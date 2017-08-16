@@ -9,7 +9,11 @@ import pprint
 import stat
 import struct
 import sys
-from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
+
+try:
+    from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
+except ImportError:
+    sys.exit('fuse module not found, please install fusepy to mount images (`pip install fusepy`).')
 
 try:
     from Cryptodome.Cipher import AES
@@ -78,7 +82,7 @@ class NANDImage(LoggingMixIn, Operations):
         if not keys_set:
             sys.exit('Failed to get keys from boot9')
 
-        self.f = open(a.nand, 'rb')
+        self.f = open(a.nand, 'r{}b'.format('' if a.ro else '+'))
         self.f.seek(0x100)  # screw the signature
         ncsd_header = self.f.read(0x100)
         if ncsd_header[0:4] != b'NCSD':
@@ -145,15 +149,16 @@ class NANDImage(LoggingMixIn, Operations):
 
         nand_stat = os.stat(a.nand)
         self.g_stat = {}
-        self.g_stat['st_ctime'] = nand_stat.st_ctime
-        self.g_stat['st_mtime'] = nand_stat.st_mtime
-        self.g_stat['st_atime'] = nand_stat.st_atime
+        self.g_stat['st_ctime'] = int(nand_stat.st_ctime)
+        self.g_stat['st_mtime'] = int(nand_stat.st_mtime)
+        self.g_stat['st_atime'] = int(nand_stat.st_atime)
+        print(self.g_stat)
 
         self.real_nand_size = nand_size[int.from_bytes(ncsd_header[4:8], 'little')]
         print('nand size: {0:08x}'.format(self.real_nand_size))
 
         self.files = {}
-        self.files['/ncsd_hdr.bin'] = {'size': 0x200, 'offset': 0, 'keyslot': 0xFF}
+        self.files['/nand_hdr.bin'] = {'size': 0x200, 'offset': 0, 'keyslot': 0xFF}
         self.files['/nand.bin'] = {'size': nand_stat.st_size, 'offset': 0, 'keyslot': 0xFF}
         self.files['/nand_minsize.bin'] = {'size': self.real_nand_size, 'offset': 0, 'keyslot': 0xFF}
 
@@ -187,9 +192,9 @@ class NANDImage(LoggingMixIn, Operations):
 
     def getattr(self, path, fh=None):
         if path == '/':
-            st = {'st_mode': (stat.S_IFDIR | 0o755), 'st_nlink': 2}
+            st = {'st_mode': (stat.S_IFDIR | (0o555 if a.ro else 0o755)), 'st_nlink': 2}
         elif path in self.files:
-            st = {'st_mode': (stat.S_IFREG | 0o644), 'st_size': self.files[path]['size'], 'st_nlink': 1}
+            st = {'st_mode': (stat.S_IFREG | (0o444 if a.ro else 0o644)), 'st_size': self.files[path]['size'], 'st_nlink': 1}
         else:
             raise FuseOSError(errno.ENOENT)
         return {**st, **self.g_stat}
@@ -197,39 +202,76 @@ class NANDImage(LoggingMixIn, Operations):
     def getxattr(self, path, name, position=0):
         attrs = self.getattr(path)
         try:
-            return attrs[name]
+            return str(attrs[name])
+        except KeyError:
+            raise FuseOSError(errno.ENOATTR)
+
+    def listxattr(self, path):
+        attrs = self.getattr(path)
+        try:
+            return attrs.keys()
         except KeyError:
             raise FuseOSError(errno.ENOATTR)
 
     def statfs(self, path):
-        return {'f_bsize': 512, 'f_blocks': 0, 'f_bavail': 0, 'f_bfree': 0}
+        return {'f_bsize': 4096, 'f_blocks': self.real_nand_size // 4096, 'f_bavail': 0, 'f_bfree': 0}
 
     def open(self, path, flags):
         # wat?
         self.fd += 1
         return self.fd
 
+    def readdir(self, path, fh):
+        return ['.', '..'] + [x[1:] for x in self.files]
+
     def read(self, path, size, offset, fh):
         fi = self.files[path]
         real_offset = fi['offset'] + offset
         self.f.seek(real_offset)
-        c = self.f.read(size)
-        iv = self.ctr + (real_offset >> 4)
+        data = self.f.read(size)
         if fi['keyslot'] != 0xFF:
             # thanks Stary2001
-            count = size
             before = offset % 16
-            after = (offset + count) % 16
-            if count % 16 != 0:
-                count = count + 16 - count % 16
-            c = (b'\0' * before) + c + (b'\0' * after)
+            after = (offset + size) % 16
+            if size % 16 != 0:
+                size = size + 16 - size % 16
+            data = (b'\0' * before) + data + (b'\0' * after)
+            iv = self.ctr + (real_offset >> 4)
             counter = Counter.new(128, initial_value=iv)
             cipher = AES.new(self.keyslots[fi['keyslot']], AES.MODE_CTR, counter=counter)
-            c = cipher.decrypt(c)[before:len(c) - after]
-        return c
+            data = cipher.decrypt(data)[before:len(data) - after]
+        return data
 
-    def readdir(self, path, fh):
-        return ['.', '..'] + [x[1:] for x in self.files]
+    def write(self, path, data, offset, fh):
+        fi = self.files[path]
+        real_offset = fi['offset'] + offset
+        self.f.seek(real_offset)
+        real_len = len(data)
+        if offset >= fi['size']:
+            print('attempt to start writing past file')
+            return real_len
+        if real_offset + len(data) > fi['offset'] + fi['size']:
+            data = data[:-((real_offset + len(data)) - fi['size'])]
+        if fi['keyslot'] != 0xFF:
+            # thanks Stary2001
+            size = real_len
+            before = offset % 16
+            after = (offset + size) % 16
+            if size % 16 != 0:
+                size = size + 16 - size % 16
+            data = (b'\0' * before) + data + (b'\0' * after)
+            iv = self.ctr + (real_offset >> 4)
+            counter = Counter.new(128, initial_value=iv)
+            cipher = AES.new(self.keyslots[fi['keyslot']], AES.MODE_CTR, counter=counter)
+            data = cipher.encrypt(data)[before:len(data) - after]
+        self.f.write(data)
+        return real_len
+
+    def truncate(self, path, length, fh=None):
+        pass
+
+    def unlink(self, path):
+        pass
 
 
 if __name__ == '__main__':
@@ -237,10 +279,11 @@ if __name__ == '__main__':
     parser.add_argument('--otp', help='path to otp (enc/dec); not needed if NAND image has essentials backup from GodMode9')
     parser.add_argument('--cid', help='NAND CID; not needed if NAND image has essentials backup from GodMode9')
     parser.add_argument('--dev', help='use dev keys', action='store_const', const=1, default=0)
+    parser.add_argument('--ro', help='mount read-only', action='store_true')
     parser.add_argument('nand', help='NAND image')
     parser.add_argument('mount_point', help='mount point')
 
     a = parser.parse_args()
 
     # logging.basicConfig(level=logging.DEBUG)
-    fuse = FUSE(NANDImage(), a.mount_point, foreground=True, ro=True)
+    fuse = FUSE(NANDImage(), a.mount_point, foreground=True, ro=a.ro)

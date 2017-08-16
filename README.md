@@ -6,10 +6,10 @@ Why Python? Because I can. And I can't be bothered to learn something else. Also
 Requires Python 3.5+, [fusepy](https://github.com/terencehonles/fusepy), and [pycryptodomex](https://github.com/Legrandin/pycryptodome).
 
 ## mount_nand.py
-Mounts NAND images. Currently read-only and only does CTR partitions (no TWL yet). Can read essentials backup by GodMode9, else OTP file/NAND CID must be provided in arguments.
+Mounts NAND images. Currently only does CTR partitions (no TWL yet). Can read essentials backup by GodMode9, else OTP file/NAND CID must be provided in arguments.
 
 ```bash
-python3 mount_nand.py [-h] [--otp OTP] [--cid CID] [--dev] nand mount_point
+python3 mount_nand.py [-h] [--otp OTP] [--cid CID] [--dev] [--ro] nand mount_point
 ```
 
 Current files:
@@ -22,5 +22,5 @@ mount_point
 ├── firm1.bin
 ├── nand.bin
 ├── nand_minsize.bin
-└── ncsd_hdr.bin
+└── nand_hdr.bin
 ```
