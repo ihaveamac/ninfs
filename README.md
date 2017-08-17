@@ -22,5 +22,6 @@ mount_point
 ├── firm1.bin
 ├── nand.bin
 ├── nand_minsize.bin
-└── nand_hdr.bin
+├── nand_hdr.bin
+└── sector0x96.bin
 ```
