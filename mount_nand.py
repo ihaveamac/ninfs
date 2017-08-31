@@ -202,7 +202,6 @@ class NANDImage(LoggingMixIn, Operations):
         self.fd = 0
 
     def __del__(self):
-        print('closing')
         self.f.close()
 
     def getattr(self, path, fh=None):
@@ -324,10 +323,11 @@ if __name__ == '__main__':
     parser.add_argument('--cid', help='NAND CID; not needed if NAND image has essentials backup from GodMode9')
     parser.add_argument('--dev', help='use dev keys', action='store_const', const=1, default=0)
     parser.add_argument('--ro', help='mount read-only', action='store_true')
+    parser.add_argument('--fg', help='run in foreground', action='store_true')
     parser.add_argument('nand', help='NAND image')
     parser.add_argument('mount_point', help='mount point')
 
     a = parser.parse_args()
 
     # logging.basicConfig(level=logging.DEBUG)
-    fuse = FUSE(NANDImage(), a.mount_point, foreground=True, ro=a.ro)
+    fuse = FUSE(NANDImage(), a.mount_point, foreground=a.fg, ro=a.ro)
