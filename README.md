@@ -3,6 +3,12 @@ FUSE Filesystem Python scripts for Nintendo 3DS files
 
 Why Python? Because I can. And I can't be bothered to learn something else. Also these scripts are probably not very good but they work for me.
 
+ARM9 bootROM required. Checked in order of:
+* `boot9.bin` (full) in current working directory
+* `boot9_prot.bin` (protected) in current working directory
+* `~/.3ds/boot9.bin` (full)
+* `~/.3ds/boot9_prot.bin` (protected)
+
 Requires Python 3.5+, [fusepy](https://github.com/terencehonles/fusepy), and [pycryptodomex](https://github.com/Legrandin/pycryptodome).
 
 ## mount_nand.py
