@@ -198,11 +198,14 @@ class NANDImage(LoggingMixIn, Operations):
         self.g_stat['st_mtime'] = int(nand_stat.st_mtime)
         self.g_stat['st_atime'] = int(nand_stat.st_atime)
 
+        self.f.seek(0, 2)
+        raw_nand_size = self.f.tell()
+
         self.real_nand_size = nand_size[int.from_bytes(ncsd_header[4:8], 'little')]
 
         self.files = {}
         self.files['/nand_hdr.bin'] = {'size': 0x200, 'offset': 0, 'keyslot': 0xFF, 'type': 'raw'}
-        self.files['/nand.bin'] = {'size': nand_stat.st_size, 'offset': 0, 'keyslot': 0xFF, 'type': 'raw'}
+        self.files['/nand.bin'] = {'size': raw_nand_size, 'offset': 0, 'keyslot': 0xFF, 'type': 'raw'}
         self.files['/nand_minsize.bin'] = {'size': self.real_nand_size, 'offset': 0, 'keyslot': 0xFF, 'type': 'raw'}
 
         self.f.seek(0x12C00)
@@ -260,6 +263,13 @@ class NANDImage(LoggingMixIn, Operations):
                 self.files['/ctrnand_full.img'] = {'size': part[1], 'offset': part[0], 'keyslot': ctrn_keyslot, 'type': 'ctr'}
             elif part_fstype[idx] == 4:
                 self.files['/agbsave.bin'] = {'size': part[1], 'offset': part[0], 'keyslot': 0x07, 'type': 'ctr'}
+
+        # GM9 bonus drive
+        if raw_nand_size != self.real_nand_size:
+            self.f.seek(self.real_nand_size)
+            bonus_drive_header = self.f.read(0x200)
+            if bonus_drive_header[0x1FE:0x200] == b'\x55\xAA':
+                self.files['/bonus.img'] = {'size': raw_nand_size - self.real_nand_size, 'offset': self.real_nand_size, 'keyslot': 0xFF, 'type': 'raw'}
 
         self.fd = 0
 

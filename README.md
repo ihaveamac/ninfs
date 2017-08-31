@@ -20,14 +20,15 @@ Current files:
 ```
 mount_point
 ├── agbsave.bin
+├── bonus.img         (only if GM9 bonus drive is detected)
 ├── ctrnand_fat.img
 ├── ctrnand_full.img
 ├── firm0.bin
-├── firm1.bin
+├── firm1.bin         (up to 8 firm partitions may be displayed)
 ├── nand.bin
 ├── nand_hdr.bin
 ├── nand_minsize.bin
-├── sector0x96.bin
+├── sector0x96.bin    (only if keysector is detected)
 ├── twlmbr.bin
 ├── twln.img
 └── twlp.img
