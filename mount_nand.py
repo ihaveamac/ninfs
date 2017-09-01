@@ -221,48 +221,66 @@ class NANDImage(LoggingMixIn, Operations):
             #   fuck that.
             self.files['/sector0x96.bin'] = {'size': 0x200, 'offset': 0x12C00, 'keyslot': 0xFF, 'type': 'keysect', 'content': keysect_dec}
 
-        part_fstype = ncsd_header[0x10:0x18]
-        part_crypttype = ncsd_header[0x18:0x20]
-        part_raw = ncsd_header[0x20:0x60]
-        partitions = [[int.from_bytes(part_raw[i:i + 4], 'little') * 0x200,
-                       int.from_bytes(part_raw[i + 4:i + 8], 'little') * 0x200] for i in range(0, 0x40, 0x8)]
+        ncsd_part_fstype = ncsd_header[0x10:0x18]
+        ncsd_part_crypttype = ncsd_header[0x18:0x20]
+        ncsd_part_raw = ncsd_header[0x20:0x60]
+        ncsd_partitions = [[int.from_bytes(ncsd_part_raw[i:i + 4], 'little') * 0x200,
+                            int.from_bytes(ncsd_part_raw[i + 4:i + 8], 'little') * 0x200] for i in range(0, 0x40, 0x8)]
 
         # including padding for crypto
-        twl_part_raw = aes_ctr_dsi(twl_normalkey, self.ctr_twl + 0x1B, ncsd_header[0xB0:0x100])[0xE:0x50]
-        twl_partitions = [[int.from_bytes(twl_part_raw[i:i + 4], 'little') * 0x200,
-                           int.from_bytes(twl_part_raw[i + 4:i + 8], 'little') * 0x200] for i in range(0, 0x40, 0x8)]
+        twl_mbr = aes_ctr_dsi(twl_normalkey, self.ctr_twl + 0x1B, ncsd_header[0xB0:0x100])[0xE:0x50]
+        twl_partitions = [[int.from_bytes(twl_mbr[i + 8:i + 12], 'little') * 0x200,
+                           int.from_bytes(twl_mbr[i + 12:i + 16], 'little') * 0x200] for i in range(0, 0x40, 0x10)]
 
-        self.files['/twlmbr.bin'] = {'size': 0x42, 'offset': 0x1BE, 'keyslot': 0x03, 'type': 'twlmbr', 'content': twl_part_raw}
+        self.files['/twlmbr.bin'] = {'size': 0x42, 'offset': 0x1BE, 'keyslot': 0x03, 'type': 'twlmbr', 'content': twl_mbr}
 
         firm_idx = 0
-        for idx, part in enumerate(partitions):  # ignoring the twl area for now
+        for idx, part in enumerate(ncsd_partitions):
+            print('ncsd idx:{0} fstype:{1} crypttype:{2} offset:{3[0]:08x} size:{3[1]:08x}'.format(idx, ncsd_part_fstype[idx], ncsd_part_crypttype[idx], part))
             if idx == 0:
                 twl_part_fstype = 0
                 for t_idx, t_part in enumerate(twl_partitions):
-                    if t_idx % 2:
-                        print('twl idx:{0} offset:{1[0]:08x} size:{1[1]:08x}'.format(t_idx, t_part))
-                        if t_part[0] != 0:
-                            if twl_part_fstype == 0:
-                                self.files['/twln.img'] = {'size': t_part[1], 'offset': t_part[0], 'keyslot': 0x03, 'type': 'twl'}
-                                twl_part_fstype += 1
-                            elif twl_part_fstype == 1:
-                                self.files['/twlp.img'] = {'size': t_part[1], 'offset': t_part[0], 'keyslot': 0x03, 'type': 'twl'}
-                                twl_part_fstype += 1
-                            else:
-                                self.files['/twl_unk{}.img'.format(twl_part_fstype)] = {'size': t_part[1], 'offset': t_part[0], 'keyslot': 0x03, 'type': 'twl'}
-                                twl_part_fstype += 1
+                    if t_part[0] != 0:
+                        print('twl  idx:{0} offset:{1[0]:08x} size:{1[1]:08x}'.format(t_idx, t_part))
+                        if twl_part_fstype == 0:
+                            self.files['/twln.img'] = {'size': t_part[1], 'offset': t_part[0], 'keyslot': 0x03, 'type': 'twl'}
+                            twl_part_fstype += 1
+                        elif twl_part_fstype == 1:
+                            self.files['/twlp.img'] = {'size': t_part[1], 'offset': t_part[0], 'keyslot': 0x03, 'type': 'twl'}
+                            twl_part_fstype += 1
+                        else:
+                            self.files['/twl_unk{}.img'.format(twl_part_fstype)] = {'size': t_part[1], 'offset': t_part[0], 'keyslot': 0x03, 'type': 'twl'}
+                            twl_part_fstype += 1
 
-            print('ctr idx:{0} fstype:{1} crypttype:{2} offset:{3[0]:08x} size:{3[1]:08x}'.format(idx, part_fstype[idx], part_crypttype[idx], part))
-            if part_fstype[idx] == 3:
-                self.files['/firm{}.bin'.format(firm_idx)] = {'size': part[1], 'offset': part[0], 'keyslot': 0x06, 'type': 'ctr'}  # boot9 hardcoded this keyslot, i'll do this properly later
-                firm_idx += 1
-            elif part_fstype[idx] == 1 and part_crypttype[idx] >= 2:
-                ctrn_mbr_size = 0x2CA00 if part_crypttype[idx] == 2 else 0x2AE00
-                ctrn_keyslot = 0x04 if part_crypttype[idx] == 2 else 0x05
-                self.files['/ctrnand_fat.img'] = {'size': part[1] - ctrn_mbr_size, 'offset': part[0] + ctrn_mbr_size, 'keyslot': ctrn_keyslot, 'type': 'ctr'}
-                self.files['/ctrnand_full.img'] = {'size': part[1], 'offset': part[0], 'keyslot': ctrn_keyslot, 'type': 'ctr'}
-            elif part_fstype[idx] == 4:
-                self.files['/agbsave.bin'] = {'size': part[1], 'offset': part[0], 'keyslot': 0x07, 'type': 'ctr'}
+            else:
+                if ncsd_part_fstype[idx] == 3:
+                    self.files['/firm{}.bin'.format(firm_idx)] = {'size': part[1], 'offset': part[0], 'keyslot': 0x06, 'type': 'ctr'}  # boot9 hardcoded this keyslot, i'll do this properly later
+                    firm_idx += 1
+
+                elif ncsd_part_fstype[idx] == 1 and ncsd_part_crypttype[idx] >= 2:
+                    ctrn_keyslot = 0x04 if ncsd_part_crypttype[idx] == 2 else 0x05
+                    self.files['/ctrnand_full.img'] = {'size': part[1], 'offset': part[0], 'keyslot': ctrn_keyslot, 'type': 'ctr'}
+                    self.f.seek(part[0])
+                    iv = self.ctr + (part[0] >> 4)
+                    counter = Counter.new(128, initial_value=iv)
+                    cipher = AES.new(self.keyslots[ctrn_keyslot], AES.MODE_CTR, counter=counter)
+                    ctr_mbr = cipher.decrypt(self.f.read(0x200))[0x1BE:0x1FE]
+                    ctr_partitions = [[int.from_bytes(ctr_mbr[i + 8:i + 12], 'little') * 0x200,
+                                       int.from_bytes(ctr_mbr[i + 12:i + 16], 'little') * 0x200] for i in range(0, 0x40, 0x10)]
+                    ctr_part_fstype = 0
+                    for c_idx, c_part in enumerate(ctr_partitions):
+                        if c_part[0] != 0:
+                            print('ctr  idx:{0} offset:{1[0]:08x} size:{1[1]:08x} (realoffset: {2:08x})'.format(c_idx, c_part, part[0] + c_part[0]))
+                            if ctr_part_fstype == 0:
+                                self.files['/ctrnand_fat.img'] = {'size': c_part[1], 'offset': part[0] + c_part[0], 'keyslot': ctrn_keyslot, 'type': 'ctr'}
+                                ctr_part_fstype += 1
+                            else:
+                                self.files['/ctr_unk{}.img'.format(ctr_part_fstype)] = {'size': c_part[1], 'offset': part[0] + c_part[0], 'keyslot': ctrn_keyslot, 'type': 'ctr'}
+                                ctr_part_fstype += 1
+                        pass
+
+                elif ncsd_part_fstype[idx] == 4:
+                    self.files['/agbsave.bin'] = {'size': part[1], 'offset': part[0], 'keyslot': 0x07, 'type': 'ctr'}
 
         # GM9 bonus drive
         if raw_nand_size != self.real_nand_size:
