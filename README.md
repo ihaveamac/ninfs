@@ -34,6 +34,9 @@ mount_point
 └── twlp.img
 ```
 
+## mount_sd.py
+Mounts SD contents under `/Nintendo 3DS`. WIP, currently read-only and requires 0x34 KeyX hardcoded.
+
 # License/Credits
 `mount_nand.py` is under the MIT license.
 

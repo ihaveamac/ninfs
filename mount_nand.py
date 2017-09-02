@@ -5,7 +5,6 @@ import errno
 import hashlib
 import logging
 import os
-import pprint
 import stat
 import struct
 import sys
