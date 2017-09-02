@@ -7,7 +7,9 @@ ARM9 bootROM required. Checked in order of:
 * `~/.3ds/boot9.bin` (full)
 * `~/.3ds/boot9_prot.bin` (protected)
 
-Requires Python 3.5+, [fusepy](https://github.com/terencehonles/fusepy), and [pycryptodomex](https://github.com/Legrandin/pycryptodome).
+Requires Python 3.5+, [fusepy](https://github.com/billziss-gh/fusepy), and [pycryptodomex](https://github.com/Legrandin/pycryptodome).
+* macOS users require [OSXFuse](https://osxfuse.github.io).
+* Windows users require [WinFsp](http://www.secfs.net/winfsp/). Windows is currently not extensively tested. Keep backups before writing.
 
 ## mount_nand.py
 Mounts NAND images. Can read essentials backup by GodMode9, else OTP file/NAND CID must be provided in arguments.

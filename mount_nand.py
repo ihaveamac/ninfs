@@ -196,6 +196,12 @@ class NANDImage(LoggingMixIn, Operations):
         self.g_stat['st_ctime'] = int(nand_stat.st_ctime)
         self.g_stat['st_mtime'] = int(nand_stat.st_mtime)
         self.g_stat['st_atime'] = int(nand_stat.st_atime)
+        if os.name == 'nt':
+            self.g_stat['st_uid'] = 65792  # "Everyone"
+            self.g_stat['st_gid'] = 65792
+        else:
+            self.g_stat['st_uid'] = int(nand_stat.st_uid)
+            self.g_stat['st_gid'] = int(nand_stat.st_gid)
 
         self.f.seek(0, 2)
         raw_nand_size = self.f.tell()
@@ -290,37 +296,45 @@ class NANDImage(LoggingMixIn, Operations):
 
         self.fd = 0
 
+        if os.name == 'nt':
+            print('NOTE: Windows is currently not extensively tested. Keep backups before writing.')
+
     def __del__(self):
         self.f.close()
 
+    def flush(self, path, fh):
+        return None
+
     def getattr(self, path, fh=None):
         if path == '/':
-            st = {'st_mode': (stat.S_IFDIR | (0o555 if a.ro else 0o755)), 'st_nlink': 2}
-        elif path in self.files:
-            st = {'st_mode': (stat.S_IFREG | (0o444 if a.ro else 0o644)), 'st_size': self.files[path]['size'], 'st_nlink': 1}
+            st = {'st_mode': (stat.S_IFDIR | (0o555 if a.ro else 0o777)), 'st_nlink': 2}
+        elif path.lower() in self.files:
+            st = {'st_mode': (stat.S_IFREG | (0o444 if a.ro else 0o666)), 'st_size': self.files[path.lower()]['size'], 'st_nlink': 1}
         else:
             raise FuseOSError(errno.ENOENT)
         return {**st, **self.g_stat}
 
     def getxattr(self, path, name, position=0):
-        attrs = self.getattr(path)
+        attrs = self.getattr(path.lower())
         try:
             return str(attrs[name])
         except KeyError:
             raise FuseOSError(errno.ENOATTR)
 
     def listxattr(self, path):
-        attrs = self.getattr(path)
+        attrs = self.getattr(path.lower())
         try:
             return attrs.keys()
         except KeyError:
             raise FuseOSError(errno.ENOATTR)
 
+    def release(self, path, fh):
+        return None
+
     def statfs(self, path):
         return {'f_bsize': 4096, 'f_blocks': self.real_nand_size // 4096, 'f_bavail': 0, 'f_bfree': 0}
 
     def open(self, path, flags):
-        # wat?
         self.fd += 1
         return self.fd
 
@@ -328,7 +342,7 @@ class NANDImage(LoggingMixIn, Operations):
         return ['.', '..'] + [x[1:] for x in self.files]
 
     def read(self, path, size, offset, fh):
-        fi = self.files[path]
+        fi = self.files[path.lower()]
         real_offset = fi['offset'] + offset
         if fi['type'] == 'raw':
             self.f.seek(real_offset)
@@ -349,7 +363,6 @@ class NANDImage(LoggingMixIn, Operations):
             data = cipher.decrypt(data)[before:len(data) - after]
 
         elif fi['type'] == 'twl':
-            pass
             self.f.seek(real_offset)
             data = self.f.read(size)
             # thanks Stary2001
@@ -369,7 +382,7 @@ class NANDImage(LoggingMixIn, Operations):
         return data
 
     def write(self, path, data, offset, fh):
-        fi = self.files[path]
+        fi = self.files[path.lower()]
         real_offset = fi['offset'] + offset
         real_len = len(data)
         if offset >= fi['size']:

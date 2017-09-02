@@ -157,5 +157,4 @@ if __name__ == '__main__':
     a = parser.parse_args()
 
     # logging.basicConfig(level=logging.DEBUG)
-
     fuse = FUSE(SDFilesystem(), a.mount_point, foreground=a.fg, ro=True)
