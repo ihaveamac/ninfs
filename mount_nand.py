@@ -10,7 +10,7 @@ import struct
 import sys
 
 try:
-    from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
+    from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ImportError:
     sys.exit('fuse module not found, please install fusepy to mount images (`pip install fusepy`).')
 
@@ -75,7 +75,7 @@ class NANDImage(LoggingMixIn, Operations):
                     keyblob_offset = 0x5860
                     otp_key_offset = 0x56E0
                     if a.dev:
-                        keyblob_offset += 0x4000
+                        keyblob_offset += 0x400
                         otp_key_offset += 0x20
                     if os.path.getsize(path) == 0x10000:
                         keyblob_offset += 0x8000
@@ -196,12 +196,6 @@ class NANDImage(LoggingMixIn, Operations):
         self.g_stat['st_ctime'] = int(nand_stat.st_ctime)
         self.g_stat['st_mtime'] = int(nand_stat.st_mtime)
         self.g_stat['st_atime'] = int(nand_stat.st_atime)
-        if os.name == 'nt':
-            self.g_stat['st_uid'] = 65792  # "Everyone"
-            self.g_stat['st_gid'] = 65792
-        else:
-            self.g_stat['st_uid'] = int(nand_stat.st_uid)
-            self.g_stat['st_gid'] = int(nand_stat.st_gid)
 
         self.f.seek(0, 2)
         raw_nand_size = self.f.tell()
@@ -241,30 +235,38 @@ class NANDImage(LoggingMixIn, Operations):
 
         firm_idx = 0
         for idx, part in enumerate(ncsd_partitions):
-            print('ncsd idx:{0} fstype:{1} crypttype:{2} offset:{3[0]:08x} size:{3[1]:08x}'.format(idx, ncsd_part_fstype[idx], ncsd_part_crypttype[idx], part))
+            if ncsd_part_fstype[idx] == 0:
+                continue
+            print('ncsd idx:{0} fstype:{1} crypttype:{2} offset:{3[0]:08x} size:{3[1]:08x} '.format(idx, ncsd_part_fstype[idx], ncsd_part_crypttype[idx], part), end='')
             if idx == 0:
+                print()
                 twl_part_fstype = 0
                 for t_idx, t_part in enumerate(twl_partitions):
                     if t_part[0] != 0:
-                        print('twl  idx:{0} offset:{1[0]:08x} size:{1[1]:08x}'.format(t_idx, t_part))
+                        print('twl  idx:{0}                      offset:{1[0]:08x} size:{1[1]:08x} '.format(t_idx, t_part), end='')
                         if twl_part_fstype == 0:
                             self.files['/twln.img'] = {'size': t_part[1], 'offset': t_part[0], 'keyslot': 0x03, 'type': 'twl'}
+                            print('/twln.img')
                             twl_part_fstype += 1
                         elif twl_part_fstype == 1:
                             self.files['/twlp.img'] = {'size': t_part[1], 'offset': t_part[0], 'keyslot': 0x03, 'type': 'twl'}
+                            print('/twlp.img')
                             twl_part_fstype += 1
                         else:
                             self.files['/twl_unk{}.img'.format(twl_part_fstype)] = {'size': t_part[1], 'offset': t_part[0], 'keyslot': 0x03, 'type': 'twl'}
+                            print('/twl_unk{}.img'.format(twl_part_fstype))
                             twl_part_fstype += 1
 
             else:
                 if ncsd_part_fstype[idx] == 3:
                     self.files['/firm{}.bin'.format(firm_idx)] = {'size': part[1], 'offset': part[0], 'keyslot': 0x06, 'type': 'ctr'}  # boot9 hardcoded this keyslot, i'll do this properly later
+                    print('/firm{}.bin'.format(firm_idx))
                     firm_idx += 1
 
                 elif ncsd_part_fstype[idx] == 1 and ncsd_part_crypttype[idx] >= 2:
                     ctrn_keyslot = 0x04 if ncsd_part_crypttype[idx] == 2 else 0x05
                     self.files['/ctrnand_full.img'] = {'size': part[1], 'offset': part[0], 'keyslot': ctrn_keyslot, 'type': 'ctr'}
+                    print('/ctrnand_full.img')
                     self.f.seek(part[0])
                     iv = self.ctr + (part[0] >> 4)
                     counter = Counter.new(128, initial_value=iv)
@@ -275,17 +277,20 @@ class NANDImage(LoggingMixIn, Operations):
                     ctr_part_fstype = 0
                     for c_idx, c_part in enumerate(ctr_partitions):
                         if c_part[0] != 0:
-                            print('ctr  idx:{0} offset:{1[0]:08x} size:{1[1]:08x} (realoffset: {2:08x})'.format(c_idx, c_part, part[0] + c_part[0]))
+                            print('ctr  idx:{0}                      offset:{1:08x} size:{2[1]:08x} '.format(c_idx, part[0] + c_part[0], c_part), end='')
                             if ctr_part_fstype == 0:
                                 self.files['/ctrnand_fat.img'] = {'size': c_part[1], 'offset': part[0] + c_part[0], 'keyslot': ctrn_keyslot, 'type': 'ctr'}
+                                print('/ctrnand_fat.img')
                                 ctr_part_fstype += 1
                             else:
                                 self.files['/ctr_unk{}.img'.format(ctr_part_fstype)] = {'size': c_part[1], 'offset': part[0] + c_part[0], 'keyslot': ctrn_keyslot, 'type': 'ctr'}
+                                print('/ctr_unk{}.img'.format(ctr_part_fstype))
                                 ctr_part_fstype += 1
                         pass
 
                 elif ncsd_part_fstype[idx] == 4:
                     self.files['/agbsave.bin'] = {'size': part[1], 'offset': part[0], 'keyslot': 0x07, 'type': 'ctr'}
+                    print('/agbsave.bin')
 
         # GM9 bonus drive
         if raw_nand_size != self.real_nand_size:
@@ -296,23 +301,41 @@ class NANDImage(LoggingMixIn, Operations):
 
         self.fd = 0
 
-        if os.name == 'nt':
-            print('NOTE: Windows is currently not extensively tested. Keep backups before writing.')
+        if os.name == 'nt' and readonly:
+            print('\nNOTE: Windows does not work properly so the NAND is read-only.', end='\n\n')
 
     def __del__(self):
-        self.f.close()
+        try:
+            self.f.close()
+        except AttributeError:
+            pass
 
-    def flush(self, path, fh):
+    def access(self, path, mode):
+        pass
+
+    # unused
+    def chmod(self, *args, **kwargs):
         return None
 
+    # unused
+    def chown(self, *args, **kwargs):
+        return None
+
+    def create(self, *args, **kwargs):
+        return None
+
+    def flush(self, path, fh):
+        return self.f.flush()
+
     def getattr(self, path, fh=None):
+        uid, gid, pid = fuse_get_context()
         if path == '/':
             st = {'st_mode': (stat.S_IFDIR | (0o555 if a.ro else 0o777)), 'st_nlink': 2}
         elif path.lower() in self.files:
             st = {'st_mode': (stat.S_IFREG | (0o444 if a.ro else 0o666)), 'st_size': self.files[path.lower()]['size'], 'st_nlink': 1}
         else:
             raise FuseOSError(errno.ENOENT)
-        return {**st, **self.g_stat}
+        return {**st, **self.g_stat, 'st_uid': uid, 'st_gid': gid}
 
     def getxattr(self, path, name, position=0):
         attrs = self.getattr(path.lower())
@@ -328,11 +351,13 @@ class NANDImage(LoggingMixIn, Operations):
         except KeyError:
             raise FuseOSError(errno.ENOATTR)
 
-    def release(self, path, fh):
+    # unused
+    def mkdir(self, *args, **kwargs):
         return None
 
-    def statfs(self, path):
-        return {'f_bsize': 4096, 'f_blocks': self.real_nand_size // 4096, 'f_bavail': 0, 'f_bfree': 0}
+    # unused
+    def mknod(self, *args, **kwargs):
+        return None
 
     def open(self, path, flags):
         self.fd += 1
@@ -381,7 +406,50 @@ class NANDImage(LoggingMixIn, Operations):
 
         return data
 
+    # unused
+    def readlink(self, *args, **kwargs):
+        return None
+
+    # unused
+    def release(self, *args, **kwargs):
+        return None
+
+    # unused
+    def releasedir(self, *args, **kwargs):
+        return None
+
+    # unused
+    def rename(self, *args, **kwargs):
+        return None
+
+    # unused
+    def rmdir(self, *args, **kwargs):
+        return None
+
+    def statfs(self, path):
+        return {'f_bsize': 4096, 'f_blocks': self.real_nand_size // 4096, 'f_bavail': 0, 'f_bfree': 0}
+
+    # unused
+    def symlink(self, target, source):
+        pass
+
+    # unused
+    # if this is set to None, some programs may crash.
+    def truncate(self, path, length, fh=None):
+        return None
+
+    # unused
+    def utimens(self, *args, **kwargs):
+        return None
+
+    # unused
+    def unlink(self, path):
+        return None
+
     def write(self, path, data, offset, fh):
+        if readonly:
+            # windows!!!!!!!
+            raise FuseOSError(errno.EPERM)
         fi = self.files[path.lower()]
         real_offset = fi['offset'] + offset
         real_len = len(data)
@@ -442,12 +510,6 @@ class NANDImage(LoggingMixIn, Operations):
 
         return real_len
 
-    def truncate(self, path, length, fh=None):
-        pass
-
-    def unlink(self, path):
-        pass
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Mount Nintendo 3DS NAND images.')
@@ -455,11 +517,18 @@ if __name__ == '__main__':
     parser.add_argument('--cid', help='NAND CID; not needed if NAND image has essentials backup from GodMode9')
     parser.add_argument('--dev', help='use dev keys', action='store_const', const=1, default=0)
     parser.add_argument('--ro', help='mount read-only', action='store_true')
-    parser.add_argument('--fg', help='run in foreground', action='store_true')
+    parser.add_argument('--fg', '-f', help='run in foreground', action='store_true')
+    parser.add_argument('--do', help='debug output (python logging module)', action='store_true')
+    parser.add_argument('-o', metavar='OPTIONS', help='mount options', default='')
     parser.add_argument('nand', help='NAND image')
     parser.add_argument('mount_point', help='mount point')
 
     a = parser.parse_args()
+    opts = {o: True for o in a.o.split(',')}
 
-    # logging.basicConfig(level=logging.DEBUG)
-    fuse = FUSE(NANDImage(), a.mount_point, foreground=a.fg, ro=a.ro)
+    readonly = a.ro or os.name == 'nt'
+
+    if a.do:
+        logging.basicConfig(level=logging.DEBUG)
+
+    fuse = FUSE(NANDImage(), a.mount_point, foreground=a.fg or a.do, fstypename='Nin3DS', fsname=os.path.realpath(a.nand), ro=readonly, **opts)

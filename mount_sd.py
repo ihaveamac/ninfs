@@ -21,10 +21,6 @@ try:
 except ImportError:
     sys.exit('Cryptodome module not found, please install pycryptodomex for encryption support (`pip install pycryptodomex`).')
 
-# 0x34 KeyX must be hardcoded here at the moment. I didn't have time to add
-#   code to read from b9 but I wanted to get this up when it was working.
-KEYX = 0x00000000000000000000000000000000
-
 
 # used from http://www.falatic.com/index.php/108/python-and-bitwise-rotation
 # converted to def because pycodestyle complained to me
@@ -44,6 +40,28 @@ class SDFilesystem(LoggingMixIn, Operations):
         return hash_p1 ^ hash_p2
 
     def __init__(self):
+        keys_set = False
+        keyX = 0
+
+        def check_b9_file(path):
+            nonlocal keys_set, keyX
+            if not keys_set:
+                if os.path.isfile(path):
+                    key_offset = 0x59F0
+                    if a.dev:
+                        key_offset += 0x400
+                    if os.path.getsize(path) == 0x10000:
+                        key_offset += 0x8000
+                    with open(path, 'rb') as b9:
+                        b9.seek(key_offset)
+                        keyX = int.from_bytes(b9.read(0x10), 'big')
+                    keys_set = True
+
+        check_b9_file('boot9.bin')
+        check_b9_file('boot9_prot.bin')
+        check_b9_file(os.path.expanduser('~') + '/.3ds/boot9.bin')
+        check_b9_file(os.path.expanduser('~') + '/.3ds/boot9_prot.bin')
+
         mv = open(a.movable, 'rb')
         mv.seek(0x110)
         keyY = mv.read(0x10)
@@ -52,9 +70,10 @@ class SDFilesystem(LoggingMixIn, Operations):
         hash_parts = struct.unpack('<IIII', key_hash[0:16])
         root_dir = '{0[0]:08x}{0[1]:08x}{0[2]:08x}{0[3]:08x}'.format(hash_parts)
 
-        print(a.sd_dir + '/' + root_dir)
+        if not os.path.isdir(a.sd_dir + '/' + root_dir):
+            sys.exit('Failed to find {} in the SD dir.'.format(root_dir))
 
-        self.key = keygen(KEYX, int.from_bytes(keyY, 'big'))
+        self.key = keygen(keyX, int.from_bytes(keyY, 'big'))
 
         self.root = os.path.realpath(a.sd_dir + '/' + root_dir)
         self.root_len = len(self.root)
@@ -68,7 +87,10 @@ class SDFilesystem(LoggingMixIn, Operations):
             raise FuseOSError(errno.EACCES)
 
     chmod = os.chmod
-    chown = os.chown
+
+    def chown(self, path, *args, **kwargs):
+        if os.name != 'nt':
+            os.chown(path, *args, **kwargs)
 
     def create(self, path, mode):
         return os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode)
@@ -94,7 +116,12 @@ class SDFilesystem(LoggingMixIn, Operations):
 
     listxattr = None
     mkdir = os.mkdir
-    mknod = os.mknod
+    # mknod = os.mknod
+
+    def mknod(self, path, *args, **kwargs):
+        if os.name != 'nt':
+            os.mknod(path, *args, **kwargs)
+
     open = os.open
 
     def read(self, path, size, offset, fh):
@@ -133,8 +160,10 @@ class SDFilesystem(LoggingMixIn, Operations):
         return os.symlink(source, target)
 
     def truncate(self, path, length, fh=None):
-        with open(path, 'r+') as f:
-            f.truncate(length)
+        print("TRUNCATE: {} {}".format(length, path))
+        os.ftruncate(fh, length)
+        # with open(path, 'r+') as f:
+        #     f.truncate(length)
 
     unlink = os.unlink
     utimens = os.utime
@@ -146,6 +175,9 @@ class SDFilesystem(LoggingMixIn, Operations):
 
 
 if __name__ == '__main__':
+    if os.name == 'nt':
+        sys.exit('Sorry, Windows is currently not supported until statfs is fixed.')
+
     parser = argparse.ArgumentParser(description='Mount Nintendo 3DS SD card contents. (WRITE SUPPORT NYI)')
     parser.add_argument('--movable', metavar='MOVABLESED', help='path to movable.sed', required=True)
     parser.add_argument('--ro', help='mount read-only', action='store_true')
