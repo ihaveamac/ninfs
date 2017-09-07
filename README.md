@@ -16,7 +16,7 @@ Install fusepy with `pip install git+https://github.com/billziss-gh/fusepy.git`.
 * Linux: Most distributions should have fuse included. Use your package manager.
 
 ## mount_nand.py
-Mounts NAND images. Can read essentials backup by GodMode9, else OTP file/NAND CID must be provided in arguments.
+Mounts NAND images, creating a virtual filesystem of decrypted partitions. Can read essentials backup by GodMode9, else OTP file/NAND CID must be provided in arguments.
 
 ```
 usage: mount_nand.py [-h] [--otp OTP] [--cid CID] [--dev] [--ro] [--fg] [--do]
@@ -61,7 +61,28 @@ mount_point
 ```
 
 ## mount_sd.py
-Mounts SD contents under `/Nintendo 3DS`. WIP, currently read-only.
+Mounts SD contents under `/Nintendo 3DS`, creating a virtual filesystem with decrypted contents. WIP, currently read-only. `movable.sed` required.
+
+```
+usage: mount_sd.py [-h] --movable MOVABLESED [--ro] [--dev] [--fg] [--do]
+                   [-o OPTIONS]
+                   sd_dir mount_point
+
+Mount Nintendo 3DS SD card contents. (WRITE SUPPORT NYI)
+
+positional arguments:
+  sd_dir                path to folder with SD contents (on SD: /Nintendo 3DS)
+  mount_point           mount point
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --movable MOVABLESED  path to movable.sed
+  --ro                  mount read-only
+  --dev                 use dev keys
+  --fg                  run in foreground
+  --do                  debug output (python logging module)
+  -o OPTIONS            mount options
+```
 
 # License/Credits
 `mount_nand.py`, `mount_sd.py` are under the MIT license.
