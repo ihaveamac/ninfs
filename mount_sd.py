@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import ctypes
 import errno
 import hashlib
 import logging
@@ -10,8 +11,12 @@ import struct
 import sys
 from threading import Lock
 
+windows = os.name == 'nt'
+if windows:
+    from ctypes import windll, wintypes
+
 try:
-    from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
+    from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ImportError:
     sys.exit('fuse module not found, please install fusepy to mount images (`pip install fusepy`).')
 
@@ -38,6 +43,8 @@ class SDFilesystem(LoggingMixIn, Operations):
         hash_p1 = int.from_bytes(path_hash[0:16], 'big')
         hash_p2 = int.from_bytes(path_hash[16:32], 'big')
         return hash_p1 ^ hash_p2
+
+    fd = 0
 
     def __init__(self):
         keys_set = False
@@ -89,25 +96,28 @@ class SDFilesystem(LoggingMixIn, Operations):
     chmod = os.chmod
 
     def chown(self, path, *args, **kwargs):
-        if os.name != 'nt':
+        if not windows:
             os.chown(path, *args, **kwargs)
 
     def create(self, path, mode):
+        if readonly:
+            raise FuseOSError(errno.EPERM)
         return os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode)
 
     def flush(self, path, fh):
-        return os.fsync(fh)
+        if not windows:
+            os.fsync(fh)
 
     def fsync(self, path, datasync, fh):
-        if datasync != 0:
-            return os.fdatasync(fh)
-        else:
-            return os.fsync(fh)
+        if not windows:
+            if datasync != 0:
+                os.fdatasync(fh)
+            else:
+                os.fsync(fh)
 
     def getattr(self, path, fh=None):
         st = os.lstat(path)
-        return dict((key, getattr(st, key)) for key in ('st_atime', 'st_ctime',
-            'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid'))
+        return dict((key, getattr(st, key)) for key in ('st_atime', 'st_ctime', 'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid'))
 
     getxattr = None
 
@@ -119,22 +129,45 @@ class SDFilesystem(LoggingMixIn, Operations):
     # mknod = os.mknod
 
     def mknod(self, path, *args, **kwargs):
-        if os.name != 'nt':
+        if not windows:
             os.mknod(path, *args, **kwargs)
 
-    open = os.open
+    # open = os.open
+    def open(self, path, flags, *args, **kwargs):
+        self.fd += 1
+        return self.fd
 
     def read(self, path, size, offset, fh):
+        # special check for special files
+        if os.path.basename(path).startswith('.'):
+            if windows:
+                f = open(path, 'rb', buffering=0)
+                f.seek(offset)
+                return f.read(size)
+            else:
+                with self.rwlock:
+                    os.lseek(fh, offset, 0)
+                    return os.read(fh, size)
+
         before = offset % 16
         after = (offset + size) % 16
-        if size % 16 != 0:
-            size = size + 16 - size % 16
-        with self.rwlock:
-            os.lseek(fh, offset - before, 0)
-            data = os.read(fh, size)
-            counter = Counter.new(128, initial_value=self.path_to_iv(path) + (offset >> 4))
-            cipher = AES.new(self.key, AES.MODE_CTR, counter=counter)
-            return cipher.decrypt(data)[before:len(data) - after]
+        # size_fix = size
+        # if size % 16 != 0:
+        #     size_fix = size + 16 - size % 16
+        if windows:
+            f = open(path, 'rb', buffering=0)
+            f.seek(offset - before)
+            data = f.read(size)
+            f.close()
+        else:
+            with self.rwlock:
+                os.lseek(fh, offset - before, 0)
+                data = os.read(fh, size)
+        counter = Counter.new(128, initial_value=self.path_to_iv(path) + (offset >> 4))
+        cipher = AES.new(self.key, AES.MODE_CTR, counter=counter)
+        out_data = cipher.decrypt(data)[before:]
+        print("#### READ: offset:0x{:x} size:0x{:x} len(out_data):0x{:x} before:{} after:{}".format(offset, size, len(out_data), before, after))
+        return out_data
 
     def readdir(self, path, fh):
         return ['.', '..'] + os.listdir(path)
@@ -142,51 +175,81 @@ class SDFilesystem(LoggingMixIn, Operations):
     readlink = os.readlink
 
     def release(self, path, fh):
-        return os.close(fh)
+        if not windows:
+            os.close(fh)
 
     def rename(self, old, new):
+        raise FuseOSError(errno.EPERM)  # TODO: proper rename support
+        if readonly or not a.allow_rename:
+            raise FuseOSError(errno.EPERM)
         return os.rename(old, self.root + new)
 
     rmdir = os.rmdir
 
     def statfs(self, path):
-        stv = os.statvfs(path)
-        # f_flag causes python interpreter crashes in some cases. i don't get it.
-        return dict((key, getattr(stv, key)) for key in ('f_bavail', 'f_bfree',
-            'f_blocks', 'f_bsize', 'f_favail', 'f_ffree', 'f_files',  # 'f_flag',
-            'f_frsize', 'f_namemax'))
+        if windows:
+            lpSectorsPerCluster = ctypes.c_ulonglong(0)
+            lpBytesPerSector = ctypes.c_ulonglong(0)
+            lpNumberOfFreeClusters = ctypes.c_ulonglong(0)
+            lpTotalNumberOfClusters = ctypes.c_ulonglong(0)
+            ret = windll.kernel32.GetDiskFreeSpaceW(ctypes.c_wchar_p(path), ctypes.pointer(lpSectorsPerCluster), ctypes.pointer(lpBytesPerSector), ctypes.pointer(lpNumberOfFreeClusters), ctypes.pointer(lpTotalNumberOfClusters))
+            if not ret:
+                raise WindowsError
+            free_blocks = lpNumberOfFreeClusters.value * lpSectorsPerCluster.value
+            result = {'f_bavail': free_blocks,
+                      'f_bfree': free_blocks,
+                      'f_bsize': lpBytesPerSector.value,
+                      'f_blocks': lpTotalNumberOfClusters.value * lpSectorsPerCluster.value,
+                      'f_namemax': wintypes.MAX_PATH}
+            return result
+        else:
+            stv = os.statvfs(path)
+            # f_flag causes python interpreter crashes in some cases. i don't get it.
+            return dict((key, getattr(stv, key)) for key in ('f_bavail', 'f_bfree', 'f_blocks', 'f_bsize', 'f_favail', 'f_ffree', 'f_files', 'f_frsize', 'f_namemax'))
 
     def symlink(self, target, source):
         return os.symlink(source, target)
 
     def truncate(self, path, length, fh=None):
-        print("TRUNCATE: {} {}".format(length, path))
-        os.ftruncate(fh, length)
-        # with open(path, 'r+') as f:
-        #     f.truncate(length)
+        if windows:
+            with open(path, 'r+') as f:
+                f.truncate(length)
+        else:
+            os.ftruncate(fh, length)
 
     unlink = os.unlink
     utimens = os.utime
 
     def write(self, path, data, offset, fh):
+        if readonly:
+            raise FuseOSError(errno.EPERM)
         with self.rwlock:
             os.lseek(fh, offset, 0)
             return os.write(fh, data)
 
 
 if __name__ == '__main__':
-    if os.name == 'nt':
-        sys.exit('Sorry, Windows is currently not supported until statfs is fixed.')
+    # if windows:
+    #     sys.exit('Sorry, Windows is currently not supported until statfs is fixed.')
 
     parser = argparse.ArgumentParser(description='Mount Nintendo 3DS SD card contents. (WRITE SUPPORT NYI)')
     parser.add_argument('--movable', metavar='MOVABLESED', help='path to movable.sed', required=True)
     parser.add_argument('--ro', help='mount read-only', action='store_true')
     parser.add_argument('--dev', help='use dev keys', action='store_const', const=1, default=0)
     parser.add_argument('--fg', help='run in foreground', action='store_true')
+    parser.add_argument('--do', help='debug output (python logging module)', action='store_true')
+    # parser.add_argument('--allow-rename', help='allow renaming of files (warning: files will be re-encrypted when renamed!)', action='store_true')
+    parser.add_argument('-o', metavar='OPTIONS', help='mount options', default='')
     parser.add_argument('sd_dir', help='path to folder with SD contents (on SD: /Nintendo 3DS)')
     parser.add_argument('mount_point', help='mount point')
 
     a = parser.parse_args()
+    opts = {o: True for o in a.o.split(',')}
 
-    # logging.basicConfig(level=logging.DEBUG)
-    fuse = FUSE(SDFilesystem(), a.mount_point, foreground=a.fg, ro=True)
+    readonly = a.ro or windows
+    readonly = True
+
+    if a.do:
+        logging.basicConfig(level=logging.DEBUG)
+
+    fuse = FUSE(SDFilesystem(), a.mount_point, foreground=a.fg or a.do, fstypename='3DS-SD', fsname=os.path.realpath(a.sd_dir), ro=readonly, **opts)

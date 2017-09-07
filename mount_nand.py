@@ -59,6 +59,8 @@ def aes_ctr_dsi(key, ctr, data):
 
 
 class NANDImage(LoggingMixIn, Operations):
+    fd = 0
+
     def __init__(self):
         keys_set = False
         keyslots_y = {}
@@ -299,8 +301,6 @@ class NANDImage(LoggingMixIn, Operations):
             if bonus_drive_header[0x1FE:0x200] == b'\x55\xAA':
                 self.files['/bonus.img'] = {'size': raw_nand_size - self.real_nand_size, 'offset': self.real_nand_size, 'keyslot': 0xFF, 'type': 'raw'}
 
-        self.fd = 0
-
         if os.name == 'nt' and readonly:
             print('\nNOTE: Windows does not work properly so the NAND is read-only.', end='\n\n')
 
@@ -427,7 +427,7 @@ class NANDImage(LoggingMixIn, Operations):
         return None
 
     def statfs(self, path):
-        return {'f_bsize': 4096, 'f_blocks': self.real_nand_size // 4096, 'f_bavail': 0, 'f_bfree': 0}
+        return {'f_bsize': 4096, 'f_blocks': self.real_nand_size // 4096, 'f_bavail': 0, 'f_bfree': 0, 'f_files': len(self.files)}
 
     # unused
     def symlink(self, target, source):
