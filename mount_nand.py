@@ -301,9 +301,6 @@ class NANDImage(LoggingMixIn, Operations):
             if bonus_drive_header[0x1FE:0x200] == b'\x55\xAA':
                 self.files['/bonus.img'] = {'size': raw_nand_size - self.real_nand_size, 'offset': self.real_nand_size, 'keyslot': 0xFF, 'type': 'raw'}
 
-        if os.name == 'nt' and readonly:
-            print('\nNOTE: Windows does not work properly so the NAND is read-only.', end='\n\n')
-
     def __del__(self):
         try:
             self.f.close()
@@ -322,7 +319,8 @@ class NANDImage(LoggingMixIn, Operations):
         return None
 
     def create(self, *args, **kwargs):
-        return None
+        self.fd += 1
+        return self.fd
 
     def flush(self, path, fh):
         return self.f.flush()
@@ -526,7 +524,7 @@ if __name__ == '__main__':
     a = parser.parse_args()
     opts = {o: True for o in a.o.split(',')}
 
-    readonly = a.ro or os.name == 'nt'
+    readonly = a.ro
 
     if a.do:
         logging.basicConfig(level=logging.DEBUG)

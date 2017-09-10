@@ -133,9 +133,12 @@ class SDFilesystem(LoggingMixIn, Operations):
             os.mknod(path, *args, **kwargs)
 
     # open = os.open
-    def open(self, path, flags, *args, **kwargs):
-        self.fd += 1
-        return self.fd
+    def open(self, path, *args, **kwargs):
+        if windows:
+            self.fd += 1
+            return self.fd
+        else:
+            return os.open(path, *args, **kwargs)
 
     def read(self, path, size, offset, fh):
         # special check for special files
@@ -166,7 +169,6 @@ class SDFilesystem(LoggingMixIn, Operations):
         counter = Counter.new(128, initial_value=self.path_to_iv(path) + (offset >> 4))
         cipher = AES.new(self.key, AES.MODE_CTR, counter=counter)
         out_data = cipher.decrypt(data)[before:]
-        print("#### READ: offset:0x{:x} size:0x{:x} len(out_data):0x{:x} before:{} after:{}".format(offset, size, len(out_data), before, after))
         return out_data
 
     def readdir(self, path, fh):
