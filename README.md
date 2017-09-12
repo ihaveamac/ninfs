@@ -61,7 +61,9 @@ mount_point
 ```
 
 ## mount_sd.py
-Mounts SD contents under `/Nintendo 3DS`, creating a virtual filesystem with decrypted contents. WIP, currently read-only. `movable.sed` required.
+Mounts SD contents under `/Nintendo 3DS`, creating a virtual filesystem with decrypted contents. `movable.sed` required.
+
+Still needs testing, keep backups.
 
 ```
 usage: mount_sd.py [-h] --movable MOVABLESED [--ro] [--dev] [--fg] [--do]

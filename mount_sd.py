@@ -158,10 +158,9 @@ class SDFilesystem(LoggingMixIn, Operations):
         # if size % 16 != 0:
         #     size_fix = size + 16 - size % 16
         if windows:
-            f = open(path, 'rb', buffering=0)
-            f.seek(offset - before)
-            data = f.read(size)
-            f.close()
+            with open(path, 'rb', buffering=0) as f:
+                f.seek(offset - before)
+                data = f.read(size)
         else:
             with self.rwlock:
                 os.lseek(fh, offset - before, 0)
@@ -201,6 +200,7 @@ class SDFilesystem(LoggingMixIn, Operations):
             result = {'f_bavail': free_blocks,
                       'f_bfree': free_blocks,
                       'f_bsize': lpBytesPerSector.value,
+                      'f_frsize': lpBytesPerSector.value,
                       'f_blocks': lpTotalNumberOfClusters.value * lpSectorsPerCluster.value,
                       'f_namemax': wintypes.MAX_PATH}
             return result
@@ -213,11 +213,8 @@ class SDFilesystem(LoggingMixIn, Operations):
         return os.symlink(source, target)
 
     def truncate(self, path, length, fh=None):
-        if windows:
-            with open(path, 'r+') as f:
-                f.truncate(length)
-        else:
-            os.ftruncate(fh, length)
+        with open(path, 'r+b') as f:
+            f.truncate(length)
 
     unlink = os.unlink
     utimens = os.utime
@@ -225,9 +222,32 @@ class SDFilesystem(LoggingMixIn, Operations):
     def write(self, path, data, offset, fh):
         if readonly:
             raise FuseOSError(errno.EPERM)
-        with self.rwlock:
-            os.lseek(fh, offset, 0)
-            return os.write(fh, data)
+        # special check for special files
+        if os.path.basename(path).startswith('.'):
+            if windows:
+                f = open(path, 'r+b', buffering=0)
+                f.seek(offset)
+                return f.write(data)
+            else:
+                with self.rwlock:
+                    os.lseek(fh, offset, 0)
+                    return os.write(fh, data)
+
+        before = offset % 16
+        # after = (offset + size) % 16
+        counter = Counter.new(128, initial_value=self.path_to_iv(path) + (offset >> 4))
+        cipher = AES.new(self.key, AES.MODE_CTR, counter=counter)
+        out_data = cipher.decrypt((b'\0' * before) + data)[before:]
+        if windows:
+            with open(path, 'r+b', buffering=0) as f:
+                f.seek(offset - before)
+                written = f.write(out_data)
+        else:
+            with self.rwlock:
+                os.lseek(fh, offset, 0)
+                written = os.write(fh, out_data)
+
+        return written
 
 
 if __name__ == '__main__':
@@ -248,8 +268,7 @@ if __name__ == '__main__':
     a = parser.parse_args()
     opts = {o: True for o in a.o.split(',')}
 
-    readonly = a.ro or windows
-    readonly = True
+    readonly = a.ro
 
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
