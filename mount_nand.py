@@ -529,4 +529,4 @@ if __name__ == '__main__':
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
 
-    fuse = FUSE(NANDImage(), a.mount_point, foreground=a.fg or a.do, fstypename='Nin3DS', fsname=os.path.realpath(a.nand), ro=readonly, **opts)
+    fuse = FUSE(NANDImage(), a.mount_point, foreground=a.fg or a.do, fsname=os.path.realpath(a.nand), ro=readonly, **opts)

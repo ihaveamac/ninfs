@@ -275,4 +275,4 @@ if __name__ == '__main__':
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
 
-    fuse = FUSE(SDFilesystem(), a.mount_point, foreground=a.fg or a.do, fstypename='3DS-SD', fsname=os.path.realpath(a.sd_dir), ro=readonly, **opts)
+    fuse = FUSE(SDFilesystem(), a.mount_point, foreground=a.fg or a.do, fsname=os.path.realpath(a.sd_dir), ro=readonly, **opts)
