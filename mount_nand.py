@@ -335,20 +335,6 @@ class NANDImage(LoggingMixIn, Operations):
             raise FuseOSError(errno.ENOENT)
         return {**st, **self.g_stat, 'st_uid': uid, 'st_gid': gid}
 
-    def getxattr(self, path, name, position=0):
-        attrs = self.getattr(path.lower())
-        try:
-            return str(attrs[name])
-        except KeyError:
-            raise FuseOSError(errno.ENOATTR)
-
-    def listxattr(self, path):
-        attrs = self.getattr(path.lower())
-        try:
-            return attrs.keys()
-        except KeyError:
-            raise FuseOSError(errno.ENOATTR)
-
     # unused
     def mkdir(self, *args, **kwargs):
         return None
