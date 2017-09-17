@@ -129,6 +129,8 @@ class SDFilesystem(LoggingMixIn, Operations):
     # mknod = os.mknod
 
     def mknod(self, path, *args, **kwargs):
+        if readonly:
+            raise FuseOSError(errno.EPERM)
         if not windows:
             os.mknod(path, *args, **kwargs)
 

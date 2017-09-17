@@ -12,7 +12,7 @@ Requires Python 3.5+, [fork of fusepy](https://github.com/billziss-gh/fusepy), a
 Install fusepy with `pip install git+https://github.com/billziss-gh/fusepy.git`.
 
 * macOS: [Fuse for macOS](https://osxfuse.github.io)
-* Windows: [WinFsp](http://www.secfs.net/winfsp/) - Windows does not work properly so filesystems are read-only.
+* Windows: [WinFsp](http://www.secfs.net/winfsp/) - Waiting for a WinFsp update to fix writing on Windows.
 * Linux: Most distributions should have fuse included. Use your package manager.
 
 ## mount_nand.py
