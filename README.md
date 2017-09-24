@@ -13,7 +13,7 @@ Install fusepy with `pip install git+https://github.com/billziss-gh/fusepy.git`.
 
 * macOS: [Fuse for macOS](https://osxfuse.github.io)
 * Windows: [WinFsp](http://www.secfs.net/winfsp/) - Waiting for a WinFsp update to fix writing on Windows.
-* Linux: Most distributions should have fuse included. Use your package manager.
+* Linux: Most distributions should have fuse included. Use your package manager. **Decryption seems to fail at random parts - trying to figure this out**
 
 ## mount_nand.py
 Mounts NAND images, creating a virtual filesystem of decrypted partitions. Can read essentials backup by GodMode9, else OTP file/NAND CID must be provided in arguments.
