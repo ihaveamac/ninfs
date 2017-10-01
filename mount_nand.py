@@ -503,12 +503,15 @@ if __name__ == '__main__':
     parser.add_argument('--ro', help='mount read-only', action='store_true')
     parser.add_argument('--fg', '-f', help='run in foreground', action='store_true')
     parser.add_argument('--do', help='debug output (python logging module)', action='store_true')
-    parser.add_argument('-o', metavar='OPTIONS', help='mount options', default='')
+    parser.add_argument('-o', metavar='OPTIONS', help='mount options')
     parser.add_argument('nand', help='NAND image')
     parser.add_argument('mount_point', help='mount point')
 
     a = parser.parse_args()
-    opts = {o: True for o in a.o.split(',')}
+    try:
+        opts = {o: True for o in a.o.split(',')}
+    except AttributeError:
+        opts = {}
 
     readonly = a.ro
 

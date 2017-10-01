@@ -253,9 +253,6 @@ class SDFilesystem(LoggingMixIn, Operations):
 
 
 if __name__ == '__main__':
-    # if windows:
-    #     sys.exit('Sorry, Windows is currently not supported until statfs is fixed.')
-
     parser = argparse.ArgumentParser(description='Mount Nintendo 3DS SD card contents. (WRITE SUPPORT NYI)')
     parser.add_argument('--movable', metavar='MOVABLESED', help='path to movable.sed', required=True)
     parser.add_argument('--ro', help='mount read-only', action='store_true')
@@ -268,7 +265,10 @@ if __name__ == '__main__':
     parser.add_argument('mount_point', help='mount point')
 
     a = parser.parse_args()
-    opts = {o: True for o in a.o.split(',')}
+    try:
+        opts = {o: True for o in a.o.split(',')}
+    except AttributeError:
+        opts = {}
 
     readonly = a.ro
 

@@ -9,10 +9,10 @@ ARM9 bootROM required. Checked in order of:
 
 Requires Python 3.5+, [fork of fusepy](https://github.com/billziss-gh/fusepy), and [pycryptodomex](https://github.com/Legrandin/pycryptodome).
 
-Install fusepy with `pip install git+https://github.com/billziss-gh/fusepy.git`.
+Install the fusepy fork with `pip install git+https://github.com/billziss-gh/fusepy.git`.
 
 * macOS: [Fuse for macOS](https://osxfuse.github.io)
-* Windows: [WinFsp](http://www.secfs.net/winfsp/) - Waiting for a WinFsp update to fix writing on Windows.
+* Windows: [WinFsp](http://www.secfs.net/winfsp/) - Requires [WinFsp 2017.2 B1](https://github.com/billziss-gh/winfsp/releases/tag/v1.2B1) or later.
 * Linux: Most distributions should have fuse included. Use your package manager. **Decryption seems to fail at random parts - trying to figure this out**
 
 ## mount_nand.py
