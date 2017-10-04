@@ -12,13 +12,13 @@ import sys
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ImportError:
-    sys.exit('fuse module not found, please install fusepy to mount images (`pip install fusepy`).')
+    sys.exit('fuse module not found, please install fusepy to mount images (`pip3 install git+https://github.com/billziss-gh/fusepy.git`).')
 
 try:
     from Cryptodome.Cipher import AES
     from Cryptodome.Util import Counter
 except ImportError:
-    sys.exit('Cryptodome module not found, please install pycryptodomex for encryption support (`pip install pycryptodomex`).')
+    sys.exit('Cryptodome module not found, please install pycryptodomex for encryption support (`pip3 install pycryptodomex`).')
 
 # ncsd image doesn't have the actual size
 nand_size = {0x200000: 0x3AF00000, 0x280000: 0x4D800000}

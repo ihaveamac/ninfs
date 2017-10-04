@@ -7,9 +7,9 @@ ARM9 bootROM required. Checked in order of:
 * `~/.3ds/boot9.bin` (full)
 * `~/.3ds/boot9_prot.bin` (protected)
 
-Requires Python 3.5+, [fork of fusepy](https://github.com/billziss-gh/fusepy), and [pycryptodomex](https://github.com/Legrandin/pycryptodome).
+Requires Python 3.5+, [a fork of fusepy](https://github.com/billziss-gh/fusepy), and [pycryptodomex](https://github.com/Legrandin/pycryptodome).
 
-Install the fusepy fork with `pip install git+https://github.com/billziss-gh/fusepy.git`.
+Install the fusepy fork with `pip3 install git+https://github.com/billziss-gh/fusepy.git`. Make sure pip is installed, since it doesn't seem to be always included on Windows.
 
 * macOS: [Fuse for macOS](https://osxfuse.github.io)
 * Windows: [WinFsp](http://www.secfs.net/winfsp/) - Requires [WinFsp 2017.2 B1](https://github.com/billziss-gh/winfsp/releases/tag/v1.2B1) or later.
