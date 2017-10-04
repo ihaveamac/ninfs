@@ -61,7 +61,7 @@ def aes_ctr_dsi(key, ctr, data):
 class NANDImage(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self):
+    def __init__(self, nand, dev, readonly=False, otp=None, cid=None):
         keys_set = False
         keyslots_y = {}
         otp_key = b''
@@ -76,7 +76,7 @@ class NANDImage(LoggingMixIn, Operations):
                 if os.path.isfile(path):
                     keyblob_offset = 0x5860
                     otp_key_offset = 0x56E0
-                    if a.dev:
+                    if dev:
                         keyblob_offset += 0x400
                         otp_key_offset += 0x20
                     if os.path.getsize(path) == 0x10000:
@@ -107,7 +107,7 @@ class NANDImage(LoggingMixIn, Operations):
         if not keys_set:
             sys.exit('Failed to get keys from boot9')
 
-        self.f = open(a.nand, 'r{}b'.format('' if a.ro else '+'))
+        self.f = open(nand, 'r{}b'.format('' if readonly else '+'))
         self.f.seek(0x100)  # screw the signature
         ncsd_header = self.f.read(0x100)
         if ncsd_header[0:4] != b'NCSD':
@@ -119,14 +119,14 @@ class NANDImage(LoggingMixIn, Operations):
         # check for essential.exefs
         self.f.seek(0x200)
         essentials_headers_raw = self.f.read(0xA0)  # doesn't include hash
-        if a.otp or a.cid:
-            if a.otp:
-                with open(a.otp, 'rb') as f:
+        if otp or cid:
+            if otp:
+                with open(otp, 'rb') as f:
                     otp = f.read(0x200)
             else:
                 sys.exit('OTP not found, provide otp-file with --otp (or embed essentials backup with GodMode9)')
-            if a.cid:
-                cid_hex = bytes.fromhex(a.cid)
+            if cid:
+                cid_hex = bytes.fromhex(cid)
                 self.ctr = int.from_bytes(hashlib.sha256(cid_hex).digest()[0:16], 'big')
                 # self.ctr_twl = int.from_bytes(hashlib.sha1(cid_hex).digest()[16:0:-1], 'big')
                 self.ctr_twl = int.from_bytes(hashlib.sha1(cid_hex).digest()[0:16], 'little')
@@ -134,9 +134,9 @@ class NANDImage(LoggingMixIn, Operations):
                 sys.exit('NAND CID not found, provide cid with --cid (or embed essentials backup with GodMode9)')
         else:
             if essentials_headers_raw == b'\0' * 0xA0 or essentials_headers_raw == b'\xFF' * 0xA0:
-                if not a.otp:
+                if not otp:
                     sys.exit('OTP not found, provide otp-file with --otp (or embed essentials backup with GodMode9)')
-                if not a.cid:
+                if not cid:
                     sys.exit('NAND CID not found, provide cid with --cid (or embed essentials backup with GodMode9)')
             else:
                 essentials_headers = [[essentials_headers_raw[i:i + 8].decode('utf-8').rstrip('\0'),
@@ -193,7 +193,7 @@ class NANDImage(LoggingMixIn, Operations):
             0x07: keygen(int.from_bytes(key_x, 'big'), int.from_bytes(keyslots_y[0x07], 'big'))
         }
 
-        nand_stat = os.stat(a.nand)
+        nand_stat = os.stat(nand)
         self.g_stat = {}
         self.g_stat['st_ctime'] = int(nand_stat.st_ctime)
         self.g_stat['st_mtime'] = int(nand_stat.st_mtime)
@@ -328,9 +328,9 @@ class NANDImage(LoggingMixIn, Operations):
     def getattr(self, path, fh=None):
         uid, gid, pid = fuse_get_context()
         if path == '/':
-            st = {'st_mode': (stat.S_IFDIR | (0o555 if a.ro else 0o777)), 'st_nlink': 2}
+            st = {'st_mode': (stat.S_IFDIR | (0o555 if readonly else 0o777)), 'st_nlink': 2}
         elif path.lower() in self.files:
-            st = {'st_mode': (stat.S_IFREG | (0o444 if a.ro else 0o666)), 'st_size': self.files[path.lower()]['size'], 'st_nlink': 1}
+            st = {'st_mode': (stat.S_IFREG | (0o444 if readonly else 0o666)), 'st_size': self.files[path.lower()]['size'], 'st_nlink': 1}
         else:
             raise FuseOSError(errno.ENOENT)
         return {**st, **self.g_stat, 'st_uid': uid, 'st_gid': gid}
@@ -513,9 +513,7 @@ if __name__ == '__main__':
     except AttributeError:
         opts = {}
 
-    readonly = a.ro
-
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
 
-    fuse = FUSE(NANDImage(), a.mount_point, foreground=a.fg or a.do, fsname=os.path.realpath(a.nand), ro=readonly, **opts)
+    fuse = FUSE(NANDImage(nand=a.nand, dev=a.dev, readonly=a.ro, otp=a.otp, cid=a.cid), a.mount_point, foreground=a.fg or a.do, fsname=os.path.realpath(a.nand), ro=a.ro, **opts)

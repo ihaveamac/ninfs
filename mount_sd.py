@@ -46,7 +46,7 @@ class SDFilesystem(LoggingMixIn, Operations):
 
     fd = 0
 
-    def __init__(self):
+    def __init__(self, sd_dir, movable, dev, readonly=False):
         keys_set = False
         keyX = 0
 
@@ -55,7 +55,7 @@ class SDFilesystem(LoggingMixIn, Operations):
             if not keys_set:
                 if os.path.isfile(path):
                     key_offset = 0x59F0
-                    if a.dev:
+                    if dev:
                         key_offset += 0x400
                     if os.path.getsize(path) == 0x10000:
                         key_offset += 0x8000
@@ -69,7 +69,7 @@ class SDFilesystem(LoggingMixIn, Operations):
         check_b9_file(os.path.expanduser('~') + '/.3ds/boot9.bin')
         check_b9_file(os.path.expanduser('~') + '/.3ds/boot9_prot.bin')
 
-        mv = open(a.movable, 'rb')
+        mv = open(movable, 'rb')
         mv.seek(0x110)
         keyY = mv.read(0x10)
         mv.close()
@@ -77,12 +77,12 @@ class SDFilesystem(LoggingMixIn, Operations):
         hash_parts = struct.unpack('<IIII', key_hash[0:16])
         root_dir = '{0[0]:08x}{0[1]:08x}{0[2]:08x}{0[3]:08x}'.format(hash_parts)
 
-        if not os.path.isdir(a.sd_dir + '/' + root_dir):
+        if not os.path.isdir(sd_dir + '/' + root_dir):
             sys.exit('Failed to find {} in the SD dir.'.format(root_dir))
 
         self.key = keygen(keyX, int.from_bytes(keyY, 'big'))
 
-        self.root = os.path.realpath(a.sd_dir + '/' + root_dir)
+        self.root = os.path.realpath(sd_dir + '/' + root_dir)
         self.root_len = len(self.root)
         self.rwlock = Lock()
 
@@ -183,7 +183,7 @@ class SDFilesystem(LoggingMixIn, Operations):
 
     def rename(self, old, new):
         raise FuseOSError(errno.EPERM)  # TODO: proper rename support
-        if readonly or not a.allow_rename:
+        if readonly:
             raise FuseOSError(errno.EPERM)
         return os.rename(old, self.root + new)
 
@@ -260,7 +260,7 @@ if __name__ == '__main__':
     parser.add_argument('--fg', help='run in foreground', action='store_true')
     parser.add_argument('--do', help='debug output (python logging module)', action='store_true')
     # parser.add_argument('--allow-rename', help='allow renaming of files (warning: files will be re-encrypted when renamed!)', action='store_true')
-    parser.add_argument('-o', metavar='OPTIONS', help='mount options', default='')
+    parser.add_argument('-o', metavar='OPTIONS', help='mount options')
     parser.add_argument('sd_dir', help='path to folder with SD contents (on SD: /Nintendo 3DS)')
     parser.add_argument('mount_point', help='mount point')
 
@@ -270,9 +270,7 @@ if __name__ == '__main__':
     except AttributeError:
         opts = {}
 
-    readonly = a.ro
-
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
 
-    fuse = FUSE(SDFilesystem(), a.mount_point, foreground=a.fg or a.do, fsname=os.path.realpath(a.sd_dir), ro=readonly, **opts)
+    fuse = FUSE(SDFilesystem(sd_dir=a.sd_dir, movable=a.movable, dev=a.dev, readonly=a.ro), a.mount_point, foreground=a.fg or a.do, fsname=os.path.realpath(a.sd_dir), ro=a.ro, **opts)
