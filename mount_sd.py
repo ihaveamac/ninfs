@@ -69,6 +69,9 @@ class SDFilesystem(LoggingMixIn, Operations):
         check_b9_file(os.path.expanduser('~') + '/.3ds/boot9.bin')
         check_b9_file(os.path.expanduser('~') + '/.3ds/boot9_prot.bin')
 
+        if not keys_set:
+            sys.exit('Failed to get keys from boot9')
+
         mv = open(movable, 'rb')
         mv.seek(0x110)
         keyY = mv.read(0x10)
@@ -253,7 +256,7 @@ class SDFilesystem(LoggingMixIn, Operations):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Mount Nintendo 3DS SD card contents. (WRITE SUPPORT NYI)')
+    parser = argparse.ArgumentParser(description='Mount Nintendo 3DS SD card contents.')
     parser.add_argument('--movable', metavar='MOVABLESED', help='path to movable.sed', required=True)
     parser.add_argument('--ro', help='mount read-only', action='store_true')
     parser.add_argument('--dev', help='use dev keys', action='store_const', const=1, default=0)

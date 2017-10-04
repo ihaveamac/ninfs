@@ -45,6 +45,7 @@ optional arguments:
 ### Current files
 ```
 mount_point
+├── _nandinfo.txt
 ├── agbsave.bin
 ├── bonus.img         (only if GM9 bonus drive is detected)
 ├── ctrnand_fat.img
@@ -55,6 +56,7 @@ mount_point
 ├── nand_hdr.bin
 ├── nand_minsize.bin
 ├── sector0x96.bin    (only if keysector is detected)
+├── twl_full.img
 ├── twlmbr.bin
 ├── twln.img
 └── twlp.img
@@ -70,7 +72,7 @@ usage: mount_sd.py [-h] --movable MOVABLESED [--ro] [--dev] [--fg] [--do]
                    [-o OPTIONS]
                    sd_dir mount_point
 
-Mount Nintendo 3DS SD card contents. (WRITE SUPPORT NYI)
+Mount Nintendo 3DS SD card contents.
 
 positional arguments:
   sd_dir                path to folder with SD contents (on SD: /Nintendo 3DS)
