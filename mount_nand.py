@@ -186,7 +186,11 @@ class NANDImage(LoggingMixIn, Operations):
         # thanks Stary2001 (from 3ds_tools)
         tmp_otp_data = otp[0x90:0xAC] + boot9_extdata_otp
         console_keyxy = hashlib.sha256(tmp_otp_data).digest()
-        console_normalkey = keygen(int.from_bytes(console_keyxy[0:16], 'big'), int.from_bytes(console_keyxy[16:32], 'big'))
+        console_keyx = int.from_bytes(console_keyxy[0:16], 'big')
+        console_keyy = int.from_bytes(console_keyxy[16:32], 'big')
+        console_normalkey = keygen(console_keyx, console_keyy)
+        nand_info += 'Keyslot 0x3f KeyX: {:032x}\n'.format(console_keyx)
+        nand_info += 'Keyslot 0x3f KeyY: {:032x}\n\n'.format(console_keyy)
 
         cipher_keygen = AES.new(console_normalkey, AES.MODE_CBC, boot9_extdata_keygen_iv)
         key_x = cipher_keygen.encrypt(boot9_extdata_keygen)
