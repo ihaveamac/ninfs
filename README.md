@@ -15,6 +15,11 @@ Install the fusepy fork with `pip3 install git+https://github.com/billziss-gh/fu
 * Windows: [WinFsp](http://www.secfs.net/winfsp/) - Requires [WinFsp 2017.2 B1](https://github.com/billziss-gh/winfsp/releases/tag/v1.2B1) or later. WinFsp has issues with certain antivirus software like [Avast](https://github.com/billziss-gh/winfsp/issues/97).
 * Linux: Most distributions should have fuse included. Use your package manager. **Decryption seems to fail at random parts - trying to figure this out**
 
+## mount_cia.py
+Mounts CTR Importable Archive (CIA) files, creating a virtual filesystem of decrypted contents (if encrypted) + Ticket, Title Metadata, and Meta region (if exists).
+
+DLC with missing contents is currently not supported.
+
 ## mount_nand.py
 Mounts NAND images, creating a virtual filesystem of decrypted partitions. Can read essentials backup by GodMode9, else OTP file/NAND CID must be provided in arguments.
 
