@@ -20,6 +20,38 @@ Mounts CTR Importable Archive (CIA) files, creating a virtual filesystem of decr
 
 DLC with missing contents is currently not supported.
 
+```
+usage: mount_cia.py [-h] [--dev] [--fg] [--do] [-o OPTIONS] cia mount_point
+
+Mount Nintendo 3DS CTR Importable Archive files.
+
+positional arguments:
+  cia          CIA file
+  mount_point  mount point
+
+optional arguments:
+  -h, --help   show this help message and exit
+  --dev        use dev keys
+  --fg, -f     run in foreground
+  --do         debug output (python logging module)
+  -o OPTIONS   mount options
+```
+
+### Current files
+```
+mount_point
+├── <id>.<index>.app
+├── cert.bin
+├── header.bin
+├── icon.bin          (only if meta region exists)
+├── meta.bin          (only if meta region exists)
+├── firm0.bin
+├── firm1.bin         (up to 8 firm partitions may be displayed)
+├── ticket.bin
+├── tmd.bin
+└── tmdchunks.bin
+```
+
 ## mount_nand.py
 Mounts NAND images, creating a virtual filesystem of decrypted partitions. Can read essentials backup by GodMode9, else OTP file/NAND CID must be provided in arguments.
 
