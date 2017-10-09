@@ -48,10 +48,10 @@ class SDFilesystem(LoggingMixIn, Operations):
 
     def __init__(self, sd_dir, movable, dev, readonly=False):
         keys_set = False
-        keyX = 0
+        key_x = 0
 
         def check_b9_file(path):
-            nonlocal keys_set, keyX
+            nonlocal keys_set, key_x
             if not keys_set:
                 if os.path.isfile(path):
                     key_offset = 0x59F0
@@ -61,7 +61,7 @@ class SDFilesystem(LoggingMixIn, Operations):
                         key_offset += 0x8000
                     with open(path, 'rb') as b9:
                         b9.seek(key_offset)
-                        keyX = int.from_bytes(b9.read(0x10), 'big')
+                        key_x = int.from_bytes(b9.read(0x10), 'big')
                     keys_set = True
 
         check_b9_file('boot9.bin')
@@ -83,11 +83,13 @@ class SDFilesystem(LoggingMixIn, Operations):
         if not os.path.isdir(sd_dir + '/' + root_dir):
             sys.exit('Failed to find {} in the SD dir.'.format(root_dir))
 
-        self.key = keygen(keyX, int.from_bytes(keyY, 'big'))
+        self.key = keygen(key_x, int.from_bytes(keyY, 'big'))
 
         self.root = os.path.realpath(sd_dir + '/' + root_dir)
         self.root_len = len(self.root)
         self.rwlock = Lock()
+
+        self.readonly = readonly
 
     def __call__(self, op, path, *args):
         return super().__call__(op, self.root + path, *args)
@@ -103,7 +105,7 @@ class SDFilesystem(LoggingMixIn, Operations):
             os.chown(path, *args, **kwargs)
 
     def create(self, path, mode):
-        if readonly:
+        if self.readonly:
             raise FuseOSError(errno.EPERM)
         return os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode)
 
@@ -132,7 +134,7 @@ class SDFilesystem(LoggingMixIn, Operations):
     # mknod = os.mknod
 
     def mknod(self, path, *args, **kwargs):
-        if readonly:
+        if self.readonly:
             raise FuseOSError(errno.EPERM)
         if not windows:
             os.mknod(path, *args, **kwargs)
@@ -186,7 +188,7 @@ class SDFilesystem(LoggingMixIn, Operations):
 
     def rename(self, old, new):
         raise FuseOSError(errno.EPERM)  # TODO: proper rename support
-        if readonly:
+        if self.readonly:
             raise FuseOSError(errno.EPERM)
         return os.rename(old, self.root + new)
 
@@ -225,7 +227,7 @@ class SDFilesystem(LoggingMixIn, Operations):
     utimens = os.utime
 
     def write(self, path, data, offset, fh):
-        if readonly:
+        if self.readonly:
             raise FuseOSError(errno.EPERM)
         # special check for special files
         if os.path.basename(path).startswith('.'):
