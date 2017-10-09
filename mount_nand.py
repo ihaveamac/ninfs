@@ -9,6 +9,8 @@ import stat
 import struct
 import sys
 
+windows = os.name == 'nt'
+
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ImportError:
@@ -357,6 +359,10 @@ class NANDImage(LoggingMixIn, Operations):
                 nand_info += '  Size:            0x{:08x}\n'.format(raw_nand_size - self.real_nand_size)
                 self.files['/bonus.img'] = {'size': raw_nand_size - self.real_nand_size, 'offset': self.real_nand_size, 'keyslot': 0xFF, 'type': 'raw'}
 
+        if windows:
+            # replace line endings for Windows so Notepad can display the text
+            #   properly
+            nand_info = nand_info.replace('\n', '\r\n')
         self.files['/_nandinfo.txt'] = {'size': len(nand_info), 'offset': -1, 'keyslot': 0xFF, 'type': 'info', 'content': nand_info.encode('utf-8')}
 
     def __del__(self):
@@ -409,6 +415,7 @@ class NANDImage(LoggingMixIn, Operations):
         return ['.', '..'] + [x[1:] for x in self.files]
 
     def read(self, path, size, offset, fh):
+        print(path)
         fi = self.files[path.lower()]
         real_offset = fi['offset'] + offset
         if fi['type'] == 'raw':
@@ -490,7 +497,6 @@ class NANDImage(LoggingMixIn, Operations):
 
     def write(self, path, data, offset, fh):
         if self.readonly:
-            # windows!!!!!!!
             raise FuseOSError(errno.EPERM)
         fi = self.files[path.lower()]
         if fi['type'] == 'info':
