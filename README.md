@@ -99,6 +99,25 @@ mount_point
 └── twlp.img
 ```
 
+## mount_romfs.py
+Mounts Read-only Filesystem (RomFS) files, creating a virtual filesystem of the RomFS contents.
+
+```
+usage: mount_romfs.py [-h] [--fg] [--do] [-o OPTIONS] romfs mount_point
+
+Mount Nintendo 3DS Read-only Filesystem (RomFS) files.
+
+positional arguments:
+  romfs        RomFS file
+  mount_point  mount point
+
+optional arguments:
+  -h, --help   show this help message and exit
+  --fg, -f     run in foreground
+  --do         debug output (python logging module)
+  -o OPTIONS   mount options
+```
+
 ## mount_sd.py
 Mounts SD contents under `/Nintendo 3DS`, creating a virtual filesystem with decrypted contents. `movable.sed` required.
 
