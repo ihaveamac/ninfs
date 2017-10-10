@@ -32,13 +32,9 @@ def keygen(key_x, key_y):
 
 
 # based on http://stackoverflow.com/questions/1766535/bit-hack-round-off-to-multiple-of-8/1766566#1766566
-def roundup(x):
-    return ((x + 63) >> 6) << 6
-
-
-# based on http://stackoverflow.com/questions/1766535/bit-hack-round-off-to-multiple-of-8/1766566#1766566
 def new_offset(x):
     return (((x + 63) >> 6) << 6)  # - x
+
 
 # these would have to be obtained from Process9 and that's annoying.
 common_key_y = (
@@ -54,7 +50,7 @@ common_key_y = (
 class CTRImportableArchive(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, cia, dev, readonly=False, otp=None, cid=None):
+    def __init__(self, cia, dev):
         keys_set = False
         key_x = 0
 
@@ -90,6 +86,7 @@ class CTRImportableArchive(LoggingMixIn, Operations):
 
         # open cia and get section sizes
         self.f = open(cia, 'rb')
+        # TODO: do this based off the section sizes instead of file size.
         self.cia_size = os.path.getsize(cia)
         archive_header_size, cia_type, cia_version, cert_chain_size, ticket_size, tmd_size, meta_size, content_size = struct.unpack('<IHHIIIIQ', self.f.read(0x20))
 
@@ -203,23 +200,33 @@ class CTRImportableArchive(LoggingMixIn, Operations):
         fi = self.files[path.lower()]
         real_offset = fi['offset'] + offset
         if fi['type'] == 'raw':
+            # if raw, just read and return
             self.f.seek(real_offset)
             data = self.f.read(size)
 
         elif fi['type'] == 'enc':
+            # if encrypted, the block needs to be decrypted first
+            # CBC requires a full block (0x10 in this case). and the previous
+            #   block is used as the IV. so that's quite a bit to read if the
+            #   application requires just a few bytes.
             # thanks Stary2001
             before = offset % 16
             after = (offset + size) % 16
             if size % 16 != 0:
                 size = size + 16 - size % 16
             if offset - before == 0:
+                # use the initial value if reading from the first block
                 iv = fi['index'] + (b'\0' * 14)
             else:
+                # use the previous block if reading anywhere else
                 self.f.seek(real_offset - before - 0x10)
                 iv = self.f.read(0x10)
+            # read to block size
             self.f.seek(real_offset - before)
             data = self.f.read(size)
+            # set up a cipher
             cipher = AES.new(self.titlekey, AES.MODE_CBC, iv)
+            # decrypt and slice to the exact size and position requested
             data = cipher.decrypt(data)[before:len(data) - after]
 
         return data
