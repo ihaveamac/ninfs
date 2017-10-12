@@ -83,6 +83,8 @@ class SDFilesystem(LoggingMixIn, Operations):
         if not os.path.isdir(sd_dir + '/' + root_dir):
             sys.exit('Failed to find {} in the SD dir.'.format(root_dir))
 
+        print('Root dir: {}'.format(root_dir))
+
         self.key = keygen(key_x, int.from_bytes(keyY, 'big'))
 
         self.root = os.path.realpath(sd_dir + '/' + root_dir)
@@ -187,7 +189,10 @@ class SDFilesystem(LoggingMixIn, Operations):
             os.close(fh)
 
     def rename(self, old, new):
-        raise FuseOSError(errno.EPERM)  # TODO: proper rename support
+        # TODO: proper rename support - this may not happen because there's not
+        #   much reason to rename files here. copying might work since either
+        #   way, the file[s] would have to be re-encrypted.
+        raise FuseOSError(errno.EPERM)
         if self.readonly:
             raise FuseOSError(errno.EPERM)
         return os.rename(old, self.root + new)
