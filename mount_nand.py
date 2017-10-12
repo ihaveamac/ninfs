@@ -130,10 +130,9 @@ class NANDImage(LoggingMixIn, Operations):
             else:
                 sys.exit('OTP not found, provide otp-file with --otp (or embed essentials backup with GodMode9)')
             if cid:
-                cid_hex = bytes.fromhex(cid)
-                self.ctr = int.from_bytes(hashlib.sha256(cid_hex).digest()[0:16], 'big')
-                # self.ctr_twl = int.from_bytes(hashlib.sha1(cid_hex).digest()[16:0:-1], 'big')
-                self.ctr_twl = int.from_bytes(hashlib.sha1(cid_hex).digest()[0:16], 'little')
+                cid = bytes.fromhex(cid)
+                self.ctr = int.from_bytes(hashlib.sha256(cid).digest()[0:16], 'big')
+                self.ctr_twl = int.from_bytes(hashlib.sha1(cid).digest()[0:16], 'little')
             else:
                 sys.exit('NAND CID not found, provide cid with --cid (or embed essentials backup with GodMode9)')
         else:
