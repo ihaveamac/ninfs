@@ -15,6 +15,29 @@ Install the fusepy fork with `pip3 install git+https://github.com/billziss-gh/fu
 * Windows: [WinFsp](http://www.secfs.net/winfsp/) - Requires [WinFsp 2017.2 B1](https://github.com/billziss-gh/winfsp/releases/tag/v1.2B1) or later. WinFsp has issues with certain antivirus software like [Avast](https://github.com/billziss-gh/winfsp/issues/97).
 * Linux: Most distributions should have fuse included. Use your package manager. **Decryption seems to fail at random parts - trying to figure this out**
 
+## mount_cdn.py
+Mounts raw CDN contents, creating a virtual filesystem of decrypted contents (if encrypted).
+
+```
+usage: mount_cdn.py [-h] [--dec-key DEC_KEY] [--dev] [--fg] [--do]
+                    [-o OPTIONS]
+                    cdn_dir mount_point
+
+Mount Nintendo 3DS CDN contents.
+
+positional arguments:
+  cdn_dir            directory with CDN contents
+  mount_point        mount point
+
+optional arguments:
+  -h, --help         show this help message and exit
+  --dec-key DEC_KEY  decrypted titlekey
+  --dev              use dev keys
+  --fg, -f           run in foreground
+  --do               debug output (python logging module)
+  -o OPTIONS         mount options
+```
+
 ## mount_cia.py
 Mounts CTR Importable Archive (CIA) files, creating a virtual filesystem of decrypted contents (if encrypted) + Ticket, Title Metadata, and Meta region (if exists).
 
