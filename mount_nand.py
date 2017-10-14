@@ -130,7 +130,15 @@ class NANDImage(LoggingMixIn, Operations):
             else:
                 sys.exit('OTP not found, provide otp-file with --otp (or embed essentials backup with GodMode9)')
             if cid:
-                cid = bytes.fromhex(cid)
+                try:
+                    cid = bytes.fromhex(cid)
+                except ValueError:
+                    with open(cid, 'rb') as f:
+                        cid = f.read(0x10)
+                except FileNotFoundError:
+                    sys.exit('Failed to convert CID to bytes, or file did not exist.')
+                if len(cid) != 0x10:
+                    sys.exit('CID is not 16 bytes.')
                 self.ctr = int.from_bytes(hashlib.sha256(cid).digest()[0:16], 'big')
                 self.ctr_twl = int.from_bytes(hashlib.sha1(cid).digest()[0:16], 'little')
             else:
@@ -414,7 +422,6 @@ class NANDImage(LoggingMixIn, Operations):
         return ['.', '..'] + [x[1:] for x in self.files]
 
     def read(self, path, size, offset, fh):
-        print(path)
         fi = self.files[path.lower()]
         real_offset = fi['offset'] + offset
         if fi['type'] == 'raw':
