@@ -143,7 +143,8 @@ class CTRImportableArchive(LoggingMixIn, Operations):
             content_index = chunk[4:6]
             content_size = int.from_bytes(chunk[8:16], 'big')
             content_is_encrypted = int.from_bytes(chunk[6:8], 'big') & 1
-            filename = '/{}.{}.app'.format(content_index.hex(), content_id.hex())
+            file_ext = 'nds' if content_index == b'\0\0' and int.from_bytes(title_id, 'big') >> 44 == 0x00048 else 'ncch'
+            filename = '/{}.{}.{}'.format(content_index.hex(), content_id.hex(), file_ext)
             self.files[filename] = {'size': content_size, 'offset': current_offset, 'index': content_index, 'type': 'enc' if content_is_encrypted else 'raw'}
             current_offset += new_offset(content_size)
 

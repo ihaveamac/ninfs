@@ -15,6 +15,38 @@ Install the fusepy fork with `pip3 install git+https://github.com/billziss-gh/fu
 * Windows: [WinFsp](http://www.secfs.net/winfsp/) - Requires [WinFsp 2017.2 B1](https://github.com/billziss-gh/winfsp/releases/tag/v1.2B1) or later. WinFsp has issues with certain antivirus software like [Avast](https://github.com/billziss-gh/winfsp/issues/97).
 * Linux: Most distributions should have fuse included. Use your package manager. **Decryption seems to fail at random parts - trying to figure this out**
 
+## mount_cci.py
+Mounts CTR Cart Image (CCI, ".3ds") files, creating a virtual filesystem of separate partitions.
+
+```
+usage: mount_cci.py [-h] [--fg] [--do] [-o OPTIONS] cci mount_point
+
+Mount Nintendo 3DS CTR Cart Image files.
+
+positional arguments:
+  cci          CCI file
+  mount_point  mount point
+
+optional arguments:
+  -h, --help   show this help message and exit
+  --fg, -f     run in foreground
+  --do         debug output (python logging module)
+  -o OPTIONS   mount options
+```
+
+### Current files
+```
+mount_point
+├── cardinfo.bin
+├── content0.game.ncch
+├── content1.manual.ncch
+├── content2.dlp.ncch
+├── content6.update_o3ds.ncch
+├── content7.update_n3ds.ncch
+├── devinfo.bin
+└── ncsd.bin
+```
+
 ## mount_cdn.py
 Mounts raw CDN contents, creating a virtual filesystem of decrypted contents (if encrypted).
 
@@ -63,7 +95,7 @@ optional arguments:
 ### Current files
 ```
 mount_point
-├── <id>.<index>.app
+├── <id>.<index>.ncch (.nds for twl titles)
 ├── cert.bin
 ├── header.bin
 ├── icon.bin          (only if meta region exists)

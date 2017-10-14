@@ -146,7 +146,8 @@ class CDNContents(LoggingMixIn, Operations):
                 print('Warning: TMD Content size and filesize of {} are different.'.format(content_id.hex()))
             self.cdn_content_size += content_size
             content_is_encrypted = int.from_bytes(chunk[6:8], 'big') & 1
-            filename = '/{}.{}.app'.format(content_index.hex(), content_id.hex())
+            file_ext = 'nds' if content_index == b'\0\0' and int.from_bytes(title_id, 'big') >> 44 == 0x00048 else 'ncch'
+            filename = '/{}.{}.{}'.format(content_index.hex(), content_id.hex(), file_ext)
             self.files[filename] = {'size': content_size, 'offset': 0, 'index': content_index, 'type': 'enc' if content_is_encrypted else 'raw', 'realfilepath': self.rp(realfilename)}
 
     def access(self, path, mode):
