@@ -138,7 +138,7 @@ class CDNContents(LoggingMixIn, Operations):
             elif os.path.isfile(self.rp(content_id.hex().upper())):
                 realfilename = content_id.hex().upper()
             else:
-                print('Content {}:{} not found, will not be included.'.format(content_id.hex(), content_index.hex()))
+                print('Content {}:{} not found, will not be included.'.format(content_index.hex(), content_id.hex()))
                 continue
             content_size = int.from_bytes(chunk[8:16], 'big')
             filesize = os.path.getsize(self.rp(realfilename))
