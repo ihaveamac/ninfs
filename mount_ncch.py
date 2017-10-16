@@ -202,8 +202,8 @@ class NCCHContainer(LoggingMixIn, Operations):
                 self.f.seek(exefs_offset * MU)
                 exefs_header = cipher.decrypt(self.f.read(0xA0))
                 exefs_normal_ranges = [(0, 0x200)]
-                for *name, offset, size in struct.iter_unpack('<8cII', exefs_header):
-                    uname = b''.join(name).decode('utf-8').strip('\0')
+                for name, offset, size in struct.iter_unpack('<8sII', exefs_header):
+                    uname = name.decode('utf-8').strip('\0')
                     if uname in ('icon', 'banner'):
                         exefs_normal_ranges.append((offset + 0x200, offset + 0x200 + (math.ceil(size / 0x200) * 0x200)))
                 self.files['/exefs.bin']['iv'] = exefs_iv
