@@ -35,6 +35,12 @@ class CTRCartImage(LoggingMixIn, Operations):
         self.f = open(cci, 'rb')
         self.f.seek(0x100)
         ncsd_header = self.f.read(0x100)
+        if ncsd_header[0:4] != b'NCSD':
+            sys.exit('NCSD magic not found, is this a real CCI?')
+        media_id = ncsd_header[0x8:0x10]
+        if media_id == b'\0' * 8:
+            sys.exit('Media ID is all-zero, is this a CCI?')
+
         self.cci_size = readle(ncsd_header[4:8]) * 0x200
 
         # create initial virtual files
