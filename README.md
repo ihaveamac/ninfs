@@ -154,6 +154,28 @@ mount_point
 └── twlp.img
 ```
 
+## mount_ncch.py
+Mounts NCCH containers, creating a virtual filesystem of decrypted sections. [SeedDB](https://github.com/ihaveamac/3DS-rom-tools/wiki/SeedDB-list) is required for titles using seed crypto. SeedDB is checked at `seeddb.bin` in current working directory, or `~/.3ds/seeddb.bin`. It can also be provided with the `--seeddb` argument.
+
+```
+usage: mount_ncch.py [-h] [--dev] [--seeddb SEEDDB] [--fg] [--do] [-o OPTIONS]
+                     ncch mount_point
+
+Mount Nintendo 3DS NCCH containers.
+
+positional arguments:
+  ncch             NCCH file
+  mount_point      mount point
+
+optional arguments:
+  -h, --help       show this help message and exit
+  --dev            use dev keys
+  --seeddb SEEDDB  path to seeddb.bin
+  --fg, -f         run in foreground
+  --do             debug output (python logging module)
+  -o OPTIONS       mount options
+```
+
 ## mount_romfs.py
 Mounts Read-only Filesystem (RomFS) files, creating a virtual filesystem of the RomFS contents.
 
