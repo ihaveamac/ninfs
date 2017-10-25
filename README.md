@@ -12,7 +12,7 @@ Requires Python 3.5+, [a fork of fusepy](https://github.com/billziss-gh/fusepy),
 Install the fusepy fork with `pip3 install git+https://github.com/billziss-gh/fusepy.git`. Make sure pip is installed, since it doesn't seem to be always included on Windows.
 
 * macOS: [Fuse for macOS](https://osxfuse.github.io)
-* Windows: [WinFsp](http://www.secfs.net/winfsp/) - Requires [WinFsp 2017.2 B1](https://github.com/billziss-gh/winfsp/releases/tag/v1.2B1) or later. WinFsp has issues with certain antivirus software like [Avast](https://github.com/billziss-gh/winfsp/issues/97).
+* Windows: [WinFsp](http://www.secfs.net/winfsp/) - Requires [WinFsp 2017.2 B2](https://github.com/billziss-gh/winfsp/releases/tag/v1.2B2) or later.
 * Linux: Most distributions should have fuse included. Use your package manager. **Decryption seems to fail at random parts - trying to figure this out**
 
 ## mount_cci.py
