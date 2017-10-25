@@ -222,6 +222,6 @@ optional arguments:
 ```
 
 # License/Credits
-`mount_nand.py`, `mount_sd.py` are under the MIT license.
+`mount_cci.py`, `mount_cdn.py`, `mount_cia.py`, `mount_nand.py`, `mount_ncch.py`, `mount_romfs.py`, `mount_sd.py` are under the MIT license.
 
 Special thanks to @Stary2001 for help with NAND crypto (especially TWL), and @d0k3 for SD crypto.
