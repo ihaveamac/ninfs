@@ -173,17 +173,10 @@ class NCCHContainer(LoggingMixIn, Operations):
         self.ncch_size = readle(ncch_header[4:8]) * 0x200
 
         self.files = {}
+        if not self.ncch_is_decrypted:
+            self.files['/decrypted.' + ('cxi' if ncch_is_executable else 'cfa')] = {'size': self.ncch_size, 'offset': 0, 'enctype': 'fulldec'}
+
         self.files['/ncch.bin'] = {'size': 0x200, 'offset': 0, 'enctype': 'none'}
-
-        plain_offset = readle(ncch_header[0x90:0x94])
-        plain_size = readle(ncch_header[0x94:0x98])
-        if plain_offset:
-            self.files['/plain.bin'] = {'size': plain_size * MU, 'offset': plain_offset * MU, 'enctype': 'none'}
-
-        logo_offset = readle(ncch_header[0x98:0x9C])
-        logo_size = readle(ncch_header[0x9C:0xA0])
-        if logo_offset:
-            self.files['/logo.bin'] = {'size': logo_size * MU, 'offset': logo_offset * MU, 'enctype': 'none'}
 
         # the exh size in the header is 0x400, but the accessdesc follows it
         #   which is 0x400 too. since it isn't supposed to change size, this
@@ -191,6 +184,16 @@ class NCCHContainer(LoggingMixIn, Operations):
         exh_size = readle(ncch_header[0x80:0x84])
         if exh_size:
             self.files['/extheader.bin'] = {'size': 0x800, 'offset': 0x200, 'enctype': 'normal', 'keyslot': ncch_normal_keyslot, 'iv': (partition_id << 64) | (0x01 << 56)}
+
+        logo_offset = readle(ncch_header[0x98:0x9C])
+        logo_size = readle(ncch_header[0x9C:0xA0])
+        if logo_offset:
+            self.files['/logo.bin'] = {'size': logo_size * MU, 'offset': logo_offset * MU, 'enctype': 'none'}
+
+        plain_offset = readle(ncch_header[0x90:0x94])
+        plain_size = readle(ncch_header[0x94:0x98])
+        if plain_offset:
+            self.files['/plain.bin'] = {'size': plain_size * MU, 'offset': plain_offset * MU, 'enctype': 'none'}
 
         exefs_offset = readle(ncch_header[0xA0:0xA4])
         exefs_size = readle(ncch_header[0xA4:0xA8])
@@ -306,6 +309,36 @@ class NCCHContainer(LoggingMixIn, Operations):
                 data += cipher.decrypt(self.f.read(0x200))
 
             data = data[before:size + before]
+
+        elif fi['enctype'] == 'fulldec':
+            # this could be optimized much better
+            before = offset % 0x200
+            after = (offset + size) % 0x200
+            aligned_real_offset = real_offset - before
+            aligned_offset = offset - before
+            aligned_size = size + before
+            self.f.seek(aligned_real_offset)
+            data = b''
+            left = aligned_size
+            for chunk in range(math.ceil(aligned_size / 0x200)):
+                new_offset = (aligned_offset + (chunk * 0x200))
+                new_data = b''
+                for fname, attrs in self.files.items():
+                    if attrs['enctype'] == 'fulldec':
+                        continue
+                    if attrs['offset'] <= new_offset and attrs['offset'] + attrs['size'] > new_offset:
+                        new_data = self.read(fname, 0x200, new_offset - attrs['offset'], 0)
+                        if fname == '/ncch.bin':
+                            # fix crypto flags
+                            ncch_array = bytearray(new_data)
+                            ncch_array[0x18B] = 0
+                            ncch_array[0x18F] = 4
+                            new_data = bytes(ncch_array)
+                if not new_data:
+                    self.f.seek(new_offset)
+                    new_data = self.f.read(0x200)
+
+                data += new_data
 
         return data
 
