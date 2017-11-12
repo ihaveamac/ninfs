@@ -86,6 +86,7 @@ class SDFilesystem(LoggingMixIn, Operations):
         print('Root dir: {}'.format(root_dir))
 
         self.key = keygen(key_x, int.from_bytes(keyY, 'big'))
+        print('Key:      {}'.format(self.key.hex()))
 
         self.root = os.path.realpath(sd_dir + '/' + root_dir)
         self.root_len = len(self.root)
@@ -151,7 +152,7 @@ class SDFilesystem(LoggingMixIn, Operations):
 
     def read(self, path, size, offset, fh):
         # special check for special files
-        if os.path.basename(path).startswith('.'):
+        if os.path.basename(path).startswith('.') or 'Nintendo DSiWare' in path:
             if windows:
                 f = open(path, 'rb', buffering=0)
                 f.seek(offset)
