@@ -340,6 +340,8 @@ class NCCHContainer(LoggingMixIn, Operations):
 
                 data += new_data
 
+            data = data[before:size + before]
+
         return data
 
     # unused
