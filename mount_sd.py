@@ -281,6 +281,8 @@ if __name__ == '__main__':
     except AttributeError:
         opts = {}
 
+    opts['-s'] = True
+
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
 

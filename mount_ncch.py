@@ -173,7 +173,7 @@ class NCCHContainer(LoggingMixIn, Operations):
         self.ncch_size = readle(ncch_header[4:8]) * 0x200
 
         self.files = {}
-        self.files['/decrypted.' + ('cxi' if ncch_is_executable else 'cfa')] = {'size': self.ncch_size, 'offset': 0, 'enctype': 'none' if self.ncch_is_decrypted else 'fulldec'}
+        self.files['/decrypted.' + ('cxi' if ncch_is_executable else 'cfa')] = {'size': self.ncch_size, 'offset': 0, 'enctype': 'fulldec'}
 
         self.files['/ncch.bin'] = {'size': 0x200, 'offset': 0, 'enctype': 'none'}
 
@@ -402,6 +402,8 @@ if __name__ == '__main__':
         opts = {o: True for o in a.o.split(',')}
     except AttributeError:
         opts = {}
+
+    opts['-s'] = True
 
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
