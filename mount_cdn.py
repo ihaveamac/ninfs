@@ -12,19 +12,22 @@ import sys
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ImportError:
-    sys.exit('fuse module not found, please install fusepy to mount images (`pip3 install git+https://github.com/billziss-gh/fusepy.git`).')
+    sys.exit('fuse module not found, please install fusepy to mount images '
+             '(`pip3 install git+https://github.com/billziss-gh/fusepy.git`).')
 
 try:
     from Cryptodome.Cipher import AES
     from Cryptodome.Util import Counter
 except ImportError:
-    sys.exit('Cryptodome module not found, please install pycryptodomex for encryption support (`pip3 install pycryptodomex`).')
+    sys.exit('Cryptodome module not found, please install pycryptodomex for encryption support '
+             '(`pip3 install pycryptodomex`).')
 
 
 # used from http://www.falatic.com/index.php/108/python-and-bitwise-rotation
 # converted to def because pycodestyle complained to me
 def rol(val, r_bits, max_bits):
-    return (val << r_bits % max_bits) & (2 ** max_bits - 1) | ((val & (2 ** max_bits - 1)) >> (max_bits - (r_bits % max_bits)))
+    return (val << r_bits % max_bits) & (2 ** max_bits - 1) |\
+           ((val & (2 ** max_bits - 1)) >> (max_bits - (r_bits % max_bits)))
 
 
 def keygen(key_x, key_y):
@@ -79,10 +82,8 @@ class CDNContents(LoggingMixIn, Operations):
 
         # get status change, modify, and file access times
         cdn_stat = os.stat(cdn_dir)
-        self.g_stat = {}
-        self.g_stat['st_ctime'] = int(cdn_stat.st_ctime)
-        self.g_stat['st_mtime'] = int(cdn_stat.st_mtime)
-        self.g_stat['st_atime'] = int(cdn_stat.st_atime)
+        self.g_stat = {'st_ctime': int(cdn_stat.st_ctime), 'st_mtime': int(cdn_stat.st_mtime),
+                       'st_atime': int(cdn_stat.st_atime)}
 
         if not os.path.isfile(self.rp('tmd')):
             sys.exit('tmd not found.')
@@ -108,7 +109,8 @@ class CDNContents(LoggingMixIn, Operations):
                 if len(self.titlekey) != 16:
                     sys.exit('--dec-key input is not 32 hex characters.')
             except ValueError:
-                sys.exit('Failed to convert --dec-key input to bytes. Non-hex character likely found, or is not 32 hex characters.')
+                sys.exit('Failed to convert --dec-key input to bytes. Non-hex character likely found, or is not '
+                         '32 hex characters.')
         else:
             with open(self.rp('cetk'), 'rb') as tik:
                 # read encrypted titlekey and common key index
@@ -118,15 +120,16 @@ class CDNContents(LoggingMixIn, Operations):
                 common_key_index = ord(tik.read(1))
 
             # decrypt titlekey
-            normalkey = keygen(key_x, int(common_key_y[common_key_index][dev], 16))
-            cipher_titlekey = AES.new(normalkey, AES.MODE_CBC, title_id + (b'\0' * 8))
+            normal_key = keygen(key_x, int(common_key_y[common_key_index][dev], 16))
+            cipher_titlekey = AES.new(normal_key, AES.MODE_CBC, title_id + (b'\0' * 8))
             self.titlekey = cipher_titlekey.decrypt(enc_titlekey)
 
         # create virtual files
-        self.files = {}
-        self.files['/ticket.bin'] = {'size': 0x350, 'offset': 0, 'type': 'raw', 'realfilepath': self.rp('cetk')}
-        self.files['/tmd.bin'] = {'size': 0xB04 + (tmd_chunks_size), 'offset': 0, 'type': 'raw', 'realfilepath': self.rp('tmd')}
-        self.files['/tmdchunks.bin'] = {'size': tmd_chunks_size, 'offset': 0xB04, 'type': 'raw', 'realfilepath': self.rp('tmd')}
+        self.files = {'/ticket.bin': {'size': 0x350, 'offset': 0, 'type': 'raw', 'real_filepath': self.rp('cetk')},
+                      '/tmd.bin': {'size': 0xB04 + tmd_chunks_size, 'offset': 0, 'type': 'raw',
+                                   'real_filepath': self.rp('tmd')},
+                      '/tmdchunks.bin': {'size': tmd_chunks_size, 'offset': 0xB04, 'type': 'raw',
+                                         'real_filepath': self.rp('tmd')}}
 
         # read contents to generate virtual files
         self.cdn_content_size = 0
@@ -134,39 +137,23 @@ class CDNContents(LoggingMixIn, Operations):
             content_id = chunk[0:4]
             content_index = chunk[4:6]
             if os.path.isfile(self.rp(content_id.hex())):
-                realfilename = content_id.hex()
+                real_filename = content_id.hex()
             elif os.path.isfile(self.rp(content_id.hex().upper())):
-                realfilename = content_id.hex().upper()
+                real_filename = content_id.hex().upper()
             else:
                 print('Content {}:{} not found, will not be included.'.format(content_index.hex(), content_id.hex()))
                 continue
             content_size = int.from_bytes(chunk[8:16], 'big')
-            filesize = os.path.getsize(self.rp(realfilename))
+            filesize = os.path.getsize(self.rp(real_filename))
             if content_size != filesize:
                 print('Warning: TMD Content size and filesize of {} are different.'.format(content_id.hex()))
             self.cdn_content_size += content_size
             content_is_encrypted = int.from_bytes(chunk[6:8], 'big') & 1
-            file_ext = 'nds' if content_index == b'\0\0' and int.from_bytes(title_id, 'big') >> 44 == 0x00048 else 'ncch'
+            file_ext = 'nds' if content_index == b'\0\0' and int.from_bytes(title_id, 'big') >> 44 == 0x48 else 'ncch'
             filename = '/{}.{}.{}'.format(content_index.hex(), content_id.hex(), file_ext)
-            self.files[filename] = {'size': content_size, 'offset': 0, 'index': content_index, 'type': 'enc' if content_is_encrypted else 'raw', 'realfilepath': self.rp(realfilename)}
-
-    def access(self, path, mode):
-        pass
-
-    # unused
-    def chmod(self, *args, **kwargs):
-        return None
-
-    # unused
-    def chown(self, *args, **kwargs):
-        return None
-
-    def create(self, *args, **kwargs):
-        self.fd += 1
-        return self.fd
-
-    def flush(self, path, fh):
-        return None
+            self.files[filename] = {'size': content_size, 'offset': 0, 'index': content_index,
+                                    'type': 'enc' if content_is_encrypted else 'raw',
+                                    'real_filepath': self.rp(real_filename)}
 
     def getattr(self, path, fh=None):
         uid, gid, pid = fuse_get_context()
@@ -177,14 +164,6 @@ class CDNContents(LoggingMixIn, Operations):
         else:
             raise FuseOSError(errno.ENOENT)
         return {**st, **self.g_stat, 'st_uid': uid, 'st_gid': gid}
-
-    # unused
-    def mkdir(self, *args, **kwargs):
-        return None
-
-    # unused
-    def mknod(self, *args, **kwargs):
-        return None
 
     def open(self, path, flags):
         # TODO: maybe this should actually open the file. this isn't so easy
@@ -199,7 +178,7 @@ class CDNContents(LoggingMixIn, Operations):
     def read(self, path, size, offset, fh):
         fi = self.files[path.lower()]
         real_offset = fi['offset'] + offset
-        with open(fi['realfilepath'], 'rb') as f:
+        with open(fi['real_filepath'], 'rb') as f:
             if fi['type'] == 'raw':
                 # if raw, just read and return
                 f.seek(real_offset)
@@ -232,48 +211,9 @@ class CDNContents(LoggingMixIn, Operations):
 
             return data
 
-    # unused
-    def readlink(self, *args, **kwargs):
-        return None
-
-    # unused
-    def release(self, *args, **kwargs):
-        return None
-
-    # unused
-    def releasedir(self, *args, **kwargs):
-        return None
-
-    # unused
-    def rename(self, *args, **kwargs):
-        return None
-
-    # unused
-    def rmdir(self, *args, **kwargs):
-        return None
-
     def statfs(self, path):
-        return {'f_bsize': 4096, 'f_blocks': self.cdn_content_size // 4096, 'f_bavail': 0, 'f_bfree': 0, 'f_files': len(self.files)}
-
-    # unused
-    def symlink(self, target, source):
-        pass
-
-    # unused
-    # if this is set to None, some programs may crash.
-    def truncate(self, path, length, fh=None):
-        raise FuseOSError(errno.EPERM)
-
-    # unused
-    def utimens(self, *args, **kwargs):
-        return None
-
-    # unused
-    def unlink(self, path):
-        return None
-
-    def write(self, path, data, offset, fh):
-        raise FuseOSError(errno.EPERM)
+        return {'f_bsize': 4096, 'f_blocks': self.cdn_content_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
+                'f_files': len(self.files)}
 
 
 if __name__ == '__main__':
@@ -292,9 +232,8 @@ if __name__ == '__main__':
     except AttributeError:
         opts = {}
 
-    opts['-s'] = True
-
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
 
-    fuse = FUSE(CDNContents(cdn_dir=a.cdn_dir, dev=a.dev, dec_key=a.dec_key), a.mount_point, foreground=a.fg or a.do, fsname=os.path.realpath(a.cdn_dir), ro=True, **opts)
+    fuse = FUSE(CDNContents(cdn_dir=a.cdn_dir, dev=a.dev, dec_key=a.dec_key), a.mount_point, foreground=a.fg or a.do,
+                fsname=os.path.realpath(a.cdn_dir), ro=True, nothreads=True, **opts)
