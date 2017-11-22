@@ -12,19 +12,22 @@ import sys
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ImportError:
-    sys.exit('fuse module not found, please install fusepy to mount images (`pip3 install git+https://github.com/billziss-gh/fusepy.git`).')
+    sys.exit('fuse module not found, please install fusepy to mount images '
+             '(`pip3 install git+https://github.com/billziss-gh/fusepy.git`).')
 
 try:
     from Cryptodome.Cipher import AES
     from Cryptodome.Util import Counter
 except ImportError:
-    sys.exit('Cryptodome module not found, please install pycryptodomex for encryption support (`pip3 install pycryptodomex`).')
+    sys.exit('Cryptodome module not found, please install pycryptodomex for encryption support '
+             '(`pip3 install pycryptodomex`).')
 
 
 # used from http://www.falatic.com/index.php/108/python-and-bitwise-rotation
 # converted to def because pycodestyle complained to me
 def rol(val, r_bits, max_bits):
-    return (val << r_bits % max_bits) & (2 ** max_bits - 1) | ((val & (2 ** max_bits - 1)) >> (max_bits - (r_bits % max_bits)))
+    return (val << r_bits % max_bits) & (2 ** max_bits - 1) |\
+           ((val & (2 ** max_bits - 1)) >> (max_bits - (r_bits % max_bits)))
 
 
 def keygen(key_x, key_y):
@@ -33,7 +36,7 @@ def keygen(key_x, key_y):
 
 # based on http://stackoverflow.com/questions/1766535/bit-hack-round-off-to-multiple-of-8/1766566#1766566
 def new_offset(x):
-    return (((x + 63) >> 6) << 6)  # - x
+    return ((x + 63) >> 6) << 6  # - x
 
 
 # these would have to be obtained from Process9 and that's annoying.
@@ -79,16 +82,15 @@ class CTRImportableArchive(LoggingMixIn, Operations):
 
         # get status change, modify, and file access times
         cia_stat = os.stat(cia)
-        self.g_stat = {}
-        self.g_stat['st_ctime'] = int(cia_stat.st_ctime)
-        self.g_stat['st_mtime'] = int(cia_stat.st_mtime)
-        self.g_stat['st_atime'] = int(cia_stat.st_atime)
+        self.g_stat = {'st_ctime': int(cia_stat.st_ctime), 'st_mtime': int(cia_stat.st_mtime),
+                       'st_atime': int(cia_stat.st_atime)}
 
         # open cia and get section sizes
         self.f = open(cia, 'rb')
         # TODO: do this based off the section sizes instead of file size.
         self.cia_size = os.path.getsize(cia)
-        archive_header_size, cia_type, cia_version, cert_chain_size, ticket_size, tmd_size, meta_size, content_size = struct.unpack('<IHHIIIIQ', self.f.read(0x20))
+        archive_header_size, cia_type, cia_version, cert_chain_size, \
+            ticket_size, tmd_size, meta_size, content_size = struct.unpack('<IHHIIIIQ', self.f.read(0x20))
 
         # get offsets for sections of the CIA
         # each section is aligned to 64-byte blocks
@@ -120,12 +122,11 @@ class CTRImportableArchive(LoggingMixIn, Operations):
         tmd_chunks_size = content_count * 0x30
 
         # create virtual files
-        self.files = {}
-        self.files['/header.bin'] = {'size': archive_header_size, 'offset': 0, 'type': 'raw'}
-        self.files['/cert.bin'] = {'size': cert_chain_size, 'offset': cert_chain_offset, 'type': 'raw'}
-        self.files['/ticket.bin'] = {'size': ticket_size, 'offset': ticket_offset, 'type': 'raw'}
-        self.files['/tmd.bin'] = {'size': tmd_size, 'offset': tmd_offset, 'type': 'raw'}
-        self.files['/tmdchunks.bin'] = {'size': tmd_chunks_size, 'offset': tmd_chunks_offset, 'type': 'raw'}
+        self.files = {'/header.bin': {'size': archive_header_size, 'offset': 0, 'type': 'raw'},
+                      '/cert.bin': {'size': cert_chain_size, 'offset': cert_chain_offset, 'type': 'raw'},
+                      '/ticket.bin': {'size': ticket_size, 'offset': ticket_offset, 'type': 'raw'},
+                      '/tmd.bin': {'size': tmd_size, 'offset': tmd_offset, 'type': 'raw'},
+                      '/tmdchunks.bin': {'size': tmd_chunks_size, 'offset': tmd_chunks_offset, 'type': 'raw'}}
         if meta_size:
             self.files['/meta.bin'] = {'size': meta_size, 'offset': meta_offset, 'type': 'raw'}
             # show icon.bin if meta size is the expected size
@@ -143,9 +144,10 @@ class CTRImportableArchive(LoggingMixIn, Operations):
             content_index = chunk[4:6]
             content_size = int.from_bytes(chunk[8:16], 'big')
             content_is_encrypted = int.from_bytes(chunk[6:8], 'big') & 1
-            file_ext = 'nds' if content_index == b'\0\0' and int.from_bytes(title_id, 'big') >> 44 == 0x00048 else 'ncch'
+            file_ext = 'nds' if content_index == b'\0\0' and int.from_bytes(title_id, 'big') >> 44 == 0x48 else 'ncch'
             filename = '/{}.{}.{}'.format(content_index.hex(), content_id.hex(), file_ext)
-            self.files[filename] = {'size': content_size, 'offset': current_offset, 'index': content_index, 'type': 'enc' if content_is_encrypted else 'raw'}
+            self.files[filename] = {'size': content_size, 'offset': current_offset, 'index': content_index,
+                                    'type': 'enc' if content_is_encrypted else 'raw'}
             current_offset += new_offset(content_size)
 
     def __del__(self):
@@ -153,21 +155,6 @@ class CTRImportableArchive(LoggingMixIn, Operations):
             self.f.close()
         except AttributeError:
             pass
-
-    def access(self, path, mode):
-        pass
-
-    # unused
-    def chmod(self, *args, **kwargs):
-        return None
-
-    # unused
-    def chown(self, *args, **kwargs):
-        return None
-
-    def create(self, *args, **kwargs):
-        self.fd += 1
-        return self.fd
 
     def flush(self, path, fh):
         return self.f.flush()
@@ -181,14 +168,6 @@ class CTRImportableArchive(LoggingMixIn, Operations):
         else:
             raise FuseOSError(errno.ENOENT)
         return {**st, **self.g_stat, 'st_uid': uid, 'st_gid': gid}
-
-    # unused
-    def mkdir(self, *args, **kwargs):
-        return None
-
-    # unused
-    def mknod(self, *args, **kwargs):
-        return None
 
     def open(self, path, flags):
         self.fd += 1
@@ -232,48 +211,9 @@ class CTRImportableArchive(LoggingMixIn, Operations):
 
         return data
 
-    # unused
-    def readlink(self, *args, **kwargs):
-        return None
-
-    # unused
-    def release(self, *args, **kwargs):
-        return None
-
-    # unused
-    def releasedir(self, *args, **kwargs):
-        return None
-
-    # unused
-    def rename(self, *args, **kwargs):
-        return None
-
-    # unused
-    def rmdir(self, *args, **kwargs):
-        return None
-
     def statfs(self, path):
-        return {'f_bsize': 4096, 'f_blocks': self.cia_size // 4096, 'f_bavail': 0, 'f_bfree': 0, 'f_files': len(self.files)}
-
-    # unused
-    def symlink(self, target, source):
-        pass
-
-    # unused
-    # if this is set to None, some programs may crash.
-    def truncate(self, path, length, fh=None):
-        raise FuseOSError(errno.EPERM)
-
-    # unused
-    def utimens(self, *args, **kwargs):
-        return None
-
-    # unused
-    def unlink(self, path):
-        return None
-
-    def write(self, path, data, offset, fh):
-        raise FuseOSError(errno.EPERM)
+        return {'f_bsize': 4096, 'f_blocks': self.cia_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
+                'f_files': len(self.files)}
 
 
 if __name__ == '__main__':
@@ -291,9 +231,8 @@ if __name__ == '__main__':
     except AttributeError:
         opts = {}
 
-    opts['-s'] = True
-
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
 
-    fuse = FUSE(CTRImportableArchive(cia=a.cia, dev=a.dev), a.mount_point, foreground=a.fg or a.do, fsname=os.path.realpath(a.cia), ro=True, **opts)
+    fuse = FUSE(CTRImportableArchive(cia=a.cia, dev=a.dev), a.mount_point, foreground=a.fg or a.do,
+                fsname=os.path.realpath(a.cia), ro=True, nothreads=True, **opts)
