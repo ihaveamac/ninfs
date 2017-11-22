@@ -25,17 +25,17 @@ except ImportError:
 
 # used from http://www.falatic.com/index.php/108/python-and-bitwise-rotation
 # converted to def because pycodestyle complained to me
-def rol(val, r_bits, max_bits):
+def rol(val: int, r_bits: int, max_bits: int) -> int:
     return (val << r_bits % max_bits) & (2 ** max_bits - 1) |\
            ((val & (2 ** max_bits - 1)) >> (max_bits - (r_bits % max_bits)))
 
 
-def keygen(key_x, key_y):
+def keygen(key_x: int, key_y: int) -> bytes:
     return rol((rol(key_x, 2, 128) ^ key_y) + 0x1FF9E9AAC5FE0408024591DC5D52768A, 87, 128).to_bytes(0x10, 'big')
 
 
 # based on http://stackoverflow.com/questions/1766535/bit-hack-round-off-to-multiple-of-8/1766566#1766566
-def new_offset(x):
+def new_offset(x: int) -> int:
     return ((x + 63) >> 6) << 6  # - x
 
 
