@@ -13,35 +13,38 @@ import sys
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ImportError:
-    sys.exit('fuse module not found, please install fusepy to mount images (`pip3 install git+https://github.com/billziss-gh/fusepy.git`).')
+    sys.exit('fuse module not found, please install fusepy to mount images '
+             '(`pip3 install git+https://github.com/billziss-gh/fusepy.git`).')
 
 try:
     from Cryptodome.Cipher import AES
     from Cryptodome.Util import Counter
 except ImportError:
-    sys.exit('Cryptodome module not found, please install pycryptodomex for encryption support (`pip3 install pycryptodomex`).')
+    sys.exit('Cryptodome module not found, please install pycryptodomex for encryption support '
+             '(`pip3 install pycryptodomex`).')
 
 # media unit
 MU = 0x200
 
 
 # since this is used often enough
-def readle(b):
+def readle(b: bytes) -> int:
     return int.from_bytes(b, 'little')
 
 
 # since this is used often enough
-def readbe(b):
+def readbe(b: bytes) -> int:
     return int.from_bytes(b, 'big')
 
 
 # used from http://www.falatic.com/index.php/108/python-and-bitwise-rotation
 # converted to def because pycodestyle complained to me
-def rol(val, r_bits, max_bits):
-    return (val << r_bits % max_bits) & (2 ** max_bits - 1) | ((val & (2 ** max_bits - 1)) >> (max_bits - (r_bits % max_bits)))
+def rol(val: int, r_bits: int, max_bits: int) -> int:
+    return (val << r_bits % max_bits) & (2 ** max_bits - 1) |\
+           ((val & (2 ** max_bits - 1)) >> (max_bits - (r_bits % max_bits)))
 
 
-def keygen(key_x, key_y):
+def keygen(key_x: int, key_y: int) -> bytes:
     return rol((rol(key_x, 2, 128) ^ key_y) + 0x1FF9E9AAC5FE0408024591DC5D52768A, 87, 128).to_bytes(0x10, 'big')
 
 
@@ -168,21 +171,22 @@ class NCCHContainer(LoggingMixIn, Operations):
                 self.normal_key[ncch_extra_keyslot] = keygen(key_x[ncch_extra_keyslot], readbe(key_y))
             else:
                 # fixed system key for certain titles, zerokey for rest
-                self.normal_key[0x11] = bytes.fromhex('527CE630A9CA305F3696F3CDE954194B') if program_id & (0x10 << 32) else b'\0' * 16
+                self.normal_key[0x11] = bytes.fromhex('527CE630A9CA305F3696F3CDE954194B') if program_id & (0x10 << 32)\
+                    else b'\0' * 16
 
         self.ncch_size = readle(ncch_header[4:8]) * 0x200
 
-        self.files = {}
-        self.files['/decrypted.' + ('cxi' if ncch_is_executable else 'cfa')] = {'size': self.ncch_size, 'offset': 0, 'enctype': 'fulldec'}
-
-        self.files['/ncch.bin'] = {'size': 0x200, 'offset': 0, 'enctype': 'none'}
+        self.files = {'/decrypted.' + ('cxi' if ncch_is_executable else 'cfa'): {'size': self.ncch_size, 'offset': 0,
+                                                                                 'enctype': 'fulldec'},
+                      '/ncch.bin': {'size': 0x200, 'offset': 0, 'enctype': 'none'}}
 
         # the exh size in the header is 0x400, but the accessdesc follows it
         #   which is 0x400 too. since it isn't supposed to change size, this
         #   ignores the size and only sees if it's not 0.
         exh_size = readle(ncch_header[0x80:0x84])
         if exh_size:
-            self.files['/extheader.bin'] = {'size': 0x800, 'offset': 0x200, 'enctype': 'normal', 'keyslot': ncch_normal_keyslot, 'iv': (partition_id << 64) | (0x01 << 56)}
+            self.files['/extheader.bin'] = {'size': 0x800, 'offset': 0x200, 'enctype': 'normal',
+                                            'keyslot': ncch_normal_keyslot, 'iv': (partition_id << 64) | (0x01 << 56)}
 
         logo_offset = readle(ncch_header[0x98:0x9C])
         logo_size = readle(ncch_header[0x9C:0xA0])
@@ -197,10 +201,12 @@ class NCCHContainer(LoggingMixIn, Operations):
         exefs_offset = readle(ncch_header[0xA0:0xA4])
         exefs_size = readle(ncch_header[0xA4:0xA8])
         if exefs_offset:
-            self.files['/exefs.bin'] = {'size': exefs_size * MU, 'offset': exefs_offset * MU, 'enctype': 'exefs', 'keyslot': ncch_normal_keyslot, 'keyslot2': ncch_extra_keyslot}
+            self.files['/exefs.bin'] = {'size': exefs_size * MU, 'offset': exefs_offset * MU, 'enctype': 'exefs',
+                                        'keyslot': ncch_normal_keyslot, 'keyslot2': ncch_extra_keyslot}
             if not self.ncch_is_decrypted:
                 exefs_iv = (partition_id << 64) | (0x02 << 56)
-                cipher = AES.new(self.normal_key[ncch_normal_keyslot], AES.MODE_CTR, counter=Counter.new(128, initial_value=exefs_iv))
+                cipher = AES.new(self.normal_key[ncch_normal_keyslot], AES.MODE_CTR,
+                                 counter=Counter.new(128,initial_value=exefs_iv))
                 self.f.seek(exefs_offset * MU)
                 exefs_header = cipher.decrypt(self.f.read(0xA0))
                 exefs_normal_ranges = [(0, 0x200)]
@@ -215,28 +221,14 @@ class NCCHContainer(LoggingMixIn, Operations):
             romfs_offset = readle(ncch_header[0xB0:0xB4])
             romfs_size = readle(ncch_header[0xB4:0xB8])
             if romfs_offset:
-                self.files['/romfs.bin'] = {'size': romfs_size * MU, 'offset': romfs_offset * MU, 'enctype': 'normal', 'keyslot': ncch_extra_keyslot, 'iv': (partition_id << 64) | (0x03 << 56)}
+                self.files['/romfs.bin'] = {'size': romfs_size * MU, 'offset': romfs_offset * MU, 'enctype': 'normal',
+                                            'keyslot': ncch_extra_keyslot, 'iv': (partition_id << 64) | (0x03 << 56)}
 
     def __del__(self):
         try:
             self.f.close()
         except AttributeError:
             pass
-
-    def access(self, path, mode):
-        pass
-
-    # unused
-    def chmod(self, *args, **kwargs):
-        return None
-
-    # unused
-    def chown(self, *args, **kwargs):
-        return None
-
-    def create(self, *args, **kwargs):
-        self.fd += 1
-        return self.fd
 
     def flush(self, path, fh):
         return self.f.flush()
@@ -250,14 +242,6 @@ class NCCHContainer(LoggingMixIn, Operations):
         else:
             raise FuseOSError(errno.ENOENT)
         return {**st, **self.g_stat, 'st_uid': uid, 'st_gid': gid}
-
-    # unused
-    def mkdir(self, *args, **kwargs):
-        return None
-
-    # unused
-    def mknod(self, *args, **kwargs):
-        return None
 
     def open(self, path, flags):
         self.fd += 1
@@ -312,20 +296,18 @@ class NCCHContainer(LoggingMixIn, Operations):
         elif fi['enctype'] == 'fulldec':
             # this could be optimized much better
             before = offset % 0x200
-            after = (offset + size) % 0x200
             aligned_real_offset = real_offset - before
             aligned_offset = offset - before
             aligned_size = size + before
             self.f.seek(aligned_real_offset)
             data = b''
-            left = aligned_size
             for chunk in range(math.ceil(aligned_size / 0x200)):
                 new_offset = (aligned_offset + (chunk * 0x200))
                 new_data = b''
                 for fname, attrs in self.files.items():
                     if attrs['enctype'] == 'fulldec':
                         continue
-                    if attrs['offset'] <= new_offset and attrs['offset'] + attrs['size'] > new_offset:
+                    if attrs['offset'] <= new_offset < attrs['offset'] + attrs['size']:
                         new_data = self.read(fname, 0x200, new_offset - attrs['offset'], 0)
                         if fname == '/ncch.bin':
                             # fix crypto flags
@@ -343,48 +325,9 @@ class NCCHContainer(LoggingMixIn, Operations):
 
         return data
 
-    # unused
-    def readlink(self, *args, **kwargs):
-        return None
-
-    # unused
-    def release(self, *args, **kwargs):
-        return None
-
-    # unused
-    def releasedir(self, *args, **kwargs):
-        return None
-
-    # unused
-    def rename(self, *args, **kwargs):
-        return None
-
-    # unused
-    def rmdir(self, *args, **kwargs):
-        return None
-
     def statfs(self, path):
-        return {'f_bsize': 4096, 'f_blocks': self.ncch_size // 4096, 'f_bavail': 0, 'f_bfree': 0, 'f_files': len(self.files)}
-
-    # unused
-    def symlink(self, target, source):
-        pass
-
-    # unused
-    # if this is set to None, some programs may crash.
-    def truncate(self, path, length, fh=None):
-        raise FuseOSError(errno.EPERM)
-
-    # unused
-    def utimens(self, *args, **kwargs):
-        return None
-
-    # unused
-    def unlink(self, path):
-        return None
-
-    def write(self, path, data, offset, fh):
-        raise FuseOSError(errno.EPERM)
+        return {'f_bsize': 4096, 'f_blocks': self.ncch_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
+                'f_files': len(self.files)}
 
 
 if __name__ == '__main__':
@@ -403,9 +346,8 @@ if __name__ == '__main__':
     except AttributeError:
         opts = {}
 
-    opts['-s'] = True
-
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
 
-    fuse = FUSE(NCCHContainer(ncch=a.ncch, dev=a.dev, seeddb=a.seeddb), a.mount_point, foreground=a.fg or a.do, fsname=os.path.realpath(a.ncch), ro=True, **opts)
+    fuse = FUSE(NCCHContainer(ncch=a.ncch, dev=a.dev, seeddb=a.seeddb), a.mount_point, foreground=a.fg or a.do,
+                fsname=os.path.realpath(a.ncch), ro=True, nothreads=True, **opts)
