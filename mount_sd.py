@@ -18,22 +18,25 @@ if windows:
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ImportError:
-    sys.exit('fuse module not found, please install fusepy to mount images (`pip3 install git+https://github.com/billziss-gh/fusepy.git`).')
+    sys.exit('fuse module not found, please install fusepy to mount images '
+             '(`pip3 install git+https://github.com/billziss-gh/fusepy.git`).')
 
 try:
     from Cryptodome.Cipher import AES
     from Cryptodome.Util import Counter
 except ImportError:
-    sys.exit('Cryptodome module not found, please install pycryptodomex for encryption support (`pip3 install pycryptodomex`).')
+    sys.exit('Cryptodome module not found, please install pycryptodomex for encryption support '
+             '(`pip3 install pycryptodomex`).')
 
 
 # used from http://www.falatic.com/index.php/108/python-and-bitwise-rotation
 # converted to def because pycodestyle complained to me
-def rol(val, r_bits, max_bits):
-    return (val << r_bits % max_bits) & (2 ** max_bits - 1) | ((val & (2 ** max_bits - 1)) >> (max_bits - (r_bits % max_bits)))
+def rol(val: int, r_bits: int, max_bits: int) -> int:
+    return (val << r_bits % max_bits) & (2 ** max_bits - 1) |\
+           ((val & (2 ** max_bits - 1)) >> (max_bits - (r_bits % max_bits)))
 
 
-def keygen(key_x, key_y):
+def keygen(key_x: int, key_y: int) -> bytes:
     return rol((rol(key_x, 2, 128) ^ key_y) + 0x1FF9E9AAC5FE0408024591DC5D52768A, 87, 128).to_bytes(0x10, 'big')
 
 
@@ -74,9 +77,9 @@ class SDFilesystem(LoggingMixIn, Operations):
 
         mv = open(movable, 'rb')
         mv.seek(0x110)
-        keyY = mv.read(0x10)
+        key_y = mv.read(0x10)
         mv.close()
-        key_hash = hashlib.sha256(keyY).digest()
+        key_hash = hashlib.sha256(key_y).digest()
         hash_parts = struct.unpack('<IIII', key_hash[0:16])
         root_dir = '{0[0]:08x}{0[1]:08x}{0[2]:08x}{0[3]:08x}'.format(hash_parts)
 
@@ -85,7 +88,7 @@ class SDFilesystem(LoggingMixIn, Operations):
 
         print('Root dir: {}'.format(root_dir))
 
-        self.key = keygen(key_x, int.from_bytes(keyY, 'big'))
+        self.key = keygen(key_x, int.from_bytes(key_y, 'big'))
         print('Key:      {}'.format(self.key.hex()))
 
         self.root = os.path.realpath(sd_dir + '/' + root_dir)
@@ -107,9 +110,9 @@ class SDFilesystem(LoggingMixIn, Operations):
         if not windows:
             os.chown(path, *args, **kwargs)
 
-    def create(self, path, mode):
+    def create(self, path, mode, **kwargs):
         if self.readonly:
-            raise FuseOSError(errno.EPERM)
+            raise FuseOSError(errno.EROFS)
         return os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode)
 
     def flush(self, path, fh):
@@ -138,7 +141,7 @@ class SDFilesystem(LoggingMixIn, Operations):
 
     def mknod(self, path, *args, **kwargs):
         if self.readonly:
-            raise FuseOSError(errno.EPERM)
+            raise FuseOSError(errno.EROFS)
         if not windows:
             os.mknod(path, *args, **kwargs)
 
@@ -163,10 +166,6 @@ class SDFilesystem(LoggingMixIn, Operations):
                     return os.read(fh, size)
 
         before = offset % 16
-        after = (offset + size) % 16
-        # size_fix = size
-        # if size % 16 != 0:
-        #     size_fix = size + 16 - size % 16
         if windows:
             with open(path, 'rb', buffering=0) as f:
                 f.seek(offset - before)
@@ -194,9 +193,9 @@ class SDFilesystem(LoggingMixIn, Operations):
         #   much reason to rename files here. copying might work since either
         #   way, the file[s] would have to be re-encrypted.
         raise FuseOSError(errno.EPERM)
-        if self.readonly:
-            raise FuseOSError(errno.EPERM)
-        return os.rename(old, self.root + new)
+        # if self.readonly:
+        #     raise FuseOSError(errno.EROFS)
+        # return os.rename(old, self.root + new)
 
     rmdir = os.rmdir
 
@@ -220,7 +219,8 @@ class SDFilesystem(LoggingMixIn, Operations):
         else:
             stv = os.statvfs(path)
             # f_flag causes python interpreter crashes in some cases. i don't get it.
-            return dict((key, getattr(stv, key)) for key in ('f_bavail', 'f_bfree', 'f_blocks', 'f_bsize', 'f_favail', 'f_ffree', 'f_files', 'f_frsize', 'f_namemax'))
+            return dict((key, getattr(stv, key)) for key in ('f_bavail', 'f_bfree', 'f_blocks', 'f_bsize', 'f_favail',
+                                                             'f_ffree', 'f_files', 'f_frsize', 'f_namemax'))
 
     def symlink(self, target, source):
         return os.symlink(source, target)
@@ -234,7 +234,7 @@ class SDFilesystem(LoggingMixIn, Operations):
 
     def write(self, path, data, offset, fh):
         if self.readonly:
-            raise FuseOSError(errno.EPERM)
+            raise FuseOSError(errno.EROFS)
         # special check for special files
         if os.path.basename(path).startswith('.'):
             if windows:
@@ -247,7 +247,6 @@ class SDFilesystem(LoggingMixIn, Operations):
                     return os.write(fh, data)
 
         before = offset % 16
-        # after = (offset + size) % 16
         counter = Counter.new(128, initial_value=self.path_to_iv(path) + (offset >> 4))
         cipher = AES.new(self.key, AES.MODE_CTR, counter=counter)
         out_data = cipher.decrypt((b'\0' * before) + data)[before:]
@@ -270,7 +269,8 @@ if __name__ == '__main__':
     parser.add_argument('--dev', help='use dev keys', action='store_const', const=1, default=0)
     parser.add_argument('--fg', help='run in foreground', action='store_true')
     parser.add_argument('--do', help='debug output (python logging module)', action='store_true')
-    # parser.add_argument('--allow-rename', help='allow renaming of files (warning: files will be re-encrypted when renamed!)', action='store_true')
+    # parser.add_argument('--allow-rename', help='allow renaming of files (warning: files will be re-encrypted '
+    #                                            'when renamed!)', action='store_true')
     parser.add_argument('-o', metavar='OPTIONS', help='mount options')
     parser.add_argument('sd_dir', help='path to folder with SD contents (on SD: /Nintendo 3DS)')
     parser.add_argument('mount_point', help='mount point')
@@ -281,9 +281,8 @@ if __name__ == '__main__':
     except AttributeError:
         opts = {}
 
-    opts['-s'] = True
-
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
 
-    fuse = FUSE(SDFilesystem(sd_dir=a.sd_dir, movable=a.movable, dev=a.dev, readonly=a.ro), a.mount_point, foreground=a.fg or a.do, fsname=os.path.realpath(a.sd_dir), ro=a.ro, **opts)
+    fuse = FUSE(SDFilesystem(sd_dir=a.sd_dir, movable=a.movable, dev=a.dev, readonly=a.ro), a.mount_point,
+                foreground=a.fg or a.do, fsname=os.path.realpath(a.sd_dir), ro=a.ro, nothreads=True, **opts)
