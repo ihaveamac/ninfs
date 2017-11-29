@@ -10,6 +10,8 @@ import stat
 import struct
 import sys
 
+from pyctr import crypto, util
+
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ImportError:
@@ -25,27 +27,6 @@ except ImportError:
 
 # media unit
 MU = 0x200
-
-
-# since this is used often enough
-def readle(b: bytes) -> int:
-    return int.from_bytes(b, 'little')
-
-
-# since this is used often enough
-def readbe(b: bytes) -> int:
-    return int.from_bytes(b, 'big')
-
-
-# used from http://www.falatic.com/index.php/108/python-and-bitwise-rotation
-# converted to def because pycodestyle complained to me
-def rol(val: int, r_bits: int, max_bits: int) -> int:
-    return (val << r_bits % max_bits) & (2 ** max_bits - 1) |\
-           ((val & (2 ** max_bits - 1)) >> (max_bits - (r_bits % max_bits)))
-
-
-def keygen(key_x: int, key_y: int) -> bytes:
-    return rol((rol(key_x, 2, 128) ^ key_y) + 0x1FF9E9AAC5FE0408024591DC5D52768A, 87, 128).to_bytes(0x10, 'big')
 
 
 class NCCHContainer(LoggingMixIn, Operations):
@@ -79,7 +60,7 @@ class NCCHContainer(LoggingMixIn, Operations):
                         key_offset += 0x8000
                     with open(path, 'rb') as b9:
                         b9.seek(key_offset)
-                        key_x[0x2C] = int.from_bytes(b9.read(0x10), 'big')
+                        key_x[0x2C] = util.readbe(b9.read(0x10))
                         key_x[0x21] = key_x[0x2C]
                     keys_set = True
 
@@ -115,10 +96,10 @@ class NCCHContainer(LoggingMixIn, Operations):
         ncch_uses_seed = ncch_flags[7] & 0x20
 
         partition_id_raw = ncch_header[0x8:0x10]
-        partition_id = readle(partition_id_raw)
+        partition_id = util.readle(partition_id_raw)
 
         program_id_raw = ncch_header[0x18:0x20]
-        program_id = readle(program_id_raw)
+        program_id = util.readle(program_id_raw)
 
         ncch_normal_keyslot = 0x11 if ncch_fixed_key else 0x2C
         ncch_extra_crypto_flags = {0x00: 0x2C, 0x01: 0x25, 0x0A: 0x18, 0x0B: 0x1B}
@@ -135,7 +116,7 @@ class NCCHContainer(LoggingMixIn, Operations):
             # tid is bytes in little-endian
             def get_seed(f, tid):
                 f.seek(0)
-                seed_count = readle(f.read(2))
+                seed_count = util.readle(f.read(2))
                 f.seek(0x10)
                 for _ in range(seed_count):
                     entry = f.read(0x20)
@@ -162,19 +143,19 @@ class NCCHContainer(LoggingMixIn, Operations):
                         sys.exit('NCCH uses seed crypto, but seed in seeddb failed verification.')
 
             if not ncch_fixed_key:
-                self.normal_key[ncch_normal_keyslot] = keygen(key_x[ncch_normal_keyslot], readbe(key_y))
+                self.normal_key[ncch_normal_keyslot] = crypto.keygen(key_x[ncch_normal_keyslot], util.readbe(key_y))
 
                 if ncch_uses_seed:
                     keydata = hashlib.sha256(key_y + ncch_seed)
                     key_y = keydata.digest()[0:16]
 
-                self.normal_key[ncch_extra_keyslot] = keygen(key_x[ncch_extra_keyslot], readbe(key_y))
+                self.normal_key[ncch_extra_keyslot] = crypto.keygen(key_x[ncch_extra_keyslot], util.readbe(key_y))
             else:
                 # fixed system key for certain titles, zerokey for rest
                 self.normal_key[0x11] = bytes.fromhex('527CE630A9CA305F3696F3CDE954194B') if program_id & (0x10 << 32)\
                     else b'\0' * 16
 
-        self.ncch_size = readle(ncch_header[4:8]) * 0x200
+        self.ncch_size = util.readle(ncch_header[4:8]) * 0x200
 
         self.files = {'/decrypted.' + ('cxi' if ncch_is_executable else 'cfa'): {'size': self.ncch_size, 'offset': 0,
                                                                                  'enctype': 'fulldec'},
@@ -183,23 +164,23 @@ class NCCHContainer(LoggingMixIn, Operations):
         # the exh size in the header is 0x400, but the accessdesc follows it
         #   which is 0x400 too. since it isn't supposed to change size, this
         #   ignores the size and only sees if it's not 0.
-        exh_size = readle(ncch_header[0x80:0x84])
+        exh_size = util.readle(ncch_header[0x80:0x84])
         if exh_size:
             self.files['/extheader.bin'] = {'size': 0x800, 'offset': 0x200, 'enctype': 'normal',
                                             'keyslot': ncch_normal_keyslot, 'iv': (partition_id << 64) | (0x01 << 56)}
 
-        logo_offset = readle(ncch_header[0x98:0x9C])
-        logo_size = readle(ncch_header[0x9C:0xA0])
+        logo_offset = util.readle(ncch_header[0x98:0x9C])
+        logo_size = util.readle(ncch_header[0x9C:0xA0])
         if logo_offset:
             self.files['/logo.bin'] = {'size': logo_size * MU, 'offset': logo_offset * MU, 'enctype': 'none'}
 
-        plain_offset = readle(ncch_header[0x90:0x94])
-        plain_size = readle(ncch_header[0x94:0x98])
+        plain_offset = util.readle(ncch_header[0x90:0x94])
+        plain_size = util.readle(ncch_header[0x94:0x98])
         if plain_offset:
             self.files['/plain.bin'] = {'size': plain_size * MU, 'offset': plain_offset * MU, 'enctype': 'none'}
 
-        exefs_offset = readle(ncch_header[0xA0:0xA4])
-        exefs_size = readle(ncch_header[0xA4:0xA8])
+        exefs_offset = util.readle(ncch_header[0xA0:0xA4])
+        exefs_size = util.readle(ncch_header[0xA4:0xA8])
         if exefs_offset:
             self.files['/exefs.bin'] = {'size': exefs_size * MU, 'offset': exefs_offset * MU, 'enctype': 'exefs',
                                         'keyslot': ncch_normal_keyslot, 'keyslot2': ncch_extra_keyslot}
@@ -218,8 +199,8 @@ class NCCHContainer(LoggingMixIn, Operations):
                 self.files['/exefs.bin']['keyslot1range'] = exefs_normal_ranges
 
         if not ncch_no_romfs:
-            romfs_offset = readle(ncch_header[0xB0:0xB4])
-            romfs_size = readle(ncch_header[0xB4:0xB8])
+            romfs_offset = util.readle(ncch_header[0xB0:0xB4])
+            romfs_size = util.readle(ncch_header[0xB4:0xB8])
             if romfs_offset:
                 self.files['/romfs.bin'] = {'size': romfs_size * MU, 'offset': romfs_offset * MU, 'enctype': 'normal',
                                             'keyslot': ncch_extra_keyslot, 'iv': (partition_id << 64) | (0x03 << 56)}

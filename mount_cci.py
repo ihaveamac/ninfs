@@ -7,16 +7,13 @@ import os
 import stat
 import sys
 
+from pyctr import util
+
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ImportError:
     sys.exit('fuse module not found, please install fusepy to mount images '
              '(`pip3 install git+https://github.com/billziss-gh/fusepy.git`).')
-
-
-# since this is used often enough
-def readle(b: bytes) -> int:
-    return int.from_bytes(b, 'little')
 
 
 class CTRCartImage(LoggingMixIn, Operations):
@@ -39,7 +36,7 @@ class CTRCartImage(LoggingMixIn, Operations):
         if media_id == b'\0' * 8:
             sys.exit('Media ID is all-zero, is this a CCI?')
 
-        self.cci_size = readle(ncsd_header[4:8]) * 0x200
+        self.cci_size = util.readle(ncsd_header[4:8]) * 0x200
 
         # create initial virtual files
         self.files = {'/ncsd.bin': {'size': 0x200, 'offset': 0},
@@ -47,8 +44,8 @@ class CTRCartImage(LoggingMixIn, Operations):
                       '/devinfo.bin': {'size': 0x300, 'offset': 0x1200}}
 
         ncsd_part_raw = ncsd_header[0x20:0x60]
-        ncsd_partitions = [[readle(ncsd_part_raw[i:i + 4]) * 0x200,
-                            readle(ncsd_part_raw[i + 4:i + 8]) * 0x200] for i in range(0, 0x40, 0x8)]
+        ncsd_partitions = [[util.readle(ncsd_part_raw[i:i + 4]) * 0x200,
+                            util.readle(ncsd_part_raw[i + 4:i + 8]) * 0x200] for i in range(0, 0x40, 0x8)]
 
         ncsd_part_names = ['game', 'manual', 'dlp', 'unk', 'unk', 'unk', 'update_n3ds', 'update_o3ds']
         for idx, part in enumerate(ncsd_partitions):

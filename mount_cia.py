@@ -9,6 +9,8 @@ import stat
 import struct
 import sys
 
+from pyctr import crypto, util
+
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ImportError:
@@ -21,17 +23,6 @@ try:
 except ImportError:
     sys.exit('Cryptodome module not found, please install pycryptodomex for encryption support '
              '(`pip3 install pycryptodomex`).')
-
-
-# used from http://www.falatic.com/index.php/108/python-and-bitwise-rotation
-# converted to def because pycodestyle complained to me
-def rol(val: int, r_bits: int, max_bits: int) -> int:
-    return (val << r_bits % max_bits) & (2 ** max_bits - 1) |\
-           ((val & (2 ** max_bits - 1)) >> (max_bits - (r_bits % max_bits)))
-
-
-def keygen(key_x: int, key_y: int) -> bytes:
-    return rol((rol(key_x, 2, 128) ^ key_y) + 0x1FF9E9AAC5FE0408024591DC5D52768A, 87, 128).to_bytes(0x10, 'big')
 
 
 # based on http://stackoverflow.com/questions/1766535/bit-hack-round-off-to-multiple-of-8/1766566#1766566
@@ -69,7 +60,7 @@ class CTRImportableArchive(LoggingMixIn, Operations):
                         key_offset += 0x8000
                     with open(path, 'rb') as b9:
                         b9.seek(key_offset)
-                        key_x = int.from_bytes(b9.read(0x10), 'big')
+                        key_x = util.readbe(b9.read(0x10))
                     keys_set = True
 
         check_b9_file('boot9.bin')
@@ -109,13 +100,13 @@ class CTRImportableArchive(LoggingMixIn, Operations):
         common_key_index = ord(self.f.read(1))
 
         # decrypt titlekey
-        normalkey = keygen(key_x, int(common_key_y[common_key_index][dev], 16))
+        normalkey = crypto.keygen(key_x, int(common_key_y[common_key_index][dev], 16))
         cipher_titlekey = AES.new(normalkey, AES.MODE_CBC, title_id + (b'\0' * 8))
         self.titlekey = cipher_titlekey.decrypt(enc_titlekey)
 
         # get content count
         self.f.seek(tmd_offset + 0x1DE)
-        content_count = int.from_bytes(self.f.read(2), 'big')
+        content_count = util.readbe(self.f.read(2))
 
         # get offset for tmd chunks, mostly so it can be put into a tmdchunks.bin virtual file
         tmd_chunks_offset = tmd_offset + 0xB04
@@ -142,9 +133,9 @@ class CTRImportableArchive(LoggingMixIn, Operations):
         for chunk in [tmd_chunks_raw[i:i + 30] for i in range(0, content_count * 0x30, 0x30)]:
             content_id = chunk[0:4]
             content_index = chunk[4:6]
-            content_size = int.from_bytes(chunk[8:16], 'big')
-            content_is_encrypted = int.from_bytes(chunk[6:8], 'big') & 1
-            file_ext = 'nds' if content_index == b'\0\0' and int.from_bytes(title_id, 'big') >> 44 == 0x48 else 'ncch'
+            content_size = util.readbe(chunk[8:16])
+            content_is_encrypted = util.readbe(chunk[6:8]) & 1
+            file_ext = 'nds' if content_index == b'\0\0' and util.readbe(title_id) >> 44 == 0x48 else 'ncch'
             filename = '/{}.{}.{}'.format(content_index.hex(), content_id.hex(), file_ext)
             self.files[filename] = {'size': content_size, 'offset': current_offset, 'index': content_index,
                                     'type': 'enc' if content_is_encrypted else 'raw'}

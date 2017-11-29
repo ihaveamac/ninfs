@@ -9,6 +9,8 @@ import stat
 import struct
 import sys
 
+from pyctr import crypto, util
+
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ImportError:
@@ -21,17 +23,6 @@ try:
 except ImportError:
     sys.exit('Cryptodome module not found, please install pycryptodomex for encryption support '
              '(`pip3 install pycryptodomex`).')
-
-
-# used from http://www.falatic.com/index.php/108/python-and-bitwise-rotation
-# converted to def because pycodestyle complained to me
-def rol(val: int, r_bits: int, max_bits: int) -> int:
-    return (val << r_bits % max_bits) & (2 ** max_bits - 1) |\
-           ((val & (2 ** max_bits - 1)) >> (max_bits - (r_bits % max_bits)))
-
-
-def keygen(key_x: int, key_y: int) -> bytes:
-    return rol((rol(key_x, 2, 128) ^ key_y) + 0x1FF9E9AAC5FE0408024591DC5D52768A, 87, 128).to_bytes(0x10, 'big')
 
 
 # these would have to be obtained from Process9 and that's annoying.
@@ -69,7 +60,7 @@ class CDNContents(LoggingMixIn, Operations):
                         key_offset += 0x8000
                     with open(path, 'rb') as b9:
                         b9.seek(key_offset)
-                        key_x = int.from_bytes(b9.read(0x10), 'big')
+                        key_x = util.readbe(b9.read(0x10))
                     keys_set = True
 
         check_b9_file('boot9.bin')
@@ -93,7 +84,7 @@ class CDNContents(LoggingMixIn, Operations):
             tmd.seek(0x18C)
             title_id = tmd.read(8)
             tmd.seek(0x1DE)
-            content_count = int.from_bytes(tmd.read(2), 'big')
+            content_count = util.readbe(tmd.read(2))
             tmd_chunks_size = content_count * 0x30
 
             tmd.seek(0xB04)
@@ -120,7 +111,7 @@ class CDNContents(LoggingMixIn, Operations):
                 common_key_index = ord(tik.read(1))
 
             # decrypt titlekey
-            normal_key = keygen(key_x, int(common_key_y[common_key_index][dev], 16))
+            normal_key = crypto.keygen(key_x, int(common_key_y[common_key_index][dev], 16))
             cipher_titlekey = AES.new(normal_key, AES.MODE_CBC, title_id + (b'\0' * 8))
             self.titlekey = cipher_titlekey.decrypt(enc_titlekey)
 
@@ -143,13 +134,13 @@ class CDNContents(LoggingMixIn, Operations):
             else:
                 print('Content {}:{} not found, will not be included.'.format(content_index.hex(), content_id.hex()))
                 continue
-            content_size = int.from_bytes(chunk[8:16], 'big')
+            content_size = util.readbe(chunk[8:16])
             filesize = os.path.getsize(self.rp(real_filename))
             if content_size != filesize:
                 print('Warning: TMD Content size and filesize of {} are different.'.format(content_id.hex()))
             self.cdn_content_size += content_size
-            content_is_encrypted = int.from_bytes(chunk[6:8], 'big') & 1
-            file_ext = 'nds' if content_index == b'\0\0' and int.from_bytes(title_id, 'big') >> 44 == 0x48 else 'ncch'
+            content_is_encrypted = util.readbe(chunk[6:8]) & 1
+            file_ext = 'nds' if content_index == b'\0\0' and util.readbe(title_id) >> 44 == 0x48 else 'ncch'
             filename = '/{}.{}.{}'.format(content_index.hex(), content_id.hex(), file_ext)
             self.files[filename] = {'size': content_size, 'offset': 0, 'index': content_index,
                                     'type': 'enc' if content_is_encrypted else 'raw',

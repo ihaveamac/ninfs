@@ -11,6 +11,8 @@ import struct
 import sys
 from threading import Lock
 
+from pyctr import crypto, util
+
 windows = os.name == 'nt'
 if windows:
     from ctypes import windll, wintypes
@@ -29,22 +31,11 @@ except ImportError:
              '(`pip3 install pycryptodomex`).')
 
 
-# used from http://www.falatic.com/index.php/108/python-and-bitwise-rotation
-# converted to def because pycodestyle complained to me
-def rol(val: int, r_bits: int, max_bits: int) -> int:
-    return (val << r_bits % max_bits) & (2 ** max_bits - 1) |\
-           ((val & (2 ** max_bits - 1)) >> (max_bits - (r_bits % max_bits)))
-
-
-def keygen(key_x: int, key_y: int) -> bytes:
-    return rol((rol(key_x, 2, 128) ^ key_y) + 0x1FF9E9AAC5FE0408024591DC5D52768A, 87, 128).to_bytes(0x10, 'big')
-
-
 class SDFilesystem(LoggingMixIn, Operations):
     def path_to_iv(self, path):
         path_hash = hashlib.sha256(path[self.root_len + 33:].lower().encode('utf-16le') + b'\0\0').digest()
-        hash_p1 = int.from_bytes(path_hash[0:16], 'big')
-        hash_p2 = int.from_bytes(path_hash[16:32], 'big')
+        hash_p1 = util.readbe(path_hash[0:16])
+        hash_p2 = util.readbe(path_hash[16:32])
         return hash_p1 ^ hash_p2
 
     fd = 0
@@ -64,7 +55,7 @@ class SDFilesystem(LoggingMixIn, Operations):
                         key_offset += 0x8000
                     with open(path, 'rb') as b9:
                         b9.seek(key_offset)
-                        key_x = int.from_bytes(b9.read(0x10), 'big')
+                        key_x = util.readbe(b9.read(0x10))
                     keys_set = True
 
         check_b9_file('boot9.bin')
@@ -88,7 +79,7 @@ class SDFilesystem(LoggingMixIn, Operations):
 
         print('Root dir: {}'.format(root_dir))
 
-        self.key = keygen(key_x, int.from_bytes(key_y, 'big'))
+        self.key = crypto.keygen(key_x, util.readbe(key_y))
         print('Key:      {}'.format(self.key.hex()))
 
         self.root = os.path.realpath(sd_dir + '/' + root_dir)

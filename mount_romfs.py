@@ -10,16 +10,13 @@ import stat
 import struct
 import sys
 
+from pyctr import util
+
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ImportError:
     sys.exit('fuse module not found, please install fusepy to mount images '
              '(`pip3 install git+https://github.com/billziss-gh/fusepy.git`).')
-
-
-# since this is used often enough
-def readle(b: bytes) -> int:
-    return int.from_bytes(b, 'little')
 
 
 def roundup(offset: int, alignment: int) -> int:
@@ -60,8 +57,8 @@ class RomFS(LoggingMixIn, Operations):
             sys.exit('IVFC magic not found, is this a RomFS?')
 
         # get the offset of lv3 which is where the contents are
-        master_hash_size = readle(ivfc_header[0x8:0xC])
-        lv3_blocksize = readle(ivfc_header[0x4C:0x50])
+        master_hash_size = util.readle(ivfc_header[0x8:0xC])
+        lv3_blocksize = util.readle(ivfc_header[0x4C:0x50])
         lv3_hashblocksize = 1 << lv3_blocksize
         self.body_offset = roundup(0x60 + master_hash_size, lv3_hashblocksize)
 
@@ -71,13 +68,13 @@ class RomFS(LoggingMixIn, Operations):
         # TODO: verify using https://github.com/d0k3/GodMode9/blob/26acfc4cff1e6314af62013e0e019210e7bc2c8d/source/game/romfs.c#L4-L12
         self.f.seek(self.body_offset)
         romfs_header = self.f.read(0x28)
-        dirmeta_offset = readle(romfs_header[0xC:0x10])
-        filemeta_offset = readle(romfs_header[0x1C:0x20])
-        filedata_offset = readle(romfs_header[0x24:0x28])
+        dirmeta_offset = util.readle(romfs_header[0xC:0x10])
+        filemeta_offset = util.readle(romfs_header[0x1C:0x20])
+        filedata_offset = util.readle(romfs_header[0x24:0x28])
 
         def iterate_dir(out, raw_metadata):
-            first_child_dir = readle(raw_metadata[0x8:0xC])
-            first_file = readle(raw_metadata[0xC:0x10])
+            first_child_dir = util.readle(raw_metadata[0x8:0xC])
+            first_file = util.readle(raw_metadata[0xC:0x10])
 
             out['type'] = 'dir'
             out['contents'] = {}
@@ -87,8 +84,8 @@ class RomFS(LoggingMixIn, Operations):
                 self.f.seek(self.body_offset + dirmeta_offset + first_child_dir)
                 while True:
                     child_dir_meta = self.f.read(0x18)
-                    next_sibling_dir = readle(child_dir_meta[0x4:0x8])
-                    child_dir_filename = self.f.read(readle(child_dir_meta[0x14:0x18])).decode('utf-16le')
+                    next_sibling_dir = util.readle(child_dir_meta[0x4:0x8])
+                    child_dir_filename = self.f.read(util.readle(child_dir_meta[0x14:0x18])).decode('utf-16le')
                     out['contents'][child_dir_filename] = {}
 
                     iterate_dir(out['contents'][child_dir_filename], child_dir_meta)
@@ -101,10 +98,10 @@ class RomFS(LoggingMixIn, Operations):
                 self.f.seek(self.body_offset + filemeta_offset + first_file)
                 while True:
                     child_file_meta = self.f.read(0x20)
-                    next_sibling_file = readle(child_file_meta[0x4:0x8])
-                    child_file_offset = readle(child_file_meta[0x8:0x10])
-                    child_file_size = readle(child_file_meta[0x10:0x18])
-                    child_file_filename = self.f.read(readle(child_file_meta[0x1C:0x20])).decode('utf-16le')
+                    next_sibling_file = util.readle(child_file_meta[0x4:0x8])
+                    child_file_offset = util.readle(child_file_meta[0x8:0x10])
+                    child_file_size = util.readle(child_file_meta[0x10:0x18])
+                    child_file_filename = self.f.read(util.readle(child_file_meta[0x1C:0x20])).decode('utf-16le')
                     child_file_offset = self.body_offset + filedata_offset + child_file_offset
                     out['contents'][child_file_filename] = {'type': 'file', 'offset': child_file_offset,
                                                             'size': child_file_size}

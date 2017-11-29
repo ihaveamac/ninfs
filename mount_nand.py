@@ -9,6 +9,8 @@ import stat
 import struct
 import sys
 
+from pyctr import crypto, util
+
 windows = os.name == 'nt'
 
 try:
@@ -28,22 +30,7 @@ except ImportError:
 nand_size = {0x200000: 0x3AF00000, 0x280000: 0x4D800000}
 
 
-# used from http://www.falatic.com/index.php/108/python-and-bitwise-rotation
-# converted to def because pycodestyle complained to me
-def rol(val: int, r_bits: int, max_bits: int) -> int:
-    return (val << r_bits % max_bits) & (2 ** max_bits - 1) |\
-           ((val & (2 ** max_bits - 1)) >> (max_bits - (r_bits % max_bits)))
-
-
-def keygen(key_x: int, key_y: int) -> bytes:
-    return rol((rol(key_x, 2, 128) ^ key_y) + 0x1FF9E9AAC5FE0408024591DC5D52768A, 87, 128).to_bytes(0x10, 'big')
-
-
-def keygen_twl(key_x: int, key_y: int) -> bytes:
-    # usually would convert to LE bytes in the end then flip with [::-1], but those just cancel out
-    return rol((key_x ^ key_y) + 0xFFFEFB4E295902582A680F5F1A4F3E79, 42, 128).to_bytes(0x10, 'big')
-
-
+# TODO: move to pyctr.crypto, along with other crypto tools
 # https://github.com/Stary2001/3ds_tools/blob/94614f3b80e6f4d32c5ec4596424dccfaad32774/three_ds/crypto_wrappers.py#L38-L50
 def aes_ctr_dsi(key: bytes, ctr: int, data: bytes) -> bytes:
     data_len = len(data)
@@ -141,8 +128,8 @@ class NANDImage(LoggingMixIn, Operations):
                     sys.exit('Failed to convert CID to bytes, or file did not exist.')
                 if len(cid) != 0x10:
                     sys.exit('CID is not 16 bytes.')
-                self.ctr = int.from_bytes(hashlib.sha256(cid).digest()[0:16], 'big')
-                self.ctr_twl = int.from_bytes(hashlib.sha1(cid).digest()[0:16], 'little')
+                self.ctr = util.readbe(hashlib.sha256(cid).digest()[0:16])
+                self.ctr_twl = util.readle(hashlib.sha1(cid).digest()[0:16])
             else:
                 sys.exit('NAND CID not found, provide cid with --cid (or embed essentials backup with GodMode9)')
         else:
@@ -153,8 +140,8 @@ class NANDImage(LoggingMixIn, Operations):
                     sys.exit('NAND CID not found, provide cid with --cid (or embed essentials backup with GodMode9)')
             else:
                 essentials_headers = [[essentials_headers_raw[i:i + 8].decode('utf-8').rstrip('\0'),
-                                       int.from_bytes(essentials_headers_raw[i + 8:i + 12], 'little'),
-                                       int.from_bytes(essentials_headers_raw[i + 12:i + 16], 'little')]
+                                       util.readle(essentials_headers_raw[i + 8:i + 12]),
+                                       util.readle(essentials_headers_raw[i + 12:i + 16])]
                                       for i in range(0, 0xA0, 0x10)]
                 for header in essentials_headers:
                     if header[0] == 'otp':
@@ -163,8 +150,8 @@ class NANDImage(LoggingMixIn, Operations):
                     elif header[0] == 'nand_cid':
                         self.f.seek(0x400 + header[1])
                         cid = self.f.read(header[2])
-                        self.ctr = int.from_bytes(hashlib.sha256(cid).digest()[0:16], 'big')
-                        self.ctr_twl = int.from_bytes(hashlib.sha1(cid).digest()[0:16], 'little')
+                        self.ctr = util.readbe(hashlib.sha256(cid).digest()[0:16])
+                        self.ctr_twl = util.readle(hashlib.sha1(cid).digest()[0:16])
                 if not (otp or cid):
                     sys.exit('otp and nand_cid somehow not found in essentials backup. update with GodMode9 or '
                              'provide OTP/NAND CID with --otp/--cid.')
@@ -191,7 +178,7 @@ class NANDImage(LoggingMixIn, Operations):
 
         twl_key_x = twl_cid_lo + b'NINTENDO' + twl_cid_hi
         twl_key_y = bytes.fromhex('76DCB90AD3C44DBD1DDD2D200500A0E1')
-        twl_normalkey = keygen_twl(int.from_bytes(twl_key_x, 'little'), int.from_bytes(twl_key_y, 'little'))
+        twl_normalkey = crypto.keygen_twl(util.readle(twl_key_x), util.readle(twl_key_y))
         keyslots_y[0x03] = twl_key_y
 
         # only keys for slots 0x04-0x07 are used, and keyX for all of them are
@@ -199,9 +186,9 @@ class NANDImage(LoggingMixIn, Operations):
         # thanks Stary2001 (from 3ds_tools)
         tmp_otp_data = otp[0x90:0xAC] + boot9_extdata_otp
         console_key_xy = hashlib.sha256(tmp_otp_data).digest()
-        console_key_x = int.from_bytes(console_key_xy[0:16], 'big')
-        console_key_y = int.from_bytes(console_key_xy[16:32], 'big')
-        console_normalkey = keygen(console_key_x, console_key_y)
+        console_key_x = util.readbe(console_key_xy[0:16])
+        console_key_y = util.readbe(console_key_xy[16:32])
+        console_normalkey = crypto.keygen(console_key_x, console_key_y)
         nand_info += 'Keyslot 0x3f KeyX: {:032x}\n'.format(console_key_x)
         nand_info += 'Keyslot 0x3f KeyY: {:032x}\n\n'.format(console_key_y)
 
@@ -211,10 +198,10 @@ class NANDImage(LoggingMixIn, Operations):
         # starting at 0x04
         self.keyslots = {
             0x03: twl_normalkey,
-            0x04: keygen(int.from_bytes(key_x, 'big'), int.from_bytes(keyslots_y[0x04], 'big')),
-            0x05: keygen(int.from_bytes(key_x, 'big'), int.from_bytes(keyslots_y[0x05], 'big')),
-            0x06: keygen(int.from_bytes(key_x, 'big'), int.from_bytes(keyslots_y[0x06], 'big')),
-            0x07: keygen(int.from_bytes(key_x, 'big'), int.from_bytes(keyslots_y[0x07], 'big'))
+            0x04: crypto.keygen(util.readbe(key_x), util.readbe(keyslots_y[0x04])),
+            0x05: crypto.keygen(util.readbe(key_x), util.readbe(keyslots_y[0x05])),
+            0x06: crypto.keygen(util.readbe(key_x), util.readbe(keyslots_y[0x06])),
+            0x07: crypto.keygen(util.readbe(key_x), util.readbe(keyslots_y[0x07]))
         }
 
         nand_info += 'KeyX: {}\n'.format(key_x.hex())
@@ -231,7 +218,7 @@ class NANDImage(LoggingMixIn, Operations):
         self.f.seek(0, 2)
         raw_nand_size = self.f.tell()
 
-        self.real_nand_size = nand_size[int.from_bytes(ncsd_header[4:8], 'little')]
+        self.real_nand_size = nand_size[util.readle(ncsd_header[4:8])]
 
         self.files = {'/nand_hdr.bin': {'size': 0x200, 'offset': 0, 'keyslot': 0xFF, 'type': 'raw'},
                       '/nand.bin': {'size': raw_nand_size, 'offset': 0, 'keyslot': 0xFF, 'type': 'raw'},
@@ -242,7 +229,7 @@ class NANDImage(LoggingMixIn, Operations):
         if keysect_enc != b'\0' * 0x200 and keysect_enc != b'\xFF' * 0x200:
             keysect_x = otp_keysect_hash[0:16]
             keysect_y = otp_keysect_hash[16:32]
-            self.keysect_key = keygen(int.from_bytes(keysect_x, 'big'), int.from_bytes(keysect_y, 'big'))
+            self.keysect_key = crypto.keygen(util.readbe(keysect_x), util.readbe(keysect_y))
             cipher_keysect = AES.new(self.keysect_key, AES.MODE_ECB)
             keysect_dec = cipher_keysect.decrypt(keysect_enc)
             # i'm cheating here by putting the decrypted version in memory and
@@ -254,13 +241,13 @@ class NANDImage(LoggingMixIn, Operations):
         ncsd_part_fstype = ncsd_header[0x10:0x18]
         ncsd_part_crypttype = ncsd_header[0x18:0x20]
         ncsd_part_raw = ncsd_header[0x20:0x60]
-        ncsd_partitions = [[int.from_bytes(ncsd_part_raw[i:i + 4], 'little') * 0x200,
-                            int.from_bytes(ncsd_part_raw[i + 4:i + 8], 'little') * 0x200] for i in range(0, 0x40, 0x8)]
+        ncsd_partitions = [[util.readle(ncsd_part_raw[i:i + 4]) * 0x200,
+                            util.readle(ncsd_part_raw[i + 4:i + 8]) * 0x200] for i in range(0, 0x40, 0x8)]
 
         # including padding for crypto
         twl_mbr = aes_ctr_dsi(twl_normalkey, self.ctr_twl + 0x1B, ncsd_header[0xB0:0x100])[0xE:0x50]
-        twl_partitions = [[int.from_bytes(twl_mbr[i + 8:i + 12], 'little') * 0x200,
-                           int.from_bytes(twl_mbr[i + 12:i + 16], 'little') * 0x200] for i in range(0, 0x40, 0x10)]
+        twl_partitions = [[util.readle(twl_mbr[i + 8:i + 12]) * 0x200,
+                           util.readle(twl_mbr[i + 12:i + 16]) * 0x200] for i in range(0, 0x40, 0x10)]
 
         self.files['/twlmbr.bin'] = {'size': 0x42, 'offset': 0x1BE, 'keyslot': 0x03, 'type': 'twlmbr',
                                      'content': twl_mbr}
@@ -341,8 +328,8 @@ class NANDImage(LoggingMixIn, Operations):
                     counter = Counter.new(128, initial_value=iv)
                     cipher = AES.new(self.keyslots[ctrnand_keyslot], AES.MODE_CTR, counter=counter)
                     ctr_mbr = cipher.decrypt(self.f.read(0x200))[0x1BE:0x1FE]
-                    ctr_partitions = [[int.from_bytes(ctr_mbr[i + 8:i + 12], 'little') * 0x200,
-                                       int.from_bytes(ctr_mbr[i + 12:i + 16], 'little') * 0x200]
+                    ctr_partitions = [[util.readle(ctr_mbr[i + 8:i + 12]) * 0x200,
+                                       util.readle(ctr_mbr[i + 12:i + 16]) * 0x200]
                                       for i in range(0, 0x40, 0x10)]
                     nand_info += 'CTR Partitions:\n'
                     ctr_part_fstype = 0
