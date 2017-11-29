@@ -13,15 +13,16 @@ import sys
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ImportError:
-    sys.exit('fuse module not found, please install fusepy to mount images (`pip3 install git+https://github.com/billziss-gh/fusepy.git`).')
+    sys.exit('fuse module not found, please install fusepy to mount images '
+             '(`pip3 install git+https://github.com/billziss-gh/fusepy.git`).')
 
 
 # since this is used often enough
-def readle(b):
+def readle(b: bytes) -> int:
     return int.from_bytes(b, 'little')
 
 
-def roundup(offset, alignment):
+def roundup(offset: int, alignment: int) -> int:
     return math.ceil(offset / alignment) * alignment
 
 
@@ -44,10 +45,8 @@ class RomFS(LoggingMixIn, Operations):
     def __init__(self, romfs):
         # get status change, modify, and file access times
         romfs_stat = os.stat(romfs)
-        self.g_stat = {}
-        self.g_stat['st_ctime'] = int(romfs_stat.st_ctime)
-        self.g_stat['st_mtime'] = int(romfs_stat.st_mtime)
-        self.g_stat['st_atime'] = int(romfs_stat.st_atime)
+        self.g_stat = {'st_ctime': int(romfs_stat.st_ctime), 'st_mtime': int(romfs_stat.st_mtime),
+                       'st_atime': int(romfs_stat.st_atime)}
 
         self.romfs_size = os.path.getsize(romfs)
 
@@ -73,16 +72,12 @@ class RomFS(LoggingMixIn, Operations):
         self.f.seek(self.body_offset)
         romfs_header = self.f.read(0x28)
         dirmeta_offset = readle(romfs_header[0xC:0x10])
-        dirmeta_size = readle(romfs_header[0x10:0x14])
         filemeta_offset = readle(romfs_header[0x1C:0x20])
-        filemeta_size = readle(romfs_header[0x20:0x24])
         filedata_offset = readle(romfs_header[0x24:0x28])
 
         def iterate_dir(out, raw_metadata):
-            next_sibling_dir = readle(raw_metadata[0x4:0x8])
             first_child_dir = readle(raw_metadata[0x8:0xC])
             first_file = readle(raw_metadata[0xC:0x10])
-            next_dir = readle(raw_metadata[0x10:0x14])
 
             out['type'] = 'dir'
             out['contents'] = {}
@@ -110,7 +105,9 @@ class RomFS(LoggingMixIn, Operations):
                     child_file_offset = readle(child_file_meta[0x8:0x10])
                     child_file_size = readle(child_file_meta[0x10:0x18])
                     child_file_filename = self.f.read(readle(child_file_meta[0x1C:0x20])).decode('utf-16le')
-                    out['contents'][child_file_filename] = {'type': 'file', 'offset': self.body_offset + filedata_offset + child_file_offset, 'size': child_file_size}
+                    child_file_offset = self.body_offset + filedata_offset + child_file_offset
+                    out['contents'][child_file_filename] = {'type': 'file', 'offset': child_file_offset,
+                                                            'size': child_file_size}
                     if next_sibling_file == 0xFFFFFFFF:
                         break
                     self.f.seek(self.body_offset + filemeta_offset + next_sibling_file)
@@ -127,24 +124,6 @@ class RomFS(LoggingMixIn, Operations):
         except AttributeError:
             pass
 
-    def access(self, path, mode):
-        pass
-
-    # unused
-    def chmod(self, *args, **kwargs):
-        return None
-
-    # unused
-    def chown(self, *args, **kwargs):
-        return None
-
-    def create(self, *args, **kwargs):
-        self.fd += 1
-        return self.fd
-
-    def flush(self, path, fh):
-        return self.f.flush()
-
     def getattr(self, path, fh=None):
         uid, gid, pid = fuse_get_context()
         item = self._get_item(path)
@@ -156,14 +135,6 @@ class RomFS(LoggingMixIn, Operations):
             # this won't happen unless I fucked up
             raise FuseOSError(errno.ENOENT)
         return {**st, **self.g_stat, 'st_uid': uid, 'st_gid': gid}
-
-    # unused
-    def mkdir(self, *args, **kwargs):
-        return None
-
-    # unused
-    def mknod(self, *args, **kwargs):
-        return None
 
     def open(self, path, flags):
         self.fd += 1
@@ -178,49 +149,10 @@ class RomFS(LoggingMixIn, Operations):
         self.f.seek(item['offset'] + offset)
         return self.f.read(size)
 
-    # unused
-    def readlink(self, *args, **kwargs):
-        return None
-
-    # unused
-    def release(self, *args, **kwargs):
-        return None
-
-    # unused
-    def releasedir(self, *args, **kwargs):
-        return None
-
-    # unused
-    def rename(self, *args, **kwargs):
-        return None
-
-    # unused
-    def rmdir(self, *args, **kwargs):
-        return None
-
     def statfs(self, path):
         item = self._get_item(path)
-        return {'f_bsize': 4096, 'f_blocks': self.romfs_size // 4096, 'f_bavail': 0, 'f_bfree': 0, 'f_files': len(item['contents'])}
-
-    # unused
-    def symlink(self, target, source):
-        pass
-
-    # unused
-    # if this is set to None, some programs may crash.
-    def truncate(self, path, length, fh=None):
-        raise FuseOSError(errno.EPERM)
-
-    # unused
-    def utimens(self, *args, **kwargs):
-        return None
-
-    # unused
-    def unlink(self, path):
-        return None
-
-    def write(self, path, data, offset, fh):
-        raise FuseOSError(errno.EPERM)
+        return {'f_bsize': 4096, 'f_blocks': self.romfs_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
+                'f_files': len(item['contents'])}
 
 
 if __name__ == '__main__':
@@ -237,9 +169,8 @@ if __name__ == '__main__':
     except AttributeError:
         opts = {}
 
-    opts['-s'] = True
-
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
 
-    fuse = FUSE(RomFS(romfs=a.romfs), a.mount_point, foreground=a.fg or a.do, fsname=os.path.realpath(a.romfs), ro=True, **opts)
+    fuse = FUSE(RomFS(romfs=a.romfs), a.mount_point, foreground=a.fg or a.do, fsname=os.path.realpath(a.romfs),
+                ro=True, nothreads=True, **opts)
