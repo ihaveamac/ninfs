@@ -7,4 +7,4 @@ def readle(b: bytes) -> int:
 
 def readbe(b: bytes) -> int:
     """Return big-endian bytes to an int."""
-    return int.from_bytes(b, 'little')
+    return int.from_bytes(b, 'big')
