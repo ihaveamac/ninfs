@@ -45,15 +45,19 @@ class RomFSReader:
         self._filedata_offset = filedata_offset
 
     def get_dirmeta_region(self):
+        """Get the offset and size of the Directory Metadata region."""
         return RomFSRegion(offset=self._dirmeta_offset, size=self._dirmeta_size)
 
     def get_filemeta_region(self):
+        """Get the offset and size of the File Metadata region."""
         return RomFSRegion(offset=self._filemeta_offset, size=self._filemeta_size)
 
     def get_filedata_offset(self):
+        """Get the offset of the File Data region."""
         return self._filedata_offset
 
     def get_info_from_path(self, path):
+        """Get a directory or file entry"""
         curr = self._root
         if path[0] == '/':
             path = path[1:]
@@ -72,6 +76,7 @@ class RomFSReader:
     @staticmethod
     def validate_lv3_header(length: int, dirhash: dict, dirmeta: dict, filehash: dict, filemeta: dict,
                             filedata_offset: int):
+        """Validate Level 3 header."""
         if length != ROMFS_LV3_HEADER_SIZE:
             raise InvalidRomFSHeaderException("Length in RomFS Lv3 header is not 0x28")
         if dirhash['offset'] < length:
@@ -87,7 +92,8 @@ class RomFSReader:
             raise InvalidRomFSHeaderException("File Data offset is before the end of the File Metadata region")
 
     @classmethod
-    def from_lv3_header(cls, header: bytes):
+    def from_lv3_header(cls, header: bytes) -> 'RomFSReader':
+        """Create a RomFSReader from a Level 3 header."""
         header_length = len(header)
         if header_length < ROMFS_LV3_HEADER_SIZE:
             raise InvalidRomFSHeaderException("RomFS Lv3 given header length is too short "
@@ -106,6 +112,7 @@ class RomFSReader:
         return cls(dirmeta=lv3_dirmeta, filemeta=lv3_filemeta, filedata_offset=lv3_filedata_offset)
 
     def parse_metadata(self, raw_dirmeta: bytes, raw_filemeta: bytes):
+        """Parse raw Directory and File Metadata to generate a file tree."""
         dirmeta_io = BytesIO(raw_dirmeta)
         filemeta_io = BytesIO(raw_filemeta)
 
