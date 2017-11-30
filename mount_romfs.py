@@ -10,7 +10,7 @@ import stat
 import struct
 import sys
 
-from pyctr import util
+from pyctr import romfs, util
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
@@ -19,101 +19,38 @@ except ImportError:
              '(`pip3 install git+https://github.com/billziss-gh/fusepy.git`).')
 
 
-def roundup(offset: int, alignment: int) -> int:
-    return math.ceil(offset / alignment) * alignment
-
-
 class RomFS(LoggingMixIn, Operations):
     fd = 0
 
-    def _get_item(self, path):
-        curr = self.root
-        if path[0] == '/':
-            path = path[1:]
-        for part in path.split('/'):
-            if part == '':
-                return curr
-            try:
-                curr = curr['contents'][part]
-            except KeyError:
-                raise FuseOSError(errno.ENOENT)
-        return curr
-
-    def __init__(self, romfs):
+    def __init__(self, romfs_file):
         # get status change, modify, and file access times
-        romfs_stat = os.stat(romfs)
+        romfs_stat = os.stat(romfs_file)
         self.g_stat = {'st_ctime': int(romfs_stat.st_ctime), 'st_mtime': int(romfs_stat.st_mtime),
                        'st_atime': int(romfs_stat.st_atime)}
 
-        self.romfs_size = os.path.getsize(romfs)
+        self.romfs_size = os.path.getsize(romfs_file)
 
-        # open file, read IVFC header and verify
-        self.f = open(romfs, 'rb')
-        ivfc_header = self.f.read(0x60)
-        if ivfc_header[0:4] != b'IVFC':
-            # TODO: maybe handle lv3 that starts at offset 0. this may happen
-            #   since a 3DSX romfs does not have the IVFC header. also, HANS
-            #   once required it be removed to be used as a replacement.
-            sys.exit('IVFC magic not found, is this a RomFS?')
+        # open file, read IVFC header for lv3 offset
+        self.f = open(romfs_file, 'rb')
+        ivfc_header = self.f.read(romfs.IVFC_HEADER_SIZE)
+        lv3_offset = romfs.get_lv3_offset_from_ivfc(ivfc_header)
 
-        # get the offset of lv3 which is where the contents are
-        master_hash_size = util.readle(ivfc_header[0x8:0xC])
-        lv3_blocksize = util.readle(ivfc_header[0x4C:0x50])
-        lv3_hashblocksize = 1 << lv3_blocksize
-        self.body_offset = roundup(0x60 + master_hash_size, lv3_hashblocksize)
+        self.f.seek(lv3_offset)
+        lv3_header = self.f.read(romfs.ROMFS_LV3_HEADER_SIZE)
+        self.romfs_reader = romfs.RomFSReader.from_lv3_header(lv3_header)
 
-        # read RomFS lv3 header
-        # only lv3 is necessary when reading files. the others are just for
-        #   hash verification I think.
-        # TODO: verify using https://github.com/d0k3/GodMode9/blob/26acfc4cff1e6314af62013e0e019210e7bc2c8d/source/game/romfs.c#L4-L12
-        self.f.seek(self.body_offset)
-        romfs_header = self.f.read(0x28)
-        dirmeta_offset = util.readle(romfs_header[0xC:0x10])
-        filemeta_offset = util.readle(romfs_header[0x1C:0x20])
-        filedata_offset = util.readle(romfs_header[0x24:0x28])
+        dirmeta_region = self.romfs_reader.get_dirmeta_region()
+        filemeta_region = self.romfs_reader.get_filemeta_region()
+        filedata_offset = self.romfs_reader.get_filedata_offset()
 
-        def iterate_dir(out, raw_metadata):
-            first_child_dir = util.readle(raw_metadata[0x8:0xC])
-            first_file = util.readle(raw_metadata[0xC:0x10])
+        self.data_offset = lv3_offset + filedata_offset
 
-            out['type'] = 'dir'
-            out['contents'] = {}
+        self.f.seek(lv3_offset + dirmeta_region.offset)
+        dirmeta = self.f.read(dirmeta_region.size)
+        self.f.seek(lv3_offset + filemeta_region.offset)
+        filemeta = self.f.read(filemeta_region.size)
 
-            # iterate through all child dirs
-            if first_child_dir != 0xFFFFFFFF:
-                self.f.seek(self.body_offset + dirmeta_offset + first_child_dir)
-                while True:
-                    child_dir_meta = self.f.read(0x18)
-                    next_sibling_dir = util.readle(child_dir_meta[0x4:0x8])
-                    child_dir_filename = self.f.read(util.readle(child_dir_meta[0x14:0x18])).decode('utf-16le')
-                    out['contents'][child_dir_filename] = {}
-
-                    iterate_dir(out['contents'][child_dir_filename], child_dir_meta)
-                    if next_sibling_dir == 0xFFFFFFFF:
-                        break
-                    self.f.seek(self.body_offset + dirmeta_offset + next_sibling_dir)
-
-            # iterate through all files
-            if first_file != 0xFFFFFFFF:
-                self.f.seek(self.body_offset + filemeta_offset + first_file)
-                while True:
-                    child_file_meta = self.f.read(0x20)
-                    next_sibling_file = util.readle(child_file_meta[0x4:0x8])
-                    child_file_offset = util.readle(child_file_meta[0x8:0x10])
-                    child_file_size = util.readle(child_file_meta[0x10:0x18])
-                    child_file_filename = self.f.read(util.readle(child_file_meta[0x1C:0x20])).decode('utf-16le')
-                    child_file_offset = self.body_offset + filedata_offset + child_file_offset
-                    out['contents'][child_file_filename] = {'type': 'file', 'offset': child_file_offset,
-                                                            'size': child_file_size}
-                    if next_sibling_file == 0xFFFFFFFF:
-                        break
-                    self.f.seek(self.body_offset + filemeta_offset + next_sibling_file)
-
-        # create root dictionary
-        self.root = {}
-        self.f.seek(self.body_offset + dirmeta_offset)
-        root_meta = self.f.read(0x18)
-        iterate_dir(self.root, root_meta)
+        self.romfs_reader.parse_metadata(dirmeta, filemeta)
 
     def __del__(self):
         try:
@@ -123,11 +60,14 @@ class RomFS(LoggingMixIn, Operations):
 
     def getattr(self, path, fh=None):
         uid, gid, pid = fuse_get_context()
-        item = self._get_item(path)
-        if item['type'] == 'dir':
+        try:
+            item = self.romfs_reader.get_info_from_path(path)
+        except romfs.RomFSFileNotFoundException:
+            raise FuseOSError(errno.ENOENT)
+        if item.type == 'dir':
             st = {'st_mode': (stat.S_IFDIR | 0o555), 'st_nlink': 2}
-        elif item['type'] == 'file':
-            st = {'st_mode': (stat.S_IFREG | 0o444), 'st_size': item['size'], 'st_nlink': 1}
+        elif item.type == 'file':
+            st = {'st_mode': (stat.S_IFREG | 0o444), 'st_size': item.size, 'st_nlink': 1}
         else:
             # this won't happen unless I fucked up
             raise FuseOSError(errno.ENOENT)
@@ -138,18 +78,27 @@ class RomFS(LoggingMixIn, Operations):
         return self.fd
 
     def readdir(self, path, fh):
-        item = self._get_item(path)
-        return ['.', '..', *item['contents'].keys()]
+        try:
+            item = self.romfs_reader.get_info_from_path(path)
+        except romfs.RomFSFileNotFoundException:
+            raise FuseOSError(errno.ENOENT)
+        return ['.', '..', *item.contents]
 
     def read(self, path, size, offset, fh):
-        item = self._get_item(path)
-        self.f.seek(item['offset'] + offset)
+        try:
+            item = self.romfs_reader.get_info_from_path(path)
+        except romfs.RomFSFileNotFoundException:
+            raise FuseOSError(errno.ENOENT)
+        self.f.seek(self.data_offset + item.offset + offset)
         return self.f.read(size)
 
     def statfs(self, path):
-        item = self._get_item(path)
+        try:
+            item = self.romfs_reader.get_info_from_path(path)
+        except romfs.RomFSFileNotFoundException:
+            raise FuseOSError(errno.ENOENT)
         return {'f_bsize': 4096, 'f_blocks': self.romfs_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
-                'f_files': len(item['contents'])}
+                'f_files': len(item.contents)}
 
 
 if __name__ == '__main__':
@@ -169,5 +118,5 @@ if __name__ == '__main__':
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
 
-    fuse = FUSE(RomFS(romfs=a.romfs), a.mount_point, foreground=a.fg or a.do, fsname=os.path.realpath(a.romfs),
+    fuse = FUSE(RomFS(romfs_file=a.romfs), a.mount_point, foreground=a.fg or a.do, fsname=os.path.realpath(a.romfs),
                 ro=True, nothreads=True, **opts)
