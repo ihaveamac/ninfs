@@ -13,7 +13,9 @@ Install the fusepy fork with `pip3 install git+https://github.com/billziss-gh/fu
 
 * macOS: [Fuse for macOS](https://osxfuse.github.io)
 * Windows: [WinFsp](http://www.secfs.net/winfsp/) - Requires [WinFsp 2017.2 B2](https://github.com/billziss-gh/winfsp/releases/tag/v1.2B2) or later.
-* Linux: Most distributions should have fuse included. Use your package manager. **Decryption seems to fail at random parts - trying to figure this out**
+* Linux: Most distributions should have fuse included. Use your package manager.
+
+For savedata and extdata, see [3dsfuse-ex](https://github.com/wwylele/3dsfuse-ex).
 
 ## mount_cci.py
 Mounts CTR Cart Image (CCI, ".3ds") files, creating a virtual filesystem of separate partitions.
@@ -198,8 +200,6 @@ optional arguments:
 ## mount_sd.py
 Mounts SD contents under `/Nintendo 3DS`, creating a virtual filesystem with decrypted contents. `movable.sed` required.
 
-Still needs testing, keep backups.
-
 ```
 usage: mount_sd.py [-h] --movable MOVABLESED [--ro] [--dev] [--fg] [--do]
                    [-o OPTIONS]
@@ -222,6 +222,6 @@ optional arguments:
 ```
 
 # License/Credits
-`mount_cci.py`, `mount_cdn.py`, `mount_cia.py`, `mount_nand.py`, `mount_ncch.py`, `mount_romfs.py`, `mount_sd.py` are under the MIT license.
+`pyctr`, `mount_cci.py`, `mount_cdn.py`, `mount_cia.py`, `mount_nand.py`, `mount_ncch.py`, `mount_romfs.py`, `mount_sd.py` are under the MIT license.
 
 Special thanks to @Stary2001 for help with NAND crypto (especially TWL), and @d0k3 for SD crypto.
