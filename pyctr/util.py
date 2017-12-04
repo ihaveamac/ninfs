@@ -1,4 +1,5 @@
 import math
+import os
 
 
 def readle(b: bytes) -> int:
@@ -14,3 +15,6 @@ def readbe(b: bytes) -> int:
 def roundup(offset: int, alignment: int) -> int:
     """Round up a number to a provided alignment."""
     return int(math.ceil(offset / alignment) * alignment)
+
+
+config_dir = os.path.expanduser('~') + '/.3ds'

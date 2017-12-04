@@ -19,7 +19,7 @@ except ImportError:
              '(`pip3 install git+https://github.com/billziss-gh/fusepy.git`).')
 
 
-class RomFS(LoggingMixIn, Operations):
+class RomFSMount(LoggingMixIn, Operations):
     fd = 0
 
     def __init__(self, romfs_file):
@@ -39,9 +39,9 @@ class RomFS(LoggingMixIn, Operations):
         lv3_header = self.f.read(romfs.ROMFS_LV3_HEADER_SIZE)
         self.romfs_reader = romfs.RomFSReader.from_lv3_header(lv3_header)
 
-        dirmeta_region = self.romfs_reader.get_dirmeta_region()
-        filemeta_region = self.romfs_reader.get_filemeta_region()
-        filedata_offset = self.romfs_reader.get_filedata_offset()
+        dirmeta_region = self.romfs_reader.dirmeta_region
+        filemeta_region = self.romfs_reader.filemeta_region
+        filedata_offset = self.romfs_reader.filedata_offset
 
         self.data_offset = lv3_offset + filedata_offset
 
@@ -118,5 +118,5 @@ if __name__ == '__main__':
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
 
-    fuse = FUSE(RomFS(romfs_file=a.romfs), a.mount_point, foreground=a.fg or a.do, fsname=os.path.realpath(a.romfs),
+    fuse = FUSE(RomFSMount(romfs_file=a.romfs), a.mount_point, foreground=a.fg or a.do, fsname=os.path.realpath(a.romfs),
                 ro=True, nothreads=True, **opts)

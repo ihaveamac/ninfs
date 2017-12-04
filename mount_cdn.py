@@ -25,18 +25,7 @@ except ImportError:
              '(`pip3 install pycryptodomex`).')
 
 
-# these would have to be obtained from Process9 and that's annoying.
-common_key_y = (
-    ('D07B337F9CA4385932A2E25723232EB9', '85215E96CB95A9ECA4B4DE601CB562C7'),
-    ('0C767230F0998F1C46828202FAACBE4C', '0C767230F0998F1C46828202FAACBE4C'),
-    ('C475CB3AB8C788BB575E12A10907B8A4', 'C475CB3AB8C788BB575E12A10907B8A4'),
-    ('E486EEE3D0C09C902F6686D4C06F649F', 'E486EEE3D0C09C902F6686D4C06F649F'),
-    ('ED31BA9C04B067506C4497A35B7804FC', 'ED31BA9C04B067506C4497A35B7804FC'),
-    ('5E66998AB4E8931606850FD7A16DD755', '5E66998AB4E8931606850FD7A16DD755')
-)
-
-
-class CDNContents(LoggingMixIn, Operations):
+class CDNContentsMount(LoggingMixIn, Operations):
     fd = 0
 
     # get the real path by returning self.cdn_dir + path
@@ -45,31 +34,10 @@ class CDNContents(LoggingMixIn, Operations):
 
     def __init__(self, cdn_dir, dev, dec_key):
         self.cdn_dir = cdn_dir
-        keys_set = False
-        key_x = 0
 
-        # check for boot9 to get common key X
-        def check_b9_file(path):
-            nonlocal keys_set, key_x
-            if not keys_set:
-                if os.path.isfile(path):
-                    key_offset = 0x5A20
-                    if dev:
-                        key_offset += 0x400
-                    if os.path.getsize(path) == 0x10000:
-                        key_offset += 0x8000
-                    with open(path, 'rb') as b9:
-                        b9.seek(key_offset)
-                        key_x = util.readbe(b9.read(0x10))
-                    keys_set = True
+        self.crypto = crypto.CTRCrypto(is_dev=dev)
 
-        check_b9_file('boot9.bin')
-        check_b9_file('boot9_prot.bin')
-        check_b9_file(os.path.expanduser('~') + '/.3ds/boot9.bin')
-        check_b9_file(os.path.expanduser('~') + '/.3ds/boot9_prot.bin')
-
-        if not keys_set:
-            sys.exit('Failed to get keys from boot9')
+        self.crypto.setup_keys_from_boot9()
 
         # get status change, modify, and file access times
         cdn_stat = os.stat(cdn_dir)
@@ -111,9 +79,9 @@ class CDNContents(LoggingMixIn, Operations):
                 common_key_index = ord(tik.read(1))
 
             # decrypt titlekey
-            normal_key = crypto.keygen(key_x, int(common_key_y[common_key_index][dev], 16))
-            cipher_titlekey = AES.new(normal_key, AES.MODE_CBC, title_id + (b'\0' * 8))
-            self.titlekey = cipher_titlekey.decrypt(enc_titlekey)
+            self.crypto.set_keyslot('y', 0x3D, self.crypto.get_common_key(common_key_index))
+            titlekey = self.crypto.aes_cbc_decrypt(0x3D, title_id + (b'\0' * 8), enc_titlekey)
+            self.crypto.set_normal_key(0x40, titlekey)
 
         # create virtual files
         self.files = {'/ticket.bin': {'size': 0x350, 'offset': 0, 'type': 'raw', 'real_filepath': self.rp('cetk')},
@@ -194,11 +162,7 @@ class CDNContents(LoggingMixIn, Operations):
                     iv = f.read(0x10)
                 # read to block size
                 f.seek(real_offset - before)
-                data = f.read(size)
-                # set up a cipher
-                cipher = AES.new(self.titlekey, AES.MODE_CBC, iv)
-                # decrypt and slice to the exact size and position requested
-                data = cipher.decrypt(data)[before:len(data) - after]
+                data = self.crypto.aes_cbc_decrypt(0x40, iv, f.read(size))
 
             return data
 
@@ -226,5 +190,5 @@ if __name__ == '__main__':
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
 
-    fuse = FUSE(CDNContents(cdn_dir=a.cdn_dir, dev=a.dev, dec_key=a.dec_key), a.mount_point, foreground=a.fg or a.do,
+    fuse = FUSE(CDNContentsMount(cdn_dir=a.cdn_dir, dev=a.dev, dec_key=a.dec_key), a.mount_point, foreground=a.fg or a.do,
                 fsname=os.path.realpath(a.cdn_dir), ro=True, nothreads=True, **opts)

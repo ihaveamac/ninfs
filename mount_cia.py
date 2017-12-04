@@ -30,46 +30,13 @@ def new_offset(x: int) -> int:
     return ((x + 63) >> 6) << 6  # - x
 
 
-# these would have to be obtained from Process9 and that's annoying.
-common_key_y = (
-    ('D07B337F9CA4385932A2E25723232EB9', '85215E96CB95A9ECA4B4DE601CB562C7'),
-    ('0C767230F0998F1C46828202FAACBE4C', '0C767230F0998F1C46828202FAACBE4C'),
-    ('C475CB3AB8C788BB575E12A10907B8A4', 'C475CB3AB8C788BB575E12A10907B8A4'),
-    ('E486EEE3D0C09C902F6686D4C06F649F', 'E486EEE3D0C09C902F6686D4C06F649F'),
-    ('ED31BA9C04B067506C4497A35B7804FC', 'ED31BA9C04B067506C4497A35B7804FC'),
-    ('5E66998AB4E8931606850FD7A16DD755', '5E66998AB4E8931606850FD7A16DD755')
-)
-
-
-class CTRImportableArchive(LoggingMixIn, Operations):
+class CTRImportableArchiveMount(LoggingMixIn, Operations):
     fd = 0
 
     def __init__(self, cia, dev):
-        keys_set = False
-        key_x = 0
+        self.crypto = crypto.CTRCrypto(is_dev=dev)
 
-        # check for boot9 to get common key X
-        def check_b9_file(path):
-            nonlocal keys_set, key_x
-            if not keys_set:
-                if os.path.isfile(path):
-                    key_offset = 0x5A20
-                    if dev:
-                        key_offset += 0x400
-                    if os.path.getsize(path) == 0x10000:
-                        key_offset += 0x8000
-                    with open(path, 'rb') as b9:
-                        b9.seek(key_offset)
-                        key_x = util.readbe(b9.read(0x10))
-                    keys_set = True
-
-        check_b9_file('boot9.bin')
-        check_b9_file('boot9_prot.bin')
-        check_b9_file(os.path.expanduser('~') + '/.3ds/boot9.bin')
-        check_b9_file(os.path.expanduser('~') + '/.3ds/boot9_prot.bin')
-
-        if not keys_set:
-            sys.exit('Failed to get keys from boot9')
+        self.crypto.setup_keys_from_boot9()
 
         # get status change, modify, and file access times
         cia_stat = os.stat(cia)
@@ -100,9 +67,9 @@ class CTRImportableArchive(LoggingMixIn, Operations):
         common_key_index = ord(self.f.read(1))
 
         # decrypt titlekey
-        normalkey = crypto.keygen(key_x, int(common_key_y[common_key_index][dev], 16))
-        cipher_titlekey = AES.new(normalkey, AES.MODE_CBC, title_id + (b'\0' * 8))
-        self.titlekey = cipher_titlekey.decrypt(enc_titlekey)
+        self.crypto.set_keyslot('y', 0x3D, self.crypto.get_common_key(common_key_index))
+        titlekey = self.crypto.aes_cbc_decrypt(0x3D, title_id + (b'\0' * 8), enc_titlekey)
+        self.crypto.set_normal_key(0x40, titlekey)
 
         # get content count
         self.f.seek(tmd_offset + 0x1DE)
@@ -194,11 +161,7 @@ class CTRImportableArchive(LoggingMixIn, Operations):
                 iv = self.f.read(0x10)
             # read to block size
             self.f.seek(real_offset - before)
-            data = self.f.read(size)
-            # set up a cipher
-            cipher = AES.new(self.titlekey, AES.MODE_CBC, iv)
-            # decrypt and slice to the exact size and position requested
-            data = cipher.decrypt(data)[before:len(data) - after]
+            data = self.crypto.aes_cbc_decrypt(0x40, iv, self.f.read(size))
 
         return data
 
@@ -225,5 +188,5 @@ if __name__ == '__main__':
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
 
-    fuse = FUSE(CTRImportableArchive(cia=a.cia, dev=a.dev), a.mount_point, foreground=a.fg or a.do,
+    fuse = FUSE(CTRImportableArchiveMount(cia=a.cia, dev=a.dev), a.mount_point, foreground=a.fg or a.do,
                 fsname=os.path.realpath(a.cia), ro=True, nothreads=True, **opts)

@@ -34,30 +34,20 @@ RomFSFileEntry = namedtuple('RomFSFileEntry', 'type offset size')
 
 
 class RomFSReader:
-    _root = {}
-
     """Class for 3DS RomFS Level 3 partition."""
-    def __init__(self, *, dirmeta: dict, filemeta: dict, filedata_offset: int):
-        self._dirmeta_offset = dirmeta['offset']
-        self._dirmeta_size = dirmeta['size']
-        self._filemeta_offset = filemeta['offset']
-        self._filemeta_size = filemeta['size']
-        self._filedata_offset = filedata_offset
 
-    def get_dirmeta_region(self):
-        """Get the offset and size of the Directory Metadata region."""
-        return RomFSRegion(offset=self._dirmeta_offset, size=self._dirmeta_size)
+    _root = {}
+    _index_setup = False
 
-    def get_filemeta_region(self):
-        """Get the offset and size of the File Metadata region."""
-        return RomFSRegion(offset=self._filemeta_offset, size=self._filemeta_size)
-
-    def get_filedata_offset(self):
-        """Get the offset of the File Data region."""
-        return self._filedata_offset
+    def __init__(self, *, dirmeta: RomFSRegion, filemeta: RomFSRegion, filedata_offset: int):
+        self.dirmeta_region = dirmeta
+        self.filemeta_region = filemeta
+        self.filedata_offset = filedata_offset
 
     def get_info_from_path(self, path):
         """Get a directory or file entry"""
+        if not self._index_setup:
+            raise RomFSFileIndexNotSetup("file index must be set up with parse_metadata")
         curr = self._root
         if path[0] == '/':
             path = path[1:]
@@ -74,21 +64,21 @@ class RomFSReader:
             return RomFSFileEntry(type='file', offset=curr['offset'], size=curr['size'])
 
     @staticmethod
-    def validate_lv3_header(length: int, dirhash: dict, dirmeta: dict, filehash: dict, filemeta: dict,
-                            filedata_offset: int):
+    def validate_lv3_header(length: int, dirhash: RomFSRegion, dirmeta: RomFSRegion, filehash: RomFSRegion,
+                            filemeta: RomFSRegion, filedata_offset: int):
         """Validate Level 3 header."""
         if length != ROMFS_LV3_HEADER_SIZE:
             raise InvalidRomFSHeaderException("Length in RomFS Lv3 header is not 0x28")
-        if dirhash['offset'] < length:
+        if dirhash.offset < length:
             raise InvalidRomFSHeaderException("Directory Hash offset is before the end of the Lv3 header")
-        if dirmeta['offset'] < dirhash['offset'] + dirhash['size']:
+        if dirmeta.offset < dirhash.offset + dirhash.size:
             raise InvalidRomFSHeaderException("Directory Metadata offset is before the end of the Directory Hash "
                                               "region")
-        if filehash['offset'] < dirmeta['offset'] + dirmeta['size']:
+        if filehash.offset < dirmeta.offset + dirmeta.size:
             raise InvalidRomFSHeaderException("File Hash offset is before the end of the Directory Metadata region")
-        if filemeta['offset'] < filehash['offset'] + filehash['size']:
+        if filemeta.offset < filehash.offset + filehash.size:
             raise InvalidRomFSHeaderException("File Metadata offset is before the end of the File Hash region")
-        if filedata_offset < filemeta['offset'] + filemeta['size']:
+        if filedata_offset < filemeta.offset + filemeta.size:
             raise InvalidRomFSHeaderException("File Data offset is before the end of the File Metadata region")
 
     @classmethod
@@ -100,10 +90,10 @@ class RomFSReader:
                                               "(0x{:X} instead of 0x{:X})".format(header_length, ROMFS_LV3_HEADER_SIZE))
 
         lv3_header_length = util.readle(header[0x0:0x4])
-        lv3_dirhash = {'offset': util.readle(header[0x4:0x8]), 'size': util.readle(header[0x8:0xC])}
-        lv3_dirmeta = {'offset': util.readle(header[0xC:0x10]), 'size': util.readle(header[0x10:0x14])}
-        lv3_filehash = {'offset': util.readle(header[0x14:0x18]), 'size': util.readle(header[0x18:0x1C])}
-        lv3_filemeta = {'offset': util.readle(header[0x1C:0x20]), 'size': util.readle(header[0x20:0x24])}
+        lv3_dirhash = RomFSRegion(offset=util.readle(header[0x4:0x8]), size=util.readle(header[0x8:0xC]))
+        lv3_dirmeta = RomFSRegion(offset=util.readle(header[0xC:0x10]), size=util.readle(header[0x10:0x14]))
+        lv3_filehash = RomFSRegion(offset=util.readle(header[0x14:0x18]), size=util.readle(header[0x18:0x1C]))
+        lv3_filemeta = RomFSRegion(offset=util.readle(header[0x1C:0x20]), size=util.readle(header[0x20:0x24]))
         lv3_filedata_offset = util.readle(header[0x24:0x28])
 
         cls.validate_lv3_header(lv3_header_length, lv3_dirhash, lv3_dirmeta, lv3_filehash, lv3_filemeta,
@@ -159,6 +149,8 @@ class RomFSReader:
 
         dirmeta_io.close()
         filemeta_io.close()
+
+        self._index_setup = True
 
 
 def get_lv3_offset_from_ivfc(header: bytes) -> int:

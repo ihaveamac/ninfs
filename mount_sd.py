@@ -31,7 +31,7 @@ except ImportError:
              '(`pip3 install pycryptodomex`).')
 
 
-class SDFilesystem(LoggingMixIn, Operations):
+class SDFilesystemMount(LoggingMixIn, Operations):
     def path_to_iv(self, path):
         path_hash = hashlib.sha256(path[self.root_len + 33:].lower().encode('utf-16le') + b'\0\0').digest()
         hash_p1 = util.readbe(path_hash[0:16])
@@ -41,30 +41,9 @@ class SDFilesystem(LoggingMixIn, Operations):
     fd = 0
 
     def __init__(self, sd_dir, movable, dev, readonly=False):
-        keys_set = False
-        key_x = 0
+        self.crypto = crypto.CTRCrypto()
 
-        def check_b9_file(path):
-            nonlocal keys_set, key_x
-            if not keys_set:
-                if os.path.isfile(path):
-                    key_offset = 0x59F0
-                    if dev:
-                        key_offset += 0x400
-                    if os.path.getsize(path) == 0x10000:
-                        key_offset += 0x8000
-                    with open(path, 'rb') as b9:
-                        b9.seek(key_offset)
-                        key_x = util.readbe(b9.read(0x10))
-                    keys_set = True
-
-        check_b9_file('boot9.bin')
-        check_b9_file('boot9_prot.bin')
-        check_b9_file(os.path.expanduser('~') + '/.3ds/boot9.bin')
-        check_b9_file(os.path.expanduser('~') + '/.3ds/boot9_prot.bin')
-
-        if not keys_set:
-            sys.exit('Failed to get keys from boot9')
+        self.crypto.setup_keys_from_boot9()
 
         mv = open(movable, 'rb')
         mv.seek(0x110)
@@ -77,10 +56,10 @@ class SDFilesystem(LoggingMixIn, Operations):
         if not os.path.isdir(sd_dir + '/' + root_dir):
             sys.exit('Failed to find {} in the SD dir.'.format(root_dir))
 
-        print('Root dir: {}'.format(root_dir))
+        print('Root dir: ' + root_dir)
 
-        self.key = crypto.keygen(key_x, util.readbe(key_y))
-        print('Key:      {}'.format(self.key.hex()))
+        self.crypto.set_keyslot('y', 0x34, util.readbe(key_y))
+        print('Key:      ' + self.crypto.key_normal[0x34].hex())
 
         self.root = os.path.realpath(sd_dir + '/' + root_dir)
         self.root_len = len(self.root)
@@ -165,10 +144,12 @@ class SDFilesystem(LoggingMixIn, Operations):
             with self.rwlock:
                 os.lseek(fh, offset - before, 0)
                 data = os.read(fh, size)
-        counter = Counter.new(128, initial_value=self.path_to_iv(path) + (offset >> 4))
-        cipher = AES.new(self.key, AES.MODE_CTR, counter=counter)
-        out_data = cipher.decrypt(data)[before:]
-        return out_data
+        # counter = Counter.new(128, initial_value=)
+        # cipher = AES.new(self.key, AES.MODE_CTR, counter=counter)
+        # out_data = cipher.decrypt(data)[before:]
+        # return out_data
+        iv = self.path_to_iv(path) + (offset >> 4)
+        return self.crypto.aes_ctr(0x34, iv, data)[before:]
 
     def readdir(self, path, fh):
         return ['.', '..'] + os.listdir(path)
@@ -183,7 +164,7 @@ class SDFilesystem(LoggingMixIn, Operations):
         # TODO: proper rename support - this may not happen because there's not
         #   much reason to rename files here. copying might work since either
         #   way, the file[s] would have to be re-encrypted.
-        raise FuseOSError(errno.EPERM)
+        raise FuseOSError(errno.EROFS if self.readonly else errno.EPERM)
         # if self.readonly:
         #     raise FuseOSError(errno.EROFS)
         # return os.rename(old, self.root + new)
@@ -238,9 +219,8 @@ class SDFilesystem(LoggingMixIn, Operations):
                     return os.write(fh, data)
 
         before = offset % 16
-        counter = Counter.new(128, initial_value=self.path_to_iv(path) + (offset >> 4))
-        cipher = AES.new(self.key, AES.MODE_CTR, counter=counter)
-        out_data = cipher.decrypt((b'\0' * before) + data)[before:]
+        iv = self.path_to_iv(path) + (offset >> 4)
+        out_data = self.crypto.aes_ctr(0x34, iv, (b'\0' * before) + data)[before:]
         if windows:
             with open(path, 'r+b', buffering=0) as f:
                 f.seek(offset - before)
@@ -275,5 +255,5 @@ if __name__ == '__main__':
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
 
-    fuse = FUSE(SDFilesystem(sd_dir=a.sd_dir, movable=a.movable, dev=a.dev, readonly=a.ro), a.mount_point,
+    fuse = FUSE(SDFilesystemMount(sd_dir=a.sd_dir, movable=a.movable, dev=a.dev, readonly=a.ro), a.mount_point,
                 foreground=a.fg or a.do, fsname=os.path.realpath(a.sd_dir), ro=a.ro, nothreads=True, **opts)

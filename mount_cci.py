@@ -16,7 +16,7 @@ except ImportError:
              '(`pip3 install git+https://github.com/billziss-gh/fusepy.git`).')
 
 
-class CTRCartImage(LoggingMixIn, Operations):
+class CTRCartImageMount(LoggingMixIn, Operations):
     fd = 0
 
     def __init__(self, cci):
@@ -107,5 +107,5 @@ if __name__ == '__main__':
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
 
-    fuse = FUSE(CTRCartImage(cci=a.cci), a.mount_point, foreground=a.fg or a.do, fsname=os.path.realpath(a.cci),
+    fuse = FUSE(CTRCartImageMount(cci=a.cci), a.mount_point, foreground=a.fg or a.do, fsname=os.path.realpath(a.cci),
                 ro=True, nothreads=True, **opts)

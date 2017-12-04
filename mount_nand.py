@@ -30,75 +30,16 @@ except ImportError:
 nand_size = {0x200000: 0x3AF00000, 0x280000: 0x4D800000}
 
 
-# TODO: move to pyctr.crypto, along with other crypto tools
-# https://github.com/Stary2001/3ds_tools/blob/94614f3b80e6f4d32c5ec4596424dccfaad32774/three_ds/crypto_wrappers.py#L38-L50
-def aes_ctr_dsi(key: bytes, ctr: int, data: bytes) -> bytes:
-    data_len = len(data)
-
-    data_rev = bytearray(data_len)
-    for i in range(0, len(data), 0x10):
-        data_rev[i:i + 0x10] = data[i:i + 0x10][::-1]
-
-    counter = Counter.new(128, initial_value=ctr)
-    cipher = AES.new(key, AES.MODE_CTR, counter=counter)
-
-    data_out = bytearray(cipher.encrypt(bytes(data_rev)))
-
-    for i in range(0, data_len, 0x10):
-        data_out[i:i + 0x10] = data_out[i:i + 0x10][::-1]
-    return bytes(data_out[0:data_len])
-
-
-class NANDImage(LoggingMixIn, Operations):
+class NANDImageMount(LoggingMixIn, Operations):
     fd = 0
 
     def __init__(self, nand, dev, readonly=False, otp=None, cid=None):
-        keys_set = False
-        keyslots_y = {}
-        otp_key = b''
-        otp_iv = b''
-        boot9_extdata_keygen = b''
-        boot9_extdata_keygen_iv = b''
-        boot9_extdata_otp = b''
+        self.crypto = crypto.CTRCrypto(is_dev=dev)
 
-        nand_info = ''
-
-        def check_b9_file(path):
-            nonlocal keys_set, keyslots_y, otp_key, otp_iv, boot9_extdata_keygen, boot9_extdata_keygen_iv,\
-                boot9_extdata_otp
-            if not keys_set and os.path.isfile(path):
-                keyblob_offset = 0x5860
-                otp_key_offset = 0x56E0
-                if dev:
-                    keyblob_offset += 0x400
-                    otp_key_offset += 0x20
-                if os.path.getsize(path) == 0x10000:
-                    keyblob_offset += 0x8000
-                    otp_key_offset += 0x8000
-                with open(path, 'rb') as b9:
-                    b9.seek(keyblob_offset)
-                    boot9_extdata_otp = b9.read(0x24)
-                    boot9_extdata_keygen = b9.read(0x10)
-                    boot9_extdata_keygen_iv = b9.read(0x10)
-                    b9.seek(keyblob_offset + 0x1F0)
-                    keyslots_y[0x04] = b9.read(0x10)
-                    # not so easy to avoid
-                    keyslots_y[0x05] = bytes.fromhex('4D804F4E9990194613A204AC584460BE')
-                    b9.seek(0x10, 1)
-                    keyslots_y[0x06] = b9.read(0x10)
-                    keyslots_y[0x07] = b9.read(0x10)
-                    b9.seek(otp_key_offset)
-                    otp_key = b9.read(0x10)
-                    otp_iv = b9.read(0x10)
-                keys_set = True
-
-        check_b9_file('boot9.bin')
-        check_b9_file('boot9_prot.bin')
-        check_b9_file(os.path.expanduser('~') + '/.3ds/boot9.bin')
-        check_b9_file(os.path.expanduser('~') + '/.3ds/boot9_prot.bin')
-
-        if not keys_set:
-            sys.exit('Failed to get keys from boot9')
+        try:
+            self.crypto.setup_keys_from_boot9()
+        except crypto.BootromNotFoundException as e:
+            print("Bootrom was not found.")
 
         self.f = open(nand, 'r{}b'.format('' if readonly else '+'))
         self.f.seek(0x100)  # screw the signature
@@ -156,11 +97,7 @@ class NANDImage(LoggingMixIn, Operations):
                     sys.exit('otp and nand_cid somehow not found in essentials backup. update with GodMode9 or '
                              'provide OTP/NAND CID with --otp/--cid.')
 
-        nand_info += 'NAND CID:       {}\n'.format(cid.hex())
-        nand_info += 'NAND CTR:       {:032x}\n'.format(self.ctr)
-        nand_info += 'NAND CTR (TWL): {:032x}\n\n'.format(self.ctr_twl)
-
-        cipher_otp = AES.new(otp_key, AES.MODE_CBC, otp_iv)
+        cipher_otp = AES.new(self.crypto.otp_key, AES.MODE_CBC, self.crypto.otp_iv)
         if otp[0:4][::-1] == b'\xDE\xAD\xB0\x0F':
             otp_enc = cipher_otp.encrypt(otp)
             otp_keysect_hash = hashlib.sha256(otp_enc[0:0x90]).digest()
@@ -169,6 +106,7 @@ class NANDImage(LoggingMixIn, Operations):
             otp = cipher_otp.decrypt(otp)
 
         # generate twl keys
+        # TODO: put this in CTRCrypto
         twl_cid_lo, twl_cid_hi = struct.unpack("II", otp[0x08:0x10])
         twl_cid_lo ^= 0xB358A6AF
         twl_cid_lo |= 0x80000000
@@ -176,40 +114,26 @@ class NANDImage(LoggingMixIn, Operations):
         twl_cid_lo = struct.pack("I", twl_cid_lo)
         twl_cid_hi = struct.pack("I", twl_cid_hi)
 
-        twl_key_x = twl_cid_lo + b'NINTENDO' + twl_cid_hi
-        twl_key_y = bytes.fromhex('76DCB90AD3C44DBD1DDD2D200500A0E1')
-        twl_normalkey = crypto.keygen_twl(util.readle(twl_key_x), util.readle(twl_key_y))
-        keyslots_y[0x03] = twl_key_y
+        twl_key_x = int.from_bytes(twl_cid_lo + b'NINTENDO' + twl_cid_hi, 'little')
+        # twl_normalkey = crypto.keygen_twl(util.readle(twl_key_x), util.readle(twl_key_y))
+        self.crypto.set_keyslot('x', 0x03, twl_key_x)
 
         # only keys for slots 0x04-0x07 are used, and keyX for all of them are
         #   the same, so this only uses the data needed for this key
         # thanks Stary2001 (from 3ds_tools)
-        tmp_otp_data = otp[0x90:0xAC] + boot9_extdata_otp
+        tmp_otp_data = otp[0x90:0xAC] + self.crypto.b9_extdata_otp
         console_key_xy = hashlib.sha256(tmp_otp_data).digest()
         console_key_x = util.readbe(console_key_xy[0:16])
         console_key_y = util.readbe(console_key_xy[16:32])
-        console_normalkey = crypto.keygen(console_key_x, console_key_y)
-        nand_info += 'Keyslot 0x3f KeyX: {:032x}\n'.format(console_key_x)
-        nand_info += 'Keyslot 0x3f KeyY: {:032x}\n\n'.format(console_key_y)
+        console_normalkey = self.crypto.keygen_manual(console_key_x, console_key_y)
 
-        cipher_keygen = AES.new(console_normalkey, AES.MODE_CBC, boot9_extdata_keygen_iv)
-        key_x = cipher_keygen.encrypt(boot9_extdata_keygen)
+        cipher_keygen = AES.new(console_normalkey, AES.MODE_CBC, self.crypto.b9_extdata_keygen_iv)
+        key_x = util.readbe(cipher_keygen.encrypt(self.crypto.b9_extdata_keygen))
 
-        # starting at 0x04
-        self.keyslots = {
-            0x03: twl_normalkey,
-            0x04: crypto.keygen(util.readbe(key_x), util.readbe(keyslots_y[0x04])),
-            0x05: crypto.keygen(util.readbe(key_x), util.readbe(keyslots_y[0x05])),
-            0x06: crypto.keygen(util.readbe(key_x), util.readbe(keyslots_y[0x06])),
-            0x07: crypto.keygen(util.readbe(key_x), util.readbe(keyslots_y[0x07]))
-        }
-
-        nand_info += 'KeyX: {}\n'.format(key_x.hex())
-        for s in range(0x03, 0x08):
-            nand_info += 'Keyslot 0x{:02x} ({}):\n'.format(s, 'TWL' if s < 0x04 else 'CTR')
-            nand_info += '  KeyY:      {}\n'.format(keyslots_y[s].hex())
-            nand_info += '  NormalKey: {}\n'.format(self.keyslots[s].hex())
-        nand_info += '\n'
+        self.crypto.set_keyslot('x', 0x04, key_x)
+        self.crypto.set_keyslot('x', 0x05, key_x)
+        self.crypto.set_keyslot('x', 0x06, key_x)
+        self.crypto.set_keyslot('x', 0x07, key_x)
 
         nand_stat = os.stat(nand)
         self.g_stat = {'st_ctime': int(nand_stat.st_ctime), 'st_mtime': int(nand_stat.st_mtime),
@@ -229,7 +153,8 @@ class NANDImage(LoggingMixIn, Operations):
         if keysect_enc != b'\0' * 0x200 and keysect_enc != b'\xFF' * 0x200:
             keysect_x = otp_keysect_hash[0:16]
             keysect_y = otp_keysect_hash[16:32]
-            self.keysect_key = crypto.keygen(util.readbe(keysect_x), util.readbe(keysect_y))
+            # TODO: put this in CTRCrypto
+            self.keysect_key = self.crypto.keygen_manual(util.readbe(keysect_x), util.readbe(keysect_y))
             cipher_keysect = AES.new(self.keysect_key, AES.MODE_ECB)
             keysect_dec = cipher_keysect.decrypt(keysect_enc)
             # i'm cheating here by putting the decrypted version in memory and
@@ -245,38 +170,13 @@ class NANDImage(LoggingMixIn, Operations):
                             util.readle(ncsd_part_raw[i + 4:i + 8]) * 0x200] for i in range(0, 0x40, 0x8)]
 
         # including padding for crypto
-        twl_mbr = aes_ctr_dsi(twl_normalkey, self.ctr_twl + 0x1B, ncsd_header[0xB0:0x100])[0xE:0x50]
+        # twl_mbr = aes_ctr_dsi(twl_normalkey, self.ctr_twl + 0x1B, ncsd_header[0xB0:0x100])[0xE:0x50]
+        twl_mbr = self.crypto.aes_ctr(0x03, self.ctr_twl + 0x1B, ncsd_header[0xB0:0x100])[0xE:0x50]
         twl_partitions = [[util.readle(twl_mbr[i + 8:i + 12]) * 0x200,
                            util.readle(twl_mbr[i + 12:i + 16]) * 0x200] for i in range(0, 0x40, 0x10)]
 
         self.files['/twlmbr.bin'] = {'size': 0x42, 'offset': 0x1BE, 'keyslot': 0x03, 'type': 'twlmbr',
                                      'content': twl_mbr}
-
-        # TODO: integrate this into the normal loop i guess. move twl partition
-        #   stuff to its own block, so these can remain separate.
-        nand_info += '(NOTE: Crypto Type is not the same as keyslot.)\n\n'
-        # loop through the partitions first to print info
-        nand_info += 'NCSD Partitions:\n'
-        for idx, part in enumerate(ncsd_partitions):
-            if ncsd_part_fstype[idx] == 0:
-                continue
-            nand_info += '  Index {}:\n'.format(idx)
-            nand_info += '    Filesystem Type: {}\n'.format(ncsd_part_fstype[idx])
-            nand_info += '    Crypto Type:     {}\n'.format(ncsd_part_crypttype[idx])
-            nand_info += '    Offset:          0x{:08x}\n'.format(part[0])
-            nand_info += '    Size:            0x{:08x}\n'.format(part[1])
-        nand_info += '\n'
-
-        twl_part_fstype = 0
-        nand_info += 'TWL Partitions:\n'
-        for idx, part in enumerate(twl_partitions):
-            if part[0] == 0:
-                continue
-            nand_info += '  Index {}:\n'.format(idx)
-            nand_info += '    Offset:          0x{:08x}\n'.format(part[0])
-            nand_info += '    Size:            0x{:08x}\n'.format(part[1])
-            twl_part_fstype += 1
-        nand_info += '\n'
 
         # then actually parse the partitions to create files
         firm_idx = 0
@@ -286,7 +186,7 @@ class NANDImage(LoggingMixIn, Operations):
             print('ncsd idx:{0} fstype:{1} crypttype:{2} offset:{3[0]:08x} size:{3[1]:08x} '
                   .format(idx, ncsd_part_fstype[idx], ncsd_part_crypttype[idx], part), end='')
             if idx == 0:
-                self.files['/twl_full.img'] = {'size': part[1], 'offset': part[0], 'keyslot': 0x03, 'type': 'twl'}
+                self.files['/twl_full.img'] = {'size': part[1], 'offset': part[0], 'keyslot': 0x03, 'type': 'enc'}
                 print('/twl_full.img')
                 twl_part_fstype = 0
                 for t_idx, t_part in enumerate(twl_partitions):
@@ -295,18 +195,18 @@ class NANDImage(LoggingMixIn, Operations):
                               .format(t_idx, t_part), end='')
                         if twl_part_fstype == 0:
                             self.files['/twln.img'] = {'size': t_part[1], 'offset': t_part[0], 'keyslot': 0x03,
-                                                       'type': 'twl'}
+                                                       'type': 'enc'}
                             print('/twln.img')
                             twl_part_fstype += 1
                         elif twl_part_fstype == 1:
                             self.files['/twlp.img'] = {'size': t_part[1], 'offset': t_part[0], 'keyslot': 0x03,
-                                                       'type': 'twl'}
+                                                       'type': 'enc'}
                             print('/twlp.img')
                             twl_part_fstype += 1
                         else:
                             self.files['/twl_unk{}.img'.format(twl_part_fstype)] = {'size': t_part[1],
                                                                                     'offset': t_part[0],
-                                                                                    'keyslot': 0x03, 'type': 'twl'}
+                                                                                    'keyslot': 0x03, 'type': 'enc'}
                             print('/twl_unk{}.img'.format(twl_part_fstype))
                             twl_part_fstype += 1
 
@@ -314,48 +214,44 @@ class NANDImage(LoggingMixIn, Operations):
                 if ncsd_part_fstype[idx] == 3:
                     # boot9 hardcoded this keyslot, i'll do this properly later
                     self.files['/firm{}.bin'.format(firm_idx)] = {'size': part[1], 'offset': part[0], 'keyslot': 0x06,
-                                                                  'type': 'ctr'}
+                                                                  'type': 'enc'}
                     print('/firm{}.bin'.format(firm_idx))
                     firm_idx += 1
 
                 elif ncsd_part_fstype[idx] == 1 and ncsd_part_crypttype[idx] >= 2:
                     ctrnand_keyslot = 0x04 if ncsd_part_crypttype[idx] == 2 else 0x05
                     self.files['/ctrnand_full.img'] = {'size': part[1], 'offset': part[0], 'keyslot': ctrnand_keyslot,
-                                                       'type': 'ctr'}
+                                                       'type': 'enc'}
                     print('/ctrnand_full.img')
                     self.f.seek(part[0])
                     iv = self.ctr + (part[0] >> 4)
-                    counter = Counter.new(128, initial_value=iv)
-                    cipher = AES.new(self.keyslots[ctrnand_keyslot], AES.MODE_CTR, counter=counter)
-                    ctr_mbr = cipher.decrypt(self.f.read(0x200))[0x1BE:0x1FE]
+                    # counter = Counter.new(128, initial_value=iv)
+                    # cipher = AES.new(self.keyslots[ctrnand_keyslot], AES.MODE_CTR, counter=counter)
+                    # ctr_mbr = cipher.decrypt(self.f.read(0x200))[0x1BE:0x1FE]
+                    ctr_mbr = self.crypto.aes_ctr(ctrnand_keyslot, iv, self.f.read(0x200))[0x1BE:0x1FE]
                     ctr_partitions = [[util.readle(ctr_mbr[i + 8:i + 12]) * 0x200,
                                        util.readle(ctr_mbr[i + 12:i + 16]) * 0x200]
                                       for i in range(0, 0x40, 0x10)]
-                    nand_info += 'CTR Partitions:\n'
                     ctr_part_fstype = 0
                     for c_idx, c_part in enumerate(ctr_partitions):
                         if c_part[0] != 0:
                             print('ctr  idx:{0}                      offset:{1:08x} size:{2[1]:08x} '
                                   .format(c_idx, part[0] + c_part[0], c_part), end='')
-                            nand_info += '  Index {}:\n'.format(c_idx)
-                            nand_info += '    Offset:          0x{:08x}\n'.format(part[0] + c_part[0])
-                            nand_info += '    Size:            0x{:08x}\n'.format(c_part[1])
                             if ctr_part_fstype == 0:
                                 self.files['/ctrnand_fat.img'] = {'size': c_part[1], 'offset': part[0] + c_part[0],
-                                                                  'keyslot': ctrnand_keyslot, 'type': 'ctr'}
+                                                                  'keyslot': ctrnand_keyslot, 'type': 'enc'}
                                 print('/ctrnand_fat.img')
                                 ctr_part_fstype += 1
                             else:
                                 self.files['/ctr_unk{}.img'.format(ctr_part_fstype)] = {'size': c_part[1],
                                                                                         'offset': part[0] + c_part[0],
                                                                                         'keyslot': ctrnand_keyslot,
-                                                                                        'type': 'ctr'}
+                                                                                        'type': 'enc'}
                                 print('/ctr_unk{}.img'.format(ctr_part_fstype))
                                 ctr_part_fstype += 1
-                    nand_info += '\n'
 
                 elif ncsd_part_fstype[idx] == 4:
-                    self.files['/agbsave.bin'] = {'size': part[1], 'offset': part[0], 'keyslot': 0x07, 'type': 'ctr'}
+                    self.files['/agbsave.bin'] = {'size': part[1], 'offset': part[0], 'keyslot': 0x07, 'type': 'enc'}
                     print('/agbsave.bin')
 
         self.readonly = readonly
@@ -365,18 +261,8 @@ class NANDImage(LoggingMixIn, Operations):
             self.f.seek(self.real_nand_size)
             bonus_drive_header = self.f.read(0x200)
             if bonus_drive_header[0x1FE:0x200] == b'\x55\xAA':
-                nand_info += 'GodMode9 Bonus Drive:\n'
-                nand_info += '  Offset:          0x{:08x}\n'.format(self.real_nand_size)
-                nand_info += '  Size:            0x{:08x}\n'.format(raw_nand_size - self.real_nand_size)
                 self.files['/bonus.img'] = {'size': raw_nand_size - self.real_nand_size, 'offset': self.real_nand_size,
                                             'keyslot': 0xFF, 'type': 'raw'}
-
-        if windows:
-            # replace line endings for Windows so Notepad can display the text
-            #   properly
-            nand_info = nand_info.replace('\n', '\r\n')
-        self.files['/_nandinfo.txt'] = {'size': len(nand_info), 'offset': -1, 'keyslot': 0xFF, 'type': 'info',
-                                        'content': nand_info.encode('utf-8')}
 
     def __del__(self):
         try:
@@ -412,31 +298,15 @@ class NANDImage(LoggingMixIn, Operations):
             self.f.seek(real_offset)
             data = self.f.read(size)
 
-        elif fi['type'] == 'ctr':
+        elif fi['type'] == 'enc':
             self.f.seek(real_offset)
             data = self.f.read(size)
             # thanks Stary2001
             before = offset % 16
             after = (offset + size) % 16
-            # if size % 16 != 0:
-            #     size = size + 16 - size % 16
             data = (b'\0' * before) + data + (b'\0' * after)
-            iv = self.ctr + (real_offset >> 4)
-            counter = Counter.new(128, initial_value=iv)
-            cipher = AES.new(self.keyslots[fi['keyslot']], AES.MODE_CTR, counter=counter)
-            data = cipher.decrypt(data)[before:len(data) - after]
-
-        elif fi['type'] == 'twl':
-            self.f.seek(real_offset)
-            data = self.f.read(size)
-            # thanks Stary2001
-            before = offset % 16
-            after = (offset + size) % 16
-            # if size % 16 != 0:
-            #     size = size + 16 - size % 16
-            data = (b'\0' * before) + data + (b'\0' * after)
-            iv = self.ctr_twl + (real_offset >> 4)
-            data = aes_ctr_dsi(self.keyslots[fi['keyslot']], iv, data)[before:len(data) - after]
+            iv = (self.ctr if fi['keyslot']> 0x03 else self.ctr_twl) + (real_offset >> 4)
+            data = self.crypto.aes_ctr(fi['keyslot'], iv, data)[before:len(data) - after]
 
         elif fi['type'] == 'keysect' or fi['type'] == 'twlmbr' or fi['type'] == 'info':
             # being lazy here since twlmbr starts at a weird offset. i'll do
@@ -467,31 +337,14 @@ class NANDImage(LoggingMixIn, Operations):
             self.f.seek(real_offset)
             self.f.write(data)
 
-        elif fi['type'] == 'ctr':
+        elif fi['type'] == 'enc':
             # thanks Stary2001
             size = real_len
             before = offset % 16
             after = (offset + size) % 16
-            # if size % 16 != 0:
-            #     size = size + 16 - size % 16
             data = (b'\0' * before) + data + (b'\0' * after)
-            iv = self.ctr + (real_offset >> 4)
-            counter = Counter.new(128, initial_value=iv)
-            cipher = AES.new(self.keyslots[fi['keyslot']], AES.MODE_CTR, counter=counter)
-            data = cipher.encrypt(data)[before:len(data) - after]
-            self.f.seek(real_offset)
-            self.f.write(data)
-
-        elif fi['type'] == 'twl':
-            # thanks Stary2001
-            size = real_len
-            before = offset % 16
-            after = (offset + size) % 16
-            # if size % 16 != 0:
-            #     size = size + 16 - size % 16
-            data = (b'\0' * before) + data + (b'\0' * after)
-            iv = self.ctr_twl + (real_offset >> 4)
-            data = aes_ctr_dsi(self.keyslots[fi['keyslot']], iv, data)[before:len(data) - after]
+            iv = (self.ctr if fi['keyslot'] > 0x03 else self.ctr_twl) + (real_offset >> 4)
+            data = self.crypto.aes_ctr(fi['keyslot'], iv, data)[before:len(data) - after]
             self.f.seek(real_offset)
             self.f.write(data)
 
@@ -500,7 +353,7 @@ class NANDImage(LoggingMixIn, Operations):
             twlmbr[offset:offset + len(data)] = data
             final = bytes(twlmbr)
             self.f.seek(fi['offset'])
-            self.f.write(aes_ctr_dsi(self.keyslots[fi['keyslot']], self.ctr_twl + 0x1B, bytes(0xE) + final)[0xE:0x50])
+            self.f.write(self.crypto.aes_ctr(fi['keyslot'], self.ctr_twl + 0x1B, bytes(0xE) + final)[0xE:0x50])
             fi['content'] = final
 
         elif fi['type'] == 'keysect':
@@ -537,5 +390,5 @@ if __name__ == '__main__':
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
 
-    fuse = FUSE(NANDImage(nand=a.nand, dev=a.dev, readonly=a.ro, otp=a.otp, cid=a.cid), a.mount_point,
+    fuse = FUSE(NANDImageMount(nand=a.nand, dev=a.dev, readonly=a.ro, otp=a.otp, cid=a.cid), a.mount_point,
                 foreground=a.fg or a.do, fsname=os.path.realpath(a.nand), ro=a.ro, nothreads=True, **opts)
