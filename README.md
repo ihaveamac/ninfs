@@ -14,7 +14,7 @@ Install the fusepy fork with `pip3 install git+https://github.com/billziss-gh/fu
 CDN, CIA, and NCCH mounting will need [SeedDB](https://github.com/ihaveamac/3DS-rom-tools/wiki/SeedDB-list) for mounting NCCH containers. SeedDB is checked at `seeddb.bin` in current working directory, or `~/.3ds/seeddb.bin`. It can also be provided with the `--seeddb` argument.
 
 * macOS: [Fuse for macOS](https://osxfuse.github.io)
-* Windows: [WinFsp](http://www.secfs.net/winfsp/) - Requires [WinFsp 2017.2 B2](https://github.com/billziss-gh/winfsp/releases/tag/v1.2B2) or later.
+* Windows: [WinFsp](http://www.secfs.net/winfsp/) - Requires [WinFsp 2017.2 B3](https://github.com/billziss-gh/winfsp/releases/tag/v1.2B3) or later.
 * Linux: Most distributions should have fuse included. Use your package manager.
 
 For savedata and extdata, see [3dsfuse-ex](https://github.com/wwylele/3dsfuse-ex).
