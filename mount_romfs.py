@@ -22,16 +22,17 @@ except ImportError:
 class RomFSMount(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, romfs_file):
+    def __init__(self, romfs_fp, g_stat):
         # get status change, modify, and file access times
-        romfs_stat = os.stat(romfs_file)
-        self.g_stat = {'st_ctime': int(romfs_stat.st_ctime), 'st_mtime': int(romfs_stat.st_mtime),
-                       'st_atime': int(romfs_stat.st_atime)}
+        self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
+                       'st_atime': int(g_stat.st_atime)}
 
-        self.romfs_size = os.path.getsize(romfs_file)
+        romfs_fp.seek(0, 2)
+        self.romfs_size = romfs_fp.tell()
+        romfs_fp.seek(0)
 
         # open file, read IVFC header for lv3 offset
-        self.f = open(romfs_file, 'rb')
+        self.f = romfs_fp
         ivfc_header = self.f.read(romfs.IVFC_HEADER_SIZE)
         lv3_offset = romfs.get_lv3_offset_from_ivfc(ivfc_header)
 
@@ -51,12 +52,6 @@ class RomFSMount(LoggingMixIn, Operations):
         filemeta = self.f.read(filemeta_region.size)
 
         self.romfs_reader.parse_metadata(dirmeta, filemeta)
-
-    def __del__(self):
-        try:
-            self.f.close()
-        except AttributeError:
-            pass
 
     def getattr(self, path, fh=None):
         uid, gid, pid = fuse_get_context()
@@ -118,5 +113,9 @@ if __name__ == '__main__':
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
 
-    fuse = FUSE(RomFSMount(romfs_file=a.romfs), a.mount_point, foreground=a.fg or a.do, fsname=os.path.realpath(a.romfs),
-                ro=True, nothreads=True, **opts)
+    romfs_stat = os.stat(a.romfs)
+    romfs_size = os.path.getsize(a.romfs)
+
+    with open(a.romfs, 'rb') as f:
+        fuse = FUSE(RomFSMount(romfs_fp=f, g_stat=romfs_stat), a.mount_point, foreground=a.fg or a.do,
+                    fsname=os.path.realpath(a.romfs), ro=True, nothreads=True, **opts)

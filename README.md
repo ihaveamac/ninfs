@@ -11,6 +11,8 @@ Requires Python 3.5+, [a fork of fusepy](https://github.com/billziss-gh/fusepy),
 
 Install the fusepy fork with `pip3 install git+https://github.com/billziss-gh/fusepy.git`. Make sure pip is installed, since it doesn't seem to be always included on Windows.
 
+CDN, CIA, and NCCH mounting will need [SeedDB](https://github.com/ihaveamac/3DS-rom-tools/wiki/SeedDB-list) for mounting NCCH containers. SeedDB is checked at `seeddb.bin` in current working directory, or `~/.3ds/seeddb.bin`. It can also be provided with the `--seeddb` argument.
+
 * macOS: [Fuse for macOS](https://osxfuse.github.io)
 * Windows: [WinFsp](http://www.secfs.net/winfsp/) - Requires [WinFsp 2017.2 B2](https://github.com/billziss-gh/winfsp/releases/tag/v1.2B2) or later.
 * Linux: Most distributions should have fuse included. Use your package manager.
@@ -53,8 +55,8 @@ mount_point
 Mounts raw CDN contents, creating a virtual filesystem of decrypted contents (if encrypted).
 
 ```
-usage: mount_cdn.py [-h] [--dec-key DEC_KEY] [--dev] [--fg] [--do]
-                    [-o OPTIONS]
+usage: mount_cdn.py [-h] [--dec-key DEC_KEY] [--dev] [--seeddb SEEDDB] [--fg]
+                    [--do] [-o OPTIONS]
                     cdn_dir mount_point
 
 Mount Nintendo 3DS CDN contents.
@@ -67,6 +69,7 @@ optional arguments:
   -h, --help         show this help message and exit
   --dec-key DEC_KEY  decrypted titlekey
   --dev              use dev keys
+  --seeddb SEEDDB    path to seeddb.bin
   --fg, -f           run in foreground
   --do               debug output (python logging module)
   -o OPTIONS         mount options
@@ -78,20 +81,22 @@ Mounts CTR Importable Archive (CIA) files, creating a virtual filesystem of decr
 DLC with missing contents is currently not supported.
 
 ```
-usage: mount_cia.py [-h] [--dev] [--fg] [--do] [-o OPTIONS] cia mount_point
+usage: mount_cia.py [-h] [--dev] [--seeddb SEEDDB] [--fg] [--do] [-o OPTIONS]
+                    cia mount_point
 
 Mount Nintendo 3DS CTR Importable Archive files.
 
 positional arguments:
-  cia          CIA file
-  mount_point  mount point
+  cia              CIA file
+  mount_point      mount point
 
 optional arguments:
-  -h, --help   show this help message and exit
-  --dev        use dev keys
-  --fg, -f     run in foreground
-  --do         debug output (python logging module)
-  -o OPTIONS   mount options
+  -h, --help       show this help message and exit
+  --dev            use dev keys
+  --seeddb SEEDDB  path to seeddb.bin
+  --fg, -f         run in foreground
+  --do             debug output (python logging module)
+  -o OPTIONS       mount options
 ```
 
 ### Current files
@@ -157,7 +162,7 @@ mount_point
 ```
 
 ## mount_ncch.py
-Mounts NCCH containers, creating a virtual filesystem of decrypted sections. [SeedDB](https://github.com/ihaveamac/3DS-rom-tools/wiki/SeedDB-list) is required for titles using seed crypto. SeedDB is checked at `seeddb.bin` in current working directory, or `~/.3ds/seeddb.bin`. It can also be provided with the `--seeddb` argument.
+Mounts NCCH containers, creating a virtual filesystem of decrypted sections.
 
 ```
 usage: mount_ncch.py [-h] [--dev] [--seeddb SEEDDB] [--fg] [--do] [-o OPTIONS]
@@ -222,6 +227,6 @@ optional arguments:
 ```
 
 # License/Credits
-`pyctr`, `mount_cci.py`, `mount_cdn.py`, `mount_cia.py`, `mount_nand.py`, `mount_ncch.py`, `mount_romfs.py`, `mount_sd.py` are under the MIT license.
+`pyctr`, `common.py`, `mount_cci.py`, `mount_cdn.py`, `mount_cia.py`, `mount_nand.py`, `mount_ncch.py`, `mount_romfs.py`, `mount_sd.py` are under the MIT license.
 
 Special thanks to @Stary2001 for help with NAND crypto (especially TWL), and @d0k3 for SD crypto.

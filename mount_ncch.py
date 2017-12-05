@@ -10,37 +10,43 @@ import stat
 import struct
 import sys
 
+import common
 from pyctr import crypto, ncch, romfs, util
+
+try:
+    from mount_romfs import RomFSMount
+except ImportError:
+    print("Failed to import mount_romfs, RomFS mount will not be available.")
+    RomFSMount = None
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ImportError:
-    sys.exit('fuse module not found, please install fusepy to mount images '
-             '(`pip3 install git+https://github.com/billziss-gh/fusepy.git`).')
+    sys.exit("fuse module not found, please install fusepy to mount images "
+             "(`pip3 install git+https://github.com/billziss-gh/fusepy.git`).")
 
 try:
     from Cryptodome.Cipher import AES
     from Cryptodome.Util import Counter
 except ImportError:
-    sys.exit('Cryptodome module not found, please install pycryptodomex for encryption support '
-             '(`pip3 install pycryptodomex`).')
+    sys.exit("Cryptodome module not found, please install pycryptodomex for encryption support "
+             "(`pip3 install pycryptodomex`).")
 
 
 class NCCHContainerMount(LoggingMixIn, Operations):
     fd = 0
     _romfs_mounted = False
 
-    def __init__(self, ncch_file, dev, seeddb=None):
+    def __init__(self, ncch_fp, dev, g_stat, seeddb=None):
         self.crypto = crypto.CTRCrypto(is_dev=dev)
 
         self.crypto.setup_keys_from_boot9()
 
         # get status change, modify, and file access times
-        ncch_stat = os.stat(ncch_file)
-        self.g_stat = {'st_ctime': int(ncch_stat.st_ctime), 'st_mtime': int(ncch_stat.st_mtime),
-                       'st_atime': int(ncch_stat.st_atime)}
+        self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
+                       'st_atime': int(g_stat.st_atime)}
 
-        self.f = open(ncch_file, 'rb')
+        self.f = ncch_fp
         ncch_header = self.f.read(0x200)
         self.ncch_reader = ncch.NCCHReader.from_header(ncch_header)
 
@@ -102,35 +108,20 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                                             'enctype': 'normal', 'keyslot': self.ncch_reader.extra_keyslot,
                                             'iv': (self.ncch_reader.partition_id << 64 | (0x03 << 56))}
 
-            # try:
-            #     ivfc_header = self.read('/romfs.bin', romfs.IVFC_HEADER_SIZE, 0, 0)
-            #     lv3_offset = romfs.get_lv3_offset_from_ivfc(ivfc_header)
-            #     lv3_header = self.read('/romfs.bin', romfs.ROMFS_LV3_HEADER_SIZE, lv3_offset, 0)
-            #     romfs_reader = romfs.RomFSReader.from_lv3_header(lv3_header)
-            #     dirmeta_region = romfs_reader.dirmeta_region
-            #     filemeta_region = romfs_reader.filemeta_region
-            #     filedata_offset = romfs_reader.filedata_offset
-            #     dirmeta = self.read('/romfs.bin', dirmeta_region.size, dirmeta_region.offset + lv3_offset, 0)
-            #     filemeta = self.read('/romfs.bin', filemeta_region.size, filemeta_region.offset + lv3_offset, 0)
-            #     romfs_reader.parse_metadata(dirmeta, filemeta)
-            #
-            #     self.romfs_reader = romfs_reader
-            #     self.lv3_offset = lv3_offset
-            #     self._romfs_mounted = True
-            #
-            # except Exception as e:
-            #     print("failed to mount RomFS: {}: {}".format(type(e).__name__, e))
-
-    def __del__(self):
-        try:
-            self.f.close()
-        except AttributeError:
-            pass
+            try:
+                romfs_vfp = common.VirtualFileWrapper(self, '/romfs.bin', romfs_region.size)
+                romfs_fuse = RomFSMount(romfs_vfp, g_stat)
+                self.romfs_fuse = romfs_fuse
+                self._romfs_mounted = True
+            except Exception as e:
+                print("Failed to mount RomFS: {}: {}".format(type(e).__name__, e))
 
     def flush(self, path, fh):
         return self.f.flush()
 
     def getattr(self, path, fh=None):
+        if path.startswith('/romfs/'):
+            return self.romfs_fuse.getattr(common.remove_first_dir(path), fh)
         uid, gid, pid = fuse_get_context()
         if path == '/' or path.lower() == '/romfs':
             st = {'st_mode': (stat.S_IFDIR | 0o555), 'st_nlink': 2}
@@ -145,16 +136,17 @@ class NCCHContainerMount(LoggingMixIn, Operations):
         return self.fd
 
     def readdir(self, path, fh):
-        out = ['.', '..']
-        # if path.lower().startswith('/romfs/'):
-        #
-        # if self._romfs_mounted:
-        return out + [x[1:] for x in self.files]
+        if path.startswith('/romfs'):
+            return self.romfs_fuse.readdir(common.remove_first_dir(path), fh)
+        elif path == '/':
+            out = ['.', '..'] + [x[1:] for x in self.files]
+            if self._romfs_mounted:
+                out.append('romfs')
+            return out
 
     def read(self, path, size, offset, fh):
-        if path.lower().startswith('/romfs/'):
-            pass
-
+        if path.startswith('/romfs/'):
+            return self.romfs_fuse.read(common.remove_first_dir(path), size, offset, fh)
         fi = self.files[path.lower()]
         real_offset = fi['offset'] + offset
         if fi['enctype'] == 'none' or self.ncch_reader.flags.no_crypto:
@@ -223,19 +215,22 @@ class NCCHContainerMount(LoggingMixIn, Operations):
         return data
 
     def statfs(self, path):
-        return {'f_bsize': 4096, 'f_blocks': self.ncch_reader.content_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
-                'f_files': len(self.files)}
+        if path.startswith('/romfs/'):
+            return self.romfs_fuse.statfs(common.remove_first_dir(path))
+        else:
+            return {'f_bsize': 4096, 'f_blocks': self.ncch_reader.content_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
+                    'f_files': len(self.files)}
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Mount Nintendo 3DS NCCH containers.')
-    parser.add_argument('--dev', help='use dev keys', action='store_const', const=1, default=0)
-    parser.add_argument('--seeddb', help='path to seeddb.bin')
-    parser.add_argument('--fg', '-f', help='run in foreground', action='store_true')
-    parser.add_argument('--do', help='debug output (python logging module)', action='store_true')
-    parser.add_argument('-o', metavar='OPTIONS', help='mount options')
-    parser.add_argument('ncch', help='NCCH file')
-    parser.add_argument('mount_point', help='mount point')
+    parser = argparse.ArgumentParser(description="Mount Nintendo 3DS NCCH containers.")
+    parser.add_argument('--dev', help="use dev keys", action='store_const', const=1, default=0)
+    parser.add_argument('--seeddb', help="path to seeddb.bin")
+    parser.add_argument('--fg', '-f', help="run in foreground", action='store_true')
+    parser.add_argument('--do', help="debug output (python logging module)", action='store_true')
+    parser.add_argument('-o', metavar='OPTIONS', help="mount options")
+    parser.add_argument('ncch', help="NCCH file")
+    parser.add_argument('mount_point', help="mount point")
 
     a = parser.parse_args()
     try:
@@ -246,5 +241,8 @@ if __name__ == '__main__':
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
 
-    fuse = FUSE(NCCHContainerMount(ncch_file=a.ncch, dev=a.dev, seeddb=a.seeddb), a.mount_point, foreground=a.fg or a.do,
-                fsname=os.path.realpath(a.ncch), ro=True, nothreads=True, **opts)
+    ncch_stat = os.stat(a.ncch)
+
+    with open(a.ncch, 'rb') as f:
+        fuse = FUSE(NCCHContainerMount(ncch_fp=a.ncch, dev=a.dev, g_stat=ncch_stat, seeddb=a.seeddb), a.mount_point,
+                    foreground=a.fg or a.do, fsname=os.path.realpath(a.ncch), ro=True, nothreads=True, **opts)

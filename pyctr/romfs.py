@@ -36,10 +36,10 @@ RomFSFileEntry = namedtuple('RomFSFileEntry', 'type offset size')
 class RomFSReader:
     """Class for 3DS RomFS Level 3 partition."""
 
-    _root = {}
     _index_setup = False
 
     def __init__(self, *, dirmeta: RomFSRegion, filemeta: RomFSRegion, filedata_offset: int):
+        self._tree_root = {}
         self.dirmeta_region = dirmeta
         self.filemeta_region = filemeta
         self.filedata_offset = filedata_offset
@@ -48,7 +48,7 @@ class RomFSReader:
         """Get a directory or file entry"""
         if not self._index_setup:
             raise RomFSFileIndexNotSetup("file index must be set up with parse_metadata")
-        curr = self._root
+        curr = self._tree_root
         if path[0] == '/':
             path = path[1:]
         for part in path.split('/'):
@@ -120,8 +120,7 @@ class RomFSReader:
                 while True:
                     child_dir_meta = dirmeta_io.read(0x18)
                     next_sibling_dir = util.readle(child_dir_meta[0x4:0x8])
-                    child_dir_filename = dirmeta_io.read(util.readle(child_dir_meta[0x14:0x18]))
-                    child_dir_filename = child_dir_filename.decode('utf-16le')
+                    child_dir_filename = dirmeta_io.read(util.readle(child_dir_meta[0x14:0x18])).decode('utf-16le')
                     out['contents'][child_dir_filename] = {}
 
                     iterate_dir(out['contents'][child_dir_filename], child_dir_meta)
@@ -145,7 +144,7 @@ class RomFSReader:
                     filemeta_io.seek(next_sibling_file)
 
         root_meta = dirmeta_io.read(0x18)
-        iterate_dir(self._root, root_meta)
+        iterate_dir(self._tree_root, root_meta)
 
         dirmeta_io.close()
         filemeta_io.close()

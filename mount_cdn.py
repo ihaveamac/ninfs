@@ -9,20 +9,27 @@ import stat
 import struct
 import sys
 
+import common
 from pyctr import crypto, util
+
+try:
+    from mount_ncch import NCCHContainerMount
+except ImportError:
+    print("Failed to import import_ncch, NCCH mount will not be available.")
+    NCCHContainerMount = None
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ImportError:
-    sys.exit('fuse module not found, please install fusepy to mount images '
-             '(`pip3 install git+https://github.com/billziss-gh/fusepy.git`).')
+    sys.exit("fuse module not found, please install fusepy to mount images "
+             "(`pip3 install git+https://github.com/billziss-gh/fusepy.git`).")
 
 try:
     from Cryptodome.Cipher import AES
     from Cryptodome.Util import Counter
 except ImportError:
-    sys.exit('Cryptodome module not found, please install pycryptodomex for encryption support '
-             '(`pip3 install pycryptodomex`).')
+    sys.exit("Cryptodome module not found, please install pycryptodomex for encryption support "
+             "(`pip3 install pycryptodomex`).")
 
 
 class CDNContentsMount(LoggingMixIn, Operations):
@@ -32,7 +39,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
     def rp(self, path):
         return os.path.join(self.cdn_dir, path)
 
-    def __init__(self, cdn_dir, dev, dec_key):
+    def __init__(self, cdn_dir, dev, dec_key=None, seeddb=None):
         self.cdn_dir = cdn_dir
 
         self.crypto = crypto.CTRCrypto(is_dev=dev)
@@ -90,6 +97,8 @@ class CDNContentsMount(LoggingMixIn, Operations):
                       '/tmdchunks.bin': {'size': tmd_chunks_size, 'offset': 0xB04, 'type': 'raw',
                                          'real_filepath': self.rp('tmd')}}
 
+        self.dirs = {}
+
         # read contents to generate virtual files
         self.cdn_content_size = 0
         for chunk in [tmd_chunks_raw[i:i + 30] for i in range(0, tmd_chunks_size, 0x30)]:
@@ -100,12 +109,12 @@ class CDNContentsMount(LoggingMixIn, Operations):
             elif os.path.isfile(self.rp(content_id.hex().upper())):
                 real_filename = content_id.hex().upper()
             else:
-                print('Content {}:{} not found, will not be included.'.format(content_index.hex(), content_id.hex()))
+                print("Content {}:{} not found, will not be included.".format(content_index.hex(), content_id.hex()))
                 continue
             content_size = util.readbe(chunk[8:16])
             filesize = os.path.getsize(self.rp(real_filename))
             if content_size != filesize:
-                print('Warning: TMD Content size and filesize of {} are different.'.format(content_id.hex()))
+                print("Warning: TMD Content size and filesize of {} are different.".format(content_id.hex()))
             self.cdn_content_size += content_size
             content_is_encrypted = util.readbe(chunk[6:8]) & 1
             file_ext = 'nds' if content_index == b'\0\0' and util.readbe(title_id) >> 44 == 0x48 else 'ncch'
@@ -114,9 +123,20 @@ class CDNContentsMount(LoggingMixIn, Operations):
                                     'type': 'enc' if content_is_encrypted else 'raw',
                                     'real_filepath': self.rp(real_filename)}
 
+            dirname = '/{}.{}'.format(content_index.hex(), content_id.hex())
+            try:
+                content_vfp = common.VirtualFileWrapper(self, filename, content_size)
+                content_fuse = NCCHContainerMount(content_vfp, dev=dev, g_stat=cdn_stat, seeddb=seeddb)
+                self.dirs[dirname] = content_fuse
+            except Exception as e:
+                print("Failed to mount {}: {}: {}".format(filename, type(e).__name__, e))
+
     def getattr(self, path, fh=None):
+        first_dir = common.get_first_dir(path)
+        if first_dir in self.dirs:
+            return self.dirs[first_dir].getattr(common.remove_first_dir(path), fh)
         uid, gid, pid = fuse_get_context()
-        if path == '/':
+        if path == '/' or path in self.dirs:
             st = {'st_mode': (stat.S_IFDIR | 0o555), 'st_nlink': 2}
         elif path.lower() in self.files:
             st = {'st_mode': (stat.S_IFREG | 0o444), 'st_size': self.files[path.lower()]['size'], 'st_nlink': 1}
@@ -132,11 +152,18 @@ class CDNContentsMount(LoggingMixIn, Operations):
         return self.fd
 
     def readdir(self, path, fh):
-        return ['.', '..'] + [x[1:] for x in self.files]
+        first_dir = common.get_first_dir(path)
+        if first_dir in self.dirs:
+            return self.dirs[first_dir].readdir(common.remove_first_dir(path), fh)
+        return ['.', '..'] + [x[1:] for x in self.files] + [x[1:] for x in self.dirs]
 
     def read(self, path, size, offset, fh):
+        first_dir = common.get_first_dir(path)
+        if first_dir in self.dirs:
+            return self.dirs[first_dir].read(common.remove_first_dir(path), size, offset, fh)
         fi = self.files[path.lower()]
         real_offset = fi['offset'] + offset
+        real_size = size
         with open(fi['real_filepath'], 'rb') as f:
             if fi['type'] == 'raw':
                 # if raw, just read and return
@@ -162,24 +189,30 @@ class CDNContentsMount(LoggingMixIn, Operations):
                     iv = f.read(0x10)
                 # read to block size
                 f.seek(real_offset - before)
-                data = self.crypto.aes_cbc_decrypt(0x40, iv, f.read(size))
+                # adding 0x10 to the size fixes some kind of decryption bug
+                data = self.crypto.aes_cbc_decrypt(0x40, iv, f.read(size + 0x10))[before:real_size + before]
 
             return data
 
     def statfs(self, path):
+        print(path)
+        first_dir = common.get_first_dir(path)
+        if first_dir in self.dirs:
+            return self.dirs[first_dir].read(common.remove_first_dir(path))
         return {'f_bsize': 4096, 'f_blocks': self.cdn_content_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
                 'f_files': len(self.files)}
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Mount Nintendo 3DS CDN contents.')
-    parser.add_argument('--dec-key', help='decrypted titlekey')
-    parser.add_argument('--dev', help='use dev keys', action='store_const', const=1, default=0)
-    parser.add_argument('--fg', '-f', help='run in foreground', action='store_true')
-    parser.add_argument('--do', help='debug output (python logging module)', action='store_true')
-    parser.add_argument('-o', metavar='OPTIONS', help='mount options')
-    parser.add_argument('cdn_dir', help='directory with CDN contents')
-    parser.add_argument('mount_point', help='mount point')
+    parser = argparse.ArgumentParser(description="Mount Nintendo 3DS CDN contents.")
+    parser.add_argument('--dec-key', help="decrypted titlekey")
+    parser.add_argument('--dev', help="use dev keys", action='store_const', const=1, default=0)
+    parser.add_argument('--seeddb', help="path to seeddb.bin")
+    parser.add_argument('--fg', '-f', help="run in foreground", action='store_true')
+    parser.add_argument('--do', help="debug output (python logging module)", action='store_true')
+    parser.add_argument('-o', metavar='OPTIONS', help="mount options")
+    parser.add_argument('cdn_dir', help="directory with CDN contents")
+    parser.add_argument('mount_point', help="mount point")
 
     a = parser.parse_args()
     try:
@@ -190,5 +223,5 @@ if __name__ == '__main__':
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
 
-    fuse = FUSE(CDNContentsMount(cdn_dir=a.cdn_dir, dev=a.dev, dec_key=a.dec_key), a.mount_point, foreground=a.fg or a.do,
-                fsname=os.path.realpath(a.cdn_dir), ro=True, nothreads=True, **opts)
+    fuse = FUSE(CDNContentsMount(cdn_dir=a.cdn_dir, dev=a.dev, dec_key=a.dec_key, seeddb=a.seeddb), a.mount_point,
+                foreground=a.fg or a.do, fsname=os.path.realpath(a.cdn_dir), ro=True, nothreads=True, **opts)

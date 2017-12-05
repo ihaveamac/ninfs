@@ -41,7 +41,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
     fd = 0
 
     def __init__(self, sd_dir, movable, dev, readonly=False):
-        self.crypto = crypto.CTRCrypto()
+        self.crypto = crypto.CTRCrypto(is_dev=dev)
 
         self.crypto.setup_keys_from_boot9()
 
@@ -67,6 +67,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
 
         self.readonly = readonly
 
+    # noinspection PyMethodOverriding
     def __call__(self, op, path, *args):
         return super().__call__(op, self.root + path, *args)
 

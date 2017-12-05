@@ -9,7 +9,14 @@ import stat
 import struct
 import sys
 
+import common
 from pyctr import crypto, util
+
+try:
+    from mount_ncch import NCCHContainerMount
+except ImportError:
+    print("Failed to import import_ncch, NCCH mount will not be available.")
+    NCCHContainerMount = None
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
@@ -33,22 +40,22 @@ def new_offset(x: int) -> int:
 class CTRImportableArchiveMount(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, cia, dev):
+    def __init__(self, cia_fp, dev, g_stat, seeddb=None):
         self.crypto = crypto.CTRCrypto(is_dev=dev)
 
         self.crypto.setup_keys_from_boot9()
 
         # get status change, modify, and file access times
-        cia_stat = os.stat(cia)
-        self.g_stat = {'st_ctime': int(cia_stat.st_ctime), 'st_mtime': int(cia_stat.st_mtime),
-                       'st_atime': int(cia_stat.st_atime)}
+        self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
+                       'st_atime': int(g_stat.st_atime)}
 
         # open cia and get section sizes
-        self.f = open(cia, 'rb')
-        # TODO: do this based off the section sizes instead of file size.
-        self.cia_size = os.path.getsize(cia)
+        self.f = cia_fp
         archive_header_size, cia_type, cia_version, cert_chain_size, \
             ticket_size, tmd_size, meta_size, content_size = struct.unpack('<IHHIIIIQ', self.f.read(0x20))
+
+        self.cia_size = new_offset(archive_header_size) + new_offset(cert_chain_size) + new_offset(ticket_size)\
+            + new_offset(tmd_size) + new_offset(meta_size) + new_offset(content_size)
 
         # get offsets for sections of the CIA
         # each section is aligned to 64-byte blocks
@@ -95,6 +102,8 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
         self.f.seek(tmd_chunks_offset)
         tmd_chunks_raw = self.f.read(tmd_chunks_size)
 
+        self.dirs = {}
+
         # read chunks to generate virtual files
         current_offset = content_offset
         for chunk in [tmd_chunks_raw[i:i + 30] for i in range(0, content_count * 0x30, 0x30)]:
@@ -108,18 +117,23 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
                                     'type': 'enc' if content_is_encrypted else 'raw'}
             current_offset += new_offset(content_size)
 
-    def __del__(self):
-        try:
-            self.f.close()
-        except AttributeError:
-            pass
+            dirname = '/{}.{}'.format(content_index.hex(), content_id.hex())
+            try:
+                content_vfp = common.VirtualFileWrapper(self, filename, content_size)
+                content_fuse = NCCHContainerMount(content_vfp, dev=dev, g_stat=g_stat, seeddb=seeddb)
+                self.dirs[dirname] = content_fuse
+            except Exception as e:
+                print("Failed to mount {}: {}: {}".format(filename, type(e).__name__, e))
 
     def flush(self, path, fh):
         return self.f.flush()
 
     def getattr(self, path, fh=None):
+        first_dir = common.get_first_dir(path)
+        if first_dir in self.dirs:
+            return self.dirs[first_dir].getattr(common.remove_first_dir(path), fh)
         uid, gid, pid = fuse_get_context()
-        if path == '/':
+        if path == '/' or path in self.dirs:
             st = {'st_mode': (stat.S_IFDIR | 0o555), 'st_nlink': 2}
         elif path.lower() in self.files:
             st = {'st_mode': (stat.S_IFREG | 0o444), 'st_size': self.files[path.lower()]['size'], 'st_nlink': 1}
@@ -132,11 +146,18 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
         return self.fd
 
     def readdir(self, path, fh):
-        return ['.', '..'] + [x[1:] for x in self.files]
+        first_dir = common.get_first_dir(path)
+        if first_dir in self.dirs:
+            return self.dirs[first_dir].readdir(common.remove_first_dir(path), fh)
+        return ['.', '..'] + [x[1:] for x in self.files] + [x[1:] for x in self.dirs]
 
     def read(self, path, size, offset, fh):
+        first_dir = common.get_first_dir(path)
+        if first_dir in self.dirs:
+            return self.dirs[first_dir].read(common.remove_first_dir(path), size, offset, fh)
         fi = self.files[path.lower()]
         real_offset = fi['offset'] + offset
+        real_size = size
         if fi['type'] == 'raw':
             # if raw, just read and return
             self.f.seek(real_offset)
@@ -161,11 +182,15 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
                 iv = self.f.read(0x10)
             # read to block size
             self.f.seek(real_offset - before)
-            data = self.crypto.aes_cbc_decrypt(0x40, iv, self.f.read(size))
+            # adding 0x10 to the size fixes some kind of decryption bug
+            data = self.crypto.aes_cbc_decrypt(0x40, iv, self.f.read(size + 0x10))[before:real_size + before]
 
         return data
 
     def statfs(self, path):
+        first_dir = common.get_first_dir(path)
+        if first_dir in self.dirs:
+            return self.dirs[first_dir].statfs(common.remove_first_dir(path))
         return {'f_bsize': 4096, 'f_blocks': self.cia_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
                 'f_files': len(self.files)}
 
@@ -173,6 +198,7 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Mount Nintendo 3DS CTR Importable Archive files.')
     parser.add_argument('--dev', help='use dev keys', action='store_const', const=1, default=0)
+    parser.add_argument('--seeddb', help="path to seeddb.bin")
     parser.add_argument('--fg', '-f', help='run in foreground', action='store_true')
     parser.add_argument('--do', help='debug output (python logging module)', action='store_true')
     parser.add_argument('-o', metavar='OPTIONS', help='mount options')
@@ -188,5 +214,8 @@ if __name__ == '__main__':
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
 
-    fuse = FUSE(CTRImportableArchiveMount(cia=a.cia, dev=a.dev), a.mount_point, foreground=a.fg or a.do,
-                fsname=os.path.realpath(a.cia), ro=True, nothreads=True, **opts)
+    cia_stat = os.stat(a.cia)
+
+    with open(a.cia, 'rb') as f:
+        fuse = FUSE(CTRImportableArchiveMount(cia_fp=f, dev=a.dev, g_stat=cia_stat, seeddb=a.seeddb), a.mount_point,
+                    foreground=a.fg or a.do, fsname=os.path.realpath(a.cia), ro=True, nothreads=True, **opts)
