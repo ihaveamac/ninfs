@@ -84,7 +84,13 @@ class RomFSMount(LoggingMixIn, Operations):
             item = self.romfs_reader.get_info_from_path(path)
         except romfs.RomFSFileNotFoundException:
             raise FuseOSError(errno.ENOENT)
-        self.f.seek(self.data_offset + item.offset + offset)
+        real_offset = item.offset + offset
+        if real_offset > item.offset + item.size:
+            # do I raise an exception or return nothing? I'm not sure
+            return b''
+        if offset + size > item.size:
+            size = item.size - offset
+        self.f.seek(self.data_offset + real_offset)
         return self.f.read(size)
 
     def statfs(self, path):
