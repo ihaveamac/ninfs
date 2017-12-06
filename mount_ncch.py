@@ -120,12 +120,13 @@ class NCCHContainerMount(LoggingMixIn, Operations):
         return self.f.flush()
 
     def getattr(self, path, fh=None):
-        if path.startswith('/romfs/'):
+        lpath = path.lower()
+        if lpath.startswith('/romfs/'):
             return self.romfs_fuse.getattr(common.remove_first_dir(path), fh)
         uid, gid, pid = fuse_get_context()
-        if path == '/' or path.lower() == '/romfs':
+        if lpath == '/' or lpath == '/romfs':
             st = {'st_mode': (stat.S_IFDIR | 0o555), 'st_nlink': 2}
-        elif path.lower() in self.files:
+        elif lpath in self.files:
             st = {'st_mode': (stat.S_IFREG | 0o444), 'st_size': self.files[path.lower()]['size'], 'st_nlink': 1}
         else:
             raise FuseOSError(errno.ENOENT)
@@ -145,9 +146,10 @@ class NCCHContainerMount(LoggingMixIn, Operations):
             return out
 
     def read(self, path, size, offset, fh):
-        if path.startswith('/romfs/'):
+        lpath = path.lower()
+        if lpath.startswith('/romfs/'):
             return self.romfs_fuse.read(common.remove_first_dir(path), size, offset, fh)
-        fi = self.files[path.lower()]
+        fi = self.files[lpath]
         real_offset = fi['offset'] + offset
         if fi['enctype'] == 'none' or self.ncch_reader.flags.no_crypto:
             # if no encryption, just read and return

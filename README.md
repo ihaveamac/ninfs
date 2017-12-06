@@ -11,7 +11,7 @@ Requires Python 3.5+, [a fork of fusepy](https://github.com/billziss-gh/fusepy),
 
 Install the fusepy fork with `pip3 install git+https://github.com/billziss-gh/fusepy.git`. Make sure pip is installed, since it doesn't seem to be always included on Windows.
 
-CDN, CIA, and NCCH mounting will need [SeedDB](https://github.com/ihaveamac/3DS-rom-tools/wiki/SeedDB-list) for mounting NCCH containers. SeedDB is checked at `seeddb.bin` in current working directory, or `~/.3ds/seeddb.bin`. It can also be provided with the `--seeddb` argument.
+CCI, CDN, CIA, and NCCH mounting will need [SeedDB](https://github.com/ihaveamac/3DS-rom-tools/wiki/SeedDB-list) for mounting NCCH containers. SeedDB is checked at `seeddb.bin` in current working directory, or `~/.3ds/seeddb.bin`. It can also be provided with the `--seeddb` argument.
 
 * macOS: [Fuse for macOS](https://osxfuse.github.io)
 * Windows: [WinFsp](http://www.secfs.net/winfsp/) - Requires [WinFsp 2017.2 B3](https://github.com/billziss-gh/winfsp/releases/tag/v1.2B3) or later.
@@ -23,19 +23,22 @@ For savedata and extdata, see [3dsfuse-ex](https://github.com/wwylele/3dsfuse-ex
 Mounts CTR Cart Image (CCI, ".3ds") files, creating a virtual filesystem of separate partitions.
 
 ```
-usage: mount_cci.py [-h] [--fg] [--do] [-o OPTIONS] cci mount_point
+usage: mount_cci.py [-h] [--dev] [--seeddb SEEDDB] [--fg] [--do] [-o OPTIONS]
+                    cci mount_point
 
 Mount Nintendo 3DS CTR Cart Image files.
 
 positional arguments:
-  cci          CCI file
-  mount_point  mount point
+  cci              CCI file
+  mount_point      mount point
 
 optional arguments:
-  -h, --help   show this help message and exit
-  --fg, -f     run in foreground
-  --do         debug output (python logging module)
-  -o OPTIONS   mount options
+  -h, --help       show this help message and exit
+  --dev            use dev keys
+  --seeddb SEEDDB  path to seeddb.bin
+  --fg, -f         run in foreground
+  --do             debug output (python logging module)
+  -o OPTIONS       mount options
 ```
 
 ### Current files

@@ -7,24 +7,30 @@ import os
 import stat
 import sys
 
+import common
 from pyctr import util
+
+try:
+    from mount_ncch import NCCHContainerMount
+except ImportError:
+    print("Failed to import import_ncch, NCCH mount will not be available.")
+    NCCHContainerMount = None
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ImportError:
-    sys.exit('fuse module not found, please install fusepy to mount images '
-             '(`pip3 install git+https://github.com/billziss-gh/fusepy.git`).')
+    sys.exit("fuse module not found, please install fusepy to mount images "
+             "(`pip3 install git+https://github.com/billziss-gh/fusepy.git`).")
 
 
 class CTRCartImageMount(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, cci):
+    def __init__(self, cci, dev, g_stat, seeddb=None):
         # get status change, modify, and file access times
-        cci_stat = os.stat(cci)
-        self.g_stat = {'st_ctime': int(cci_stat.st_ctime),
-                       'st_mtime': int(cci_stat.st_mtime),
-                       'st_atime': int(cci_stat.st_atime)}
+        self.g_stat = {'st_ctime': int(g_stat.st_ctime),
+                       'st_mtime': int(g_stat.st_mtime),
+                       'st_atime': int(g_stat.st_atime)}
 
         # open cci and get section sizes
         self.f = open(cci, 'rb')
@@ -48,10 +54,20 @@ class CTRCartImageMount(LoggingMixIn, Operations):
                             util.readle(ncsd_part_raw[i + 4:i + 8]) * 0x200] for i in range(0, 0x40, 0x8)]
 
         ncsd_part_names = ['game', 'manual', 'dlp', 'unk', 'unk', 'unk', 'update_n3ds', 'update_o3ds']
+
+        self.dirs = {}
         for idx, part in enumerate(ncsd_partitions):
             if part[0]:
-                self.files['/content{}.{}.ncch'.format(idx, ncsd_part_names[idx])] = {'size': part[1],
-                                                                                      'offset': part[0]}
+                filename = '/content{}.{}.ncch'.format(idx, ncsd_part_names[idx])
+                self.files[filename] = {'size': part[1], 'offset': part[0]}
+
+                dirname = '/content{}.{}'.format(idx, ncsd_part_names[idx])
+                try:
+                    content_vfp = common.VirtualFileWrapper(self, filename, part[1])
+                    content_fuse = NCCHContainerMount(content_vfp, dev, g_stat=g_stat, seeddb=seeddb)
+                    self.dirs[dirname] = content_fuse
+                except Exception as e:
+                    print("Failed to mount {}: {}: {}".format(filename, type(e).__name__, e))
 
     def __del__(self):
         try:
@@ -63,6 +79,9 @@ class CTRCartImageMount(LoggingMixIn, Operations):
         return self.f.flush()
 
     def getattr(self, path, fh=None):
+        first_dir = common.get_first_dir(path)
+        if first_dir in self.dirs:
+            return self.dirs[first_dir].getattr(common.remove_first_dir(path), fh)
         uid, gid, pid = fuse_get_context()
         if path == '/':
             st = {'st_mode': (stat.S_IFDIR | 0o555), 'st_nlink': 2}
@@ -77,26 +96,38 @@ class CTRCartImageMount(LoggingMixIn, Operations):
         return self.fd
 
     def readdir(self, path, fh):
-        return ['.', '..'] + [x[1:] for x in self.files]
+        first_dir = common.get_first_dir(path)
+        if first_dir in self.dirs:
+            return self.dirs[first_dir].readdir(common.remove_first_dir(path), fh)
+        return ['.', '..'] + [x[1:] for x in self.files] + [x[1:] for x in self.dirs]
 
     def read(self, path, size, offset, fh):
+        first_dir = common.get_first_dir(path)
+        print('read req: 0x{:08x} 0x{:08x} {}'.format(size, offset, path))
+        if first_dir in self.dirs:
+            return self.dirs[first_dir].read(common.remove_first_dir(path), size, offset, fh)
         fi = self.files[path.lower()]
         real_offset = fi['offset'] + offset
         self.f.seek(real_offset)
         return self.f.read(size)
 
     def statfs(self, path):
+        first_dir = common.get_first_dir(path)
+        if first_dir in self.dirs:
+            return self.dirs[first_dir].statfs(common.remove_first_dir(path))
         return {'f_bsize': 4096, 'f_blocks': self.cci_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
                 'f_files': len(self.files)}
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Mount Nintendo 3DS CTR Cart Image files.')
-    parser.add_argument('--fg', '-f', help='run in foreground', action='store_true')
-    parser.add_argument('--do', help='debug output (python logging module)', action='store_true')
-    parser.add_argument('-o', metavar='OPTIONS', help='mount options')
-    parser.add_argument('cci', help='CCI file')
-    parser.add_argument('mount_point', help='mount point')
+    parser.add_argument('--dev', help="use dev keys", action='store_const', const=1, default=0)
+    parser.add_argument('--seeddb', help="path to seeddb.bin")
+    parser.add_argument('--fg', '-f', help="run in foreground", action='store_true')
+    parser.add_argument('--do', help="debug output (python logging module)", action='store_true')
+    parser.add_argument('-o', metavar='OPTIONS', help="mount options")
+    parser.add_argument('cci', help="CCI file")
+    parser.add_argument('mount_point', help="mount point")
 
     a = parser.parse_args()
     try:
@@ -107,5 +138,7 @@ if __name__ == '__main__':
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
 
-    fuse = FUSE(CTRCartImageMount(cci=a.cci), a.mount_point, foreground=a.fg or a.do, fsname=os.path.realpath(a.cci),
-                ro=True, nothreads=True, **opts)
+    cci_stat = os.stat(a.cci)
+
+    fuse = FUSE(CTRCartImageMount(cci=a.cci, dev=a.dev, g_stat=cci_stat, seeddb=a.seeddb), a.mount_point,
+                foreground=a.fg or a.do, fsname=os.path.realpath(a.cci), ro=True, nothreads=True, **opts)

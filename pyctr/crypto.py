@@ -39,9 +39,6 @@ def rol(val: int, r_bits: int, max_bits: int) -> int:
 
 class CTRCrypto:
     """Class for 3DS crypto operations, including encryption and key generation."""
-    key_x = {}
-    key_y = {0x03: 0xE1A00005202DDD1DBD4DC4D30AB9DC76, 0x05: 0x4D804F4E9990194613A204AC584460BE}
-    key_normal = {}
 
     b9_keys_set = False
 
@@ -68,6 +65,10 @@ class CTRCrypto:
     )
 
     def __init__(self, is_dev: int = 0):
+        self.key_x = {}
+        self.key_y = {0x03: 0xE1A00005202DDD1DBD4DC4D30AB9DC76, 0x05: 0x4D804F4E9990194613A204AC584460BE}
+        self.key_normal = {}
+
         self.is_dev = is_dev
 
         for keyslot, keys in base_key_x.items():

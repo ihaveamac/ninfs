@@ -197,13 +197,13 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Mount Nintendo 3DS CTR Importable Archive files.')
-    parser.add_argument('--dev', help='use dev keys', action='store_const', const=1, default=0)
+    parser.add_argument('--dev', help="use dev keys", action='store_const', const=1, default=0)
     parser.add_argument('--seeddb', help="path to seeddb.bin")
-    parser.add_argument('--fg', '-f', help='run in foreground', action='store_true')
-    parser.add_argument('--do', help='debug output (python logging module)', action='store_true')
-    parser.add_argument('-o', metavar='OPTIONS', help='mount options')
-    parser.add_argument('cia', help='CIA file')
-    parser.add_argument('mount_point', help='mount point')
+    parser.add_argument('--fg', '-f', help="run in foreground", action='store_true')
+    parser.add_argument('--do', help="debug output (python logging module)", action='store_true')
+    parser.add_argument('-o', metavar='OPTIONS', help="mount options")
+    parser.add_argument('cia', help="CIA file")
+    parser.add_argument('mount_point', help="mount point")
 
     a = parser.parse_args()
     try:
