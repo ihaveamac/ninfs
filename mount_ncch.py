@@ -244,5 +244,5 @@ if __name__ == '__main__':
     ncch_stat = os.stat(a.ncch)
 
     with open(a.ncch, 'rb') as f:
-        fuse = FUSE(NCCHContainerMount(ncch_fp=a.ncch, dev=a.dev, g_stat=ncch_stat, seeddb=a.seeddb), a.mount_point,
+        fuse = FUSE(NCCHContainerMount(ncch_fp=f, dev=a.dev, g_stat=ncch_stat, seeddb=a.seeddb), a.mount_point,
                     foreground=a.fg or a.do, fsname=os.path.realpath(a.ncch), ro=True, nothreads=True, **opts)
