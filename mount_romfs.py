@@ -38,7 +38,7 @@ class RomFSMount(LoggingMixIn, Operations):
 
         self.f.seek(lv3_offset)
         lv3_header = self.f.read(romfs.ROMFS_LV3_HEADER_SIZE)
-        self.romfs_reader = romfs.RomFSReader.from_lv3_header(lv3_header)
+        self.romfs_reader = romfs.RomFSReader.from_lv3_header(lv3_header, case_insensitive=True)
 
         dirmeta_region = self.romfs_reader.dirmeta_region
         filemeta_region = self.romfs_reader.filemeta_region

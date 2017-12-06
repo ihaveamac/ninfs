@@ -29,8 +29,8 @@ class RomFSFileIndexNotSetup(RomFSException):
 
 
 RomFSRegion = namedtuple('RomFSRegion', 'offset size')
-RomFSDirectoryEntry = namedtuple('RomFSDirectoryEntry', 'type contents')
-RomFSFileEntry = namedtuple('RomFSFileEntry', 'type offset size')
+RomFSDirectoryEntry = namedtuple('RomFSDirectoryEntry', 'name type contents')
+RomFSFileEntry = namedtuple('RomFSFileEntry', 'name type offset size')
 
 
 class RomFSReader:
@@ -38,17 +38,21 @@ class RomFSReader:
 
     _index_setup = False
 
-    def __init__(self, *, dirmeta: RomFSRegion, filemeta: RomFSRegion, filedata_offset: int):
-        self._tree_root = {}
+    def __init__(self, *, dirmeta: RomFSRegion, filemeta: RomFSRegion, filedata_offset: int,
+                 case_insensitive: bool = False):
+        self._tree_root = {'name': 'ROOT'}
         self.dirmeta_region = dirmeta
         self.filemeta_region = filemeta
         self.filedata_offset = filedata_offset
+        self.case_insensitive = case_insensitive
 
     def get_info_from_path(self, path):
         """Get a directory or file entry"""
         if not self._index_setup:
             raise RomFSFileIndexNotSetup("file index must be set up with parse_metadata")
         curr = self._tree_root
+        if self.case_insensitive:
+            path = path.lower()
         if path[0] == '/':
             path = path[1:]
         for part in path.split('/'):
@@ -59,9 +63,11 @@ class RomFSReader:
             except KeyError:
                 raise RomFSFileNotFoundException(path)
         if curr['type'] == 'dir':
-            return RomFSDirectoryEntry(type='dir', contents=(*curr['contents'].keys(),))
+            # for v in curr['contents'].values():
+            contents = (k['name'] for k in curr['contents'].values())
+            return RomFSDirectoryEntry(name=curr['name'], type='dir', contents=(*contents,))
         elif curr['type'] == 'file':
-            return RomFSFileEntry(type='file', offset=curr['offset'], size=curr['size'])
+            return RomFSFileEntry(name=curr['name'], type='file', offset=curr['offset'], size=curr['size'])
 
     @staticmethod
     def validate_lv3_header(length: int, dirhash: RomFSRegion, dirmeta: RomFSRegion, filehash: RomFSRegion,
@@ -82,7 +88,7 @@ class RomFSReader:
             raise InvalidRomFSHeaderException("File Data offset is before the end of the File Metadata region")
 
     @classmethod
-    def from_lv3_header(cls, header: bytes) -> 'RomFSReader':
+    def from_lv3_header(cls, header: bytes, *, case_insensitive: bool = False) -> 'RomFSReader':
         """Create a RomFSReader from a Level 3 header."""
         header_length = len(header)
         if header_length < ROMFS_LV3_HEADER_SIZE:
@@ -99,7 +105,8 @@ class RomFSReader:
         cls.validate_lv3_header(lv3_header_length, lv3_dirhash, lv3_dirmeta, lv3_filehash, lv3_filemeta,
                                 lv3_filedata_offset)
 
-        return cls(dirmeta=lv3_dirmeta, filemeta=lv3_filemeta, filedata_offset=lv3_filedata_offset)
+        return cls(dirmeta=lv3_dirmeta, filemeta=lv3_filemeta, filedata_offset=lv3_filedata_offset,
+                   case_insensitive=case_insensitive)
 
     def parse_metadata(self, raw_dirmeta: bytes, raw_filemeta: bytes):
         """Parse raw Directory and File Metadata to generate a file tree."""
@@ -107,7 +114,7 @@ class RomFSReader:
         filemeta_io = BytesIO(raw_filemeta)
 
         # maybe this should be switched to BytesIO
-        def iterate_dir(out: dict, raw: bytes):
+        def iterate_dir(out: dict, raw: bytes, current_path: str):
             first_child_dir = util.readle(raw[0x8:0xC])
             first_file = util.readle(raw[0xC:0x10])
 
@@ -120,10 +127,14 @@ class RomFSReader:
                 while True:
                     child_dir_meta = dirmeta_io.read(0x18)
                     next_sibling_dir = util.readle(child_dir_meta[0x4:0x8])
-                    child_dir_filename = dirmeta_io.read(util.readle(child_dir_meta[0x14:0x18])).decode('utf-16le')
-                    out['contents'][child_dir_filename] = {}
+                    child_dir_name = dirmeta_io.read(util.readle(child_dir_meta[0x14:0x18])).decode('utf-16le')
+                    child_dir_name_meta = child_dir_name.lower() if self.case_insensitive else child_dir_name
+                    if child_dir_name_meta in out['contents']:
+                        print("WARNING: Dirname collision! {}{}".format(current_path, child_dir_name))
+                    out['contents'][child_dir_name_meta] = {'name': child_dir_name}
 
-                    iterate_dir(out['contents'][child_dir_filename], child_dir_meta)
+                    iterate_dir(out['contents'][child_dir_name_meta], child_dir_meta,
+                                '{}{}/'.format(current_path, child_dir_name))
                     if next_sibling_dir == 0xFFFFFFFF:
                         break
                     dirmeta_io.seek(next_sibling_dir)
@@ -135,16 +146,19 @@ class RomFSReader:
                     next_sibling_file = util.readle(child_file_meta[0x4:0x8])
                     child_file_offset = util.readle(child_file_meta[0x8:0x10])
                     child_file_size = util.readle(child_file_meta[0x10:0x18])
-                    child_file_filename = filemeta_io.read(util.readle(child_file_meta[0x1C:0x20])).decode('utf-16le')
-                    out['contents'][child_file_filename] = {'type': 'file', 'offset': child_file_offset,
-                                                            'size': child_file_size}
+                    child_file_name = filemeta_io.read(util.readle(child_file_meta[0x1C:0x20])).decode('utf-16le')
+                    child_file_name_meta = child_file_name.lower() if self.case_insensitive else child_file_name
+                    if child_file_name_meta in out['contents']:
+                        print("WARNING: Filename collision! {}{}".format(current_path, child_file_name))
+                    out['contents'][child_file_name_meta] = {'name': child_file_name, 'type': 'file',
+                                                             'offset': child_file_offset, 'size': child_file_size}
 
                     if next_sibling_file == 0xFFFFFFFF:
                         break
                     filemeta_io.seek(next_sibling_file)
 
         root_meta = dirmeta_io.read(0x18)
-        iterate_dir(self._tree_root, root_meta)
+        iterate_dir(self._tree_root, root_meta, '/')
 
         dirmeta_io.close()
         filemeta_io.close()
