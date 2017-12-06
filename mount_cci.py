@@ -103,7 +103,6 @@ class CTRCartImageMount(LoggingMixIn, Operations):
 
     def read(self, path, size, offset, fh):
         first_dir = common.get_first_dir(path)
-        print('read req: 0x{:08x} 0x{:08x} {}'.format(size, offset, path))
         if first_dir in self.dirs:
             return self.dirs[first_dir].read(common.remove_first_dir(path), size, offset, fh)
         fi = self.files[path.lower()]
