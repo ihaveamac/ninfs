@@ -187,7 +187,6 @@ class NCCHContainerMount(LoggingMixIn, Operations):
 
         elif fi['enctype'] == 'fulldec':
             # this could be optimized much better
-            print()
             before = offset % 0x200
             aligned_real_offset = real_offset - before
             aligned_offset = offset - before
@@ -231,10 +230,6 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                     new_data = self.f.read(info[1])
 
                 data += new_data
-
-            print('size:         0x{:08x}'.format(size))
-            print('aligned size: 0x{:08x}'.format(aligned_size))
-            print('read:         0x{:08x}'.format(total_read))
 
             data = data[before:size + before]
 
