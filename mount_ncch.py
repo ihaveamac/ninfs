@@ -191,27 +191,22 @@ class NCCHContainerMount(LoggingMixIn, Operations):
             aligned_real_offset = real_offset - before
             aligned_offset = offset - before
             aligned_size = size + before
-            # print('requested size: 0x{:x}'.format(size))
             self.f.seek(aligned_real_offset)
             data = b''
             files_to_read = OrderedDict()
             for chunk in range(math.ceil(aligned_size / 0x200)):
                 new_offset = (aligned_offset + (chunk * 0x200))
                 added = False
-                print('new_offset:      0x{:08x}'.format(new_offset).ljust(0x20), end='')
                 for fname, attrs in self.files.items():
                     if attrs['enctype'] == 'fulldec':
                         continue
                     if attrs['offset'] <= new_offset < attrs['offset'] + attrs['size']:
-                        print(' found: ' + fname)
                         if fname not in files_to_read:
                             files_to_read[fname] = [new_offset - attrs['offset'], 0]
-                            print('beginning: 0x{:08x}'.format(new_offset - attrs['offset']))
                         files_to_read[fname][1] += 0x200
                         added = True
                 if not added:
                     files_to_read['raw{}'.format(chunk)] = [new_offset, 0x200]
-                    print()
 
             total_read = 0
             for fname, info in files_to_read.items():
@@ -224,7 +219,6 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                         ncch_array[0x18F] = 4
                         new_data = bytes(ncch_array)
                 except KeyError:
-                    print('reading: {:16} 0x{:08x} 0x{:08x}'.format(fname, info[0], info[1]))
                     # for unknown files
                     self.f.seek(info[0])
                     new_data = self.f.read(info[1])
