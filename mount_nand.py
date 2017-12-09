@@ -225,9 +225,6 @@ class NANDImageMount(LoggingMixIn, Operations):
                     print('/ctrnand_full.img')
                     self.f.seek(part[0])
                     iv = self.ctr + (part[0] >> 4)
-                    # counter = Counter.new(128, initial_value=iv)
-                    # cipher = AES.new(self.keyslots[ctrnand_keyslot], AES.MODE_CTR, counter=counter)
-                    # ctr_mbr = cipher.decrypt(self.f.read(0x200))[0x1BE:0x1FE]
                     ctr_mbr = self.crypto.aes_ctr(ctrnand_keyslot, iv, self.f.read(0x200))[0x1BE:0x1FE]
                     ctr_partitions = [[util.readle(ctr_mbr[i + 8:i + 12]) * 0x200,
                                        util.readle(ctr_mbr[i + 12:i + 16]) * 0x200]

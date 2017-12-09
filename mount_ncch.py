@@ -9,6 +9,7 @@ import os
 import stat
 import struct
 import sys
+from collections import OrderedDict
 
 import common
 from pyctr import crypto, ncch, romfs, util
@@ -186,31 +187,54 @@ class NCCHContainerMount(LoggingMixIn, Operations):
 
         elif fi['enctype'] == 'fulldec':
             # this could be optimized much better
+            print()
             before = offset % 0x200
             aligned_real_offset = real_offset - before
             aligned_offset = offset - before
             aligned_size = size + before
+            # print('requested size: 0x{:x}'.format(size))
             self.f.seek(aligned_real_offset)
             data = b''
+            files_to_read = OrderedDict()
             for chunk in range(math.ceil(aligned_size / 0x200)):
                 new_offset = (aligned_offset + (chunk * 0x200))
-                new_data = b''
+                added = False
+                print('new_offset:      0x{:08x}'.format(new_offset).ljust(0x20), end='')
                 for fname, attrs in self.files.items():
                     if attrs['enctype'] == 'fulldec':
                         continue
                     if attrs['offset'] <= new_offset < attrs['offset'] + attrs['size']:
-                        new_data = self.read(fname, 0x200, new_offset - attrs['offset'], 0)
-                        if fname == '/ncch.bin':
-                            # fix crypto flags
-                            ncch_array = bytearray(new_data)
-                            ncch_array[0x18B] = 0
-                            ncch_array[0x18F] = 4
-                            new_data = bytes(ncch_array)
-                if not new_data:
-                    self.f.seek(new_offset)
-                    new_data = self.f.read(0x200)
+                        print(' found: ' + fname)
+                        if fname not in files_to_read:
+                            files_to_read[fname] = [new_offset - attrs['offset'], 0]
+                            print('beginning: 0x{:08x}'.format(new_offset - attrs['offset']))
+                        files_to_read[fname][1] += 0x200
+                        added = True
+                if not added:
+                    files_to_read['raw{}'.format(chunk)] = [new_offset, 0x200]
+                    print()
+
+            total_read = 0
+            for fname, info in files_to_read.items():
+                try:
+                    new_data = self.read(fname, info[1], info[0], 0)
+                    if fname == '/ncch.bin':
+                        # fix crypto flags
+                        ncch_array = bytearray(new_data)
+                        ncch_array[0x18B] = 0
+                        ncch_array[0x18F] = 4
+                        new_data = bytes(ncch_array)
+                except KeyError:
+                    print('reading: {:16} 0x{:08x} 0x{:08x}'.format(fname, info[0], info[1]))
+                    # for unknown files
+                    self.f.seek(info[0])
+                    new_data = self.f.read(info[1])
 
                 data += new_data
+
+            print('size:         0x{:08x}'.format(size))
+            print('aligned size: 0x{:08x}'.format(aligned_size))
+            print('read:         0x{:08x}'.format(total_read))
 
             data = data[before:size + before]
 
