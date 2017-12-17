@@ -10,6 +10,7 @@ import stat
 import struct
 import sys
 
+import common
 from pyctr import romfs, util
 
 try:
@@ -111,10 +112,7 @@ if __name__ == '__main__':
     parser.add_argument('mount_point', help='mount point')
 
     a = parser.parse_args()
-    try:
-        opts = {o: True for o in a.o.split(',')}
-    except AttributeError:
-        opts = {}
+    opts = dict(common.parse_fuse_opts(a.o))
 
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
@@ -123,5 +121,18 @@ if __name__ == '__main__':
     romfs_size = os.path.getsize(a.romfs)
 
     with open(a.romfs, 'rb') as f:
-        fuse = FUSE(RomFSMount(romfs_fp=f, g_stat=romfs_stat), a.mount_point, foreground=a.fg or a.do,
-                    fsname=os.path.realpath(a.romfs), ro=True, nothreads=True, **opts)
+        mount = RomFSMount(romfs_fp=f, g_stat=romfs_stat)
+        if common.macos or common.windows:
+            # assuming / is the path separator since macos. but if windows gets support for this,
+            #   it will have to be done differently.
+            path_to_show = os.path.realpath(a.romfs).rsplit('/', maxsplit=2)
+            if common.macos:
+                opts['volname'] = "Nintendo 3DS RomFS ({}/{})".format(path_to_show[-2], path_to_show[-1])
+            elif common.windows:
+                # volume label can only be up to 32 chars
+                # TODO: maybe I should show the path here, if i can shorten it properly
+                opts['volname'] = "Nintendo 3DS RomFS"
+        if common.macos or common.windows:
+            opts['fstypename'] = 'RomFS'
+        fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do, ro=True, nothreads=True,
+                    fsname=os.path.realpath(a.romfs), **opts)

@@ -1,7 +1,22 @@
+import sys
+
 from fuse import Operations
 
 
-def remove_first_dir(path):
+windows = sys.platform in {'win32', 'cygwin'}
+macos = sys.platform == 'darwin'
+
+
+def parse_fuse_opts(opts):
+    if not opts:
+        return
+    for arg in opts.split(','):
+        if arg:  # leaves out empty ones
+            separated = arg.split('=', maxsplit=1)
+            yield separated[0], True if len(separated) == 1 else separated[1]
+
+
+def remove_first_dir(path: str) -> str:
     sep = path.find('/', 1)
     if sep == -1:
         return '/'
@@ -9,12 +24,13 @@ def remove_first_dir(path):
         return path[sep:]
 
 
-def get_first_dir(path):
+def get_first_dir(path: str) -> str:
     sep = path.find('/', 1)
     if sep == -1:
         return path
     else:
         return path[:sep]
+
 
 class VirtualFileWrapper:
     """Wrapper for a FUSE Operations class for things that need a file-like object."""

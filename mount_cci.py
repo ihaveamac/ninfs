@@ -26,20 +26,20 @@ except ImportError:
 class CTRCartImageMount(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, cci, dev, g_stat, seeddb=None):
+    def __init__(self, cci_fp, dev, g_stat, seeddb=None):
         # get status change, modify, and file access times
         self.g_stat = {'st_ctime': int(g_stat.st_ctime),
                        'st_mtime': int(g_stat.st_mtime),
                        'st_atime': int(g_stat.st_atime)}
 
         # open cci and get section sizes
-        self.f = open(cci, 'rb')
+        self.f = cci_fp
         self.f.seek(0x100)
         ncsd_header = self.f.read(0x100)
         if ncsd_header[0:4] != b'NCSD':
             sys.exit('NCSD magic not found, is this a real CCI?')
-        media_id = ncsd_header[0x8:0x10]
-        if media_id == b'\0' * 8:
+        self.media_id = ncsd_header[0x8:0x10]
+        if self.media_id == b'\0' * 8:
             sys.exit('Media ID is all-zero, is this a CCI?')
 
         self.cci_size = util.readle(ncsd_header[4:8]) * 0x200
@@ -68,12 +68,6 @@ class CTRCartImageMount(LoggingMixIn, Operations):
                     self.dirs[dirname] = content_fuse
                 except Exception as e:
                     print("Failed to mount {}: {}: {}".format(filename, type(e).__name__, e))
-
-    def __del__(self):
-        try:
-            self.f.close()
-        except AttributeError:
-            pass
 
     def flush(self, path, fh):
         return self.f.flush()
@@ -129,15 +123,21 @@ if __name__ == '__main__':
     parser.add_argument('mount_point', help="mount point")
 
     a = parser.parse_args()
-    try:
-        opts = {o: True for o in a.o.split(',')}
-    except AttributeError:
-        opts = {}
+    opts = dict(common.parse_fuse_opts(a.o))
 
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
 
     cci_stat = os.stat(a.cci)
 
-    fuse = FUSE(CTRCartImageMount(cci=a.cci, dev=a.dev, g_stat=cci_stat, seeddb=a.seeddb), a.mount_point,
-                foreground=a.fg or a.do, fsname=os.path.realpath(a.cci), ro=True, nothreads=True, **opts)
+    with open(a.cci, 'rb') as f:
+        mount = CTRCartImageMount(cci_fp=f, dev=a.dev, g_stat=cci_stat, seeddb=a.seeddb)
+        if common.macos or common.windows:
+            opts['fstypename'] = 'CCI'
+            if common.macos:
+                opts['volname'] = "CTR Cart Image ({})".format(mount.media_id[::-1].hex().upper())
+            elif common.windows:
+                # volume label can only be up to 32 chars
+                opts['volname'] = "CCI ({})".format(mount.media_id[::-1].hex().upper())
+        fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do, ro=True, nothreads=True,
+                    fsname=os.path.realpath(a.cci), **opts)

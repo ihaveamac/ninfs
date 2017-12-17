@@ -57,7 +57,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
         with open(self.rp('tmd'), 'rb') as tmd:
             # get title and content count
             tmd.seek(0x18C)
-            title_id = tmd.read(8)
+            self.title_id = tmd.read(8)
             tmd.seek(0x1DE)
             content_count = util.readbe(tmd.read(2))
             tmd_chunks_size = content_count * 0x30
@@ -87,7 +87,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
 
             # decrypt titlekey
             self.crypto.set_keyslot('y', 0x3D, self.crypto.get_common_key(common_key_index))
-            titlekey = self.crypto.aes_cbc_decrypt(0x3D, title_id + (b'\0' * 8), enc_titlekey)
+            titlekey = self.crypto.aes_cbc_decrypt(0x3D, self.title_id + (b'\0' * 8), enc_titlekey)
             self.crypto.set_normal_key(0x40, titlekey)
 
         # create virtual files
@@ -117,7 +117,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
                 print("Warning: TMD Content size and filesize of {} are different.".format(content_id.hex()))
             self.cdn_content_size += content_size
             content_is_encrypted = util.readbe(chunk[6:8]) & 1
-            file_ext = 'nds' if content_index == b'\0\0' and util.readbe(title_id) >> 44 == 0x48 else 'ncch'
+            file_ext = 'nds' if content_index == b'\0\0' and util.readbe(self.title_id) >> 44 == 0x48 else 'ncch'
             filename = '/{}.{}.{}'.format(content_index.hex(), content_id.hex(), file_ext)
             self.files[filename] = {'size': content_size, 'offset': 0, 'index': content_index,
                                     'type': 'enc' if content_is_encrypted else 'raw',
@@ -195,7 +195,6 @@ class CDNContentsMount(LoggingMixIn, Operations):
             return data
 
     def statfs(self, path):
-        print(path)
         first_dir = common.get_first_dir(path)
         if first_dir in self.dirs:
             return self.dirs[first_dir].read(common.remove_first_dir(path))
@@ -215,13 +214,14 @@ if __name__ == '__main__':
     parser.add_argument('mount_point', help="mount point")
 
     a = parser.parse_args()
-    try:
-        opts = {o: True for o in a.o.split(',')}
-    except AttributeError:
-        opts = {}
+    opts = dict(common.parse_fuse_opts(a.o))
 
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
 
-    fuse = FUSE(CDNContentsMount(cdn_dir=a.cdn_dir, dev=a.dev, dec_key=a.dec_key, seeddb=a.seeddb), a.mount_point,
-                foreground=a.fg or a.do, fsname=os.path.realpath(a.cdn_dir), ro=True, nothreads=True, **opts)
+    mount = CDNContentsMount(cdn_dir=a.cdn_dir, dev=a.dev, dec_key=a.dec_key, seeddb=a.seeddb)
+    if common.macos or common.windows:
+        opts['fstypename'] = 'CDN'
+        opts['volname'] = "CDN Contents ({})".format(mount.title_id.hex().upper())
+    fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do, ro=True, nothreads=True,
+                fsname=os.path.realpath(a.cdn_dir), **opts)

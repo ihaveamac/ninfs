@@ -67,7 +67,7 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
 
         # read title id, encrypted titlekey and common key index
         self.f.seek(ticket_offset + 0x1DC)
-        title_id = self.f.read(8)
+        self.title_id = self.f.read(8)
         self.f.seek(ticket_offset + 0x1BF)
         enc_titlekey = self.f.read(0x10)
         self.f.seek(ticket_offset + 0x1F1)
@@ -75,7 +75,7 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
 
         # decrypt titlekey
         self.crypto.set_keyslot('y', 0x3D, self.crypto.get_common_key(common_key_index))
-        titlekey = self.crypto.aes_cbc_decrypt(0x3D, title_id + (b'\0' * 8), enc_titlekey)
+        titlekey = self.crypto.aes_cbc_decrypt(0x3D, self.title_id + (b'\0' * 8), enc_titlekey)
         self.crypto.set_normal_key(0x40, titlekey)
 
         # get content count
@@ -111,7 +111,7 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
             content_index = chunk[4:6]
             content_size = util.readbe(chunk[8:16])
             content_is_encrypted = util.readbe(chunk[6:8]) & 1
-            file_ext = 'nds' if content_index == b'\0\0' and util.readbe(title_id) >> 44 == 0x48 else 'ncch'
+            file_ext = 'nds' if content_index == b'\0\0' and util.readbe(self.title_id) >> 44 == 0x48 else 'ncch'
             filename = '/{}.{}.{}'.format(content_index.hex(), content_id.hex(), file_ext)
             self.files[filename] = {'size': content_size, 'offset': current_offset, 'index': content_index,
                                     'type': 'enc' if content_is_encrypted else 'raw'}
@@ -206,10 +206,7 @@ if __name__ == '__main__':
     parser.add_argument('mount_point', help="mount point")
 
     a = parser.parse_args()
-    try:
-        opts = {o: True for o in a.o.split(',')}
-    except AttributeError:
-        opts = {}
+    opts = dict(common.parse_fuse_opts(a.o))
 
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
@@ -217,5 +214,13 @@ if __name__ == '__main__':
     cia_stat = os.stat(a.cia)
 
     with open(a.cia, 'rb') as f:
-        fuse = FUSE(CTRImportableArchiveMount(cia_fp=f, dev=a.dev, g_stat=cia_stat, seeddb=a.seeddb), a.mount_point,
-                    foreground=a.fg or a.do, fsname=os.path.realpath(a.cia), ro=True, nothreads=True, **opts)
+        mount = CTRImportableArchiveMount(cia_fp=f, dev=a.dev, g_stat=cia_stat, seeddb=a.seeddb)
+        if common.macos or common.windows:
+            opts['fstypename'] = 'CIA'
+            if common.macos:
+                opts['volname'] = "CTR Importable Archive ({})".format(mount.title_id.hex().upper())
+            elif common.windows:
+                # volume label can only be up to 32 chars
+                opts['volname'] = "CIA ({})".format(mount.title_id.hex().upper())
+        fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do, ro=True, nothreads=True,
+                    fsname=os.path.realpath(a.cia), **opts)

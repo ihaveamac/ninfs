@@ -248,10 +248,7 @@ if __name__ == '__main__':
     parser.add_argument('mount_point', help="mount point")
 
     a = parser.parse_args()
-    try:
-        opts = {o: True for o in a.o.split(',')}
-    except AttributeError:
-        opts = {}
+    opts = dict(common.parse_fuse_opts(a.o))
 
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
@@ -259,5 +256,13 @@ if __name__ == '__main__':
     ncch_stat = os.stat(a.ncch)
 
     with open(a.ncch, 'rb') as f:
-        fuse = FUSE(NCCHContainerMount(ncch_fp=f, dev=a.dev, g_stat=ncch_stat, seeddb=a.seeddb), a.mount_point,
-                    foreground=a.fg or a.do, fsname=os.path.realpath(a.ncch), ro=True, nothreads=True, **opts)
+        mount = NCCHContainerMount(ncch_fp=f, dev=a.dev, g_stat=ncch_stat, seeddb=a.seeddb)
+        if common.macos or common.windows:
+            opts['fstypename'] = 'NCCH'
+            if common.macos:
+                opts['volname'] = "NCCH Container ({0.product_code}; {0.program_id:016X})".format(mount.ncch_reader)
+            elif common.windows:
+                # volume label can only be up to 32 chars
+                opts['volname'] = "NCCH ({0.product_code})".format(mount.ncch_reader)
+        fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do, ro=True, nothreads=True,
+                    fsname=os.path.realpath(a.ncch), **opts)

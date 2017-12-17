@@ -9,9 +9,8 @@ import stat
 import struct
 import sys
 
+import common
 from pyctr import crypto, util
-
-windows = os.name == 'nt'
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
@@ -33,7 +32,7 @@ nand_size = {0x200000: 0x3AF00000, 0x280000: 0x4D800000}
 class NANDImageMount(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, nand, dev, readonly=False, otp=None, cid=None):
+    def __init__(self, nand_fp, dev, g_stat, readonly=False, otp=None, cid=None):
         self.crypto = crypto.CTRCrypto(is_dev=dev)
 
         try:
@@ -41,7 +40,7 @@ class NANDImageMount(LoggingMixIn, Operations):
         except crypto.BootromNotFoundException as e:
             print("Bootrom was not found.")
 
-        self.f = open(nand, 'r{}b'.format('' if readonly else '+'))
+        self.f = nand_fp
         self.f.seek(0x100)  # screw the signature
         ncsd_header = self.f.read(0x100)
         if ncsd_header[0:4] != b'NCSD':
@@ -135,9 +134,8 @@ class NANDImageMount(LoggingMixIn, Operations):
         self.crypto.set_keyslot('x', 0x06, key_x)
         self.crypto.set_keyslot('x', 0x07, key_x)
 
-        nand_stat = os.stat(nand)
-        self.g_stat = {'st_ctime': int(nand_stat.st_ctime), 'st_mtime': int(nand_stat.st_mtime),
-                       'st_atime': int(nand_stat.st_atime)}
+        self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
+                       'st_atime': int(g_stat.st_atime)}
 
         self.f.seek(0, 2)
         raw_nand_size = self.f.tell()
@@ -261,12 +259,6 @@ class NANDImageMount(LoggingMixIn, Operations):
                 self.files['/bonus.img'] = {'size': raw_nand_size - self.real_nand_size, 'offset': self.real_nand_size,
                                             'keyslot': 0xFF, 'type': 'raw'}
 
-    def __del__(self):
-        try:
-            self.f.close()
-        except AttributeError:
-            pass
-
     def flush(self, path, fh):
         return self.f.flush()
 
@@ -379,13 +371,26 @@ if __name__ == '__main__':
     parser.add_argument('mount_point', help='mount point')
 
     a = parser.parse_args()
-    try:
-        opts = {o: True for o in a.o.split(',')}
-    except AttributeError:
-        opts = {}
+    opts = dict(common.parse_fuse_opts(a.o))
 
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
 
-    fuse = FUSE(NANDImageMount(nand=a.nand, dev=a.dev, readonly=a.ro, otp=a.otp, cid=a.cid), a.mount_point,
-                foreground=a.fg or a.do, fsname=os.path.realpath(a.nand), ro=a.ro, nothreads=True, **opts)
+    nand_stat = os.stat(a.nand)
+
+    with open(a.nand, 'r{}b'.format('' if a.ro else '+')) as f:
+        mount = NANDImageMount(nand_fp=f, dev=a.dev, g_stat=nand_stat, readonly=a.ro, otp=a.otp, cid=a.cid)
+        if common.macos or common.windows:
+            # assuming / is the path separator since macos. but if windows gets support for this,
+            #   it will have to be done differently.
+            path_to_show = os.path.realpath(a.nand).rsplit('/', maxsplit=2)
+            if common.macos:
+                opts['volname'] = "Nintendo 3DS NAND ({}/{})".format(path_to_show[-2], path_to_show[-1])
+            elif common.windows:
+                # volume label can only be up to 32 chars
+                # TODO: maybe I should show the path here, if i can shorten it properly
+                opts['volname'] = "Nintendo 3DS NAND"
+        if common.macos or common.windows:
+            opts['fstypename'] = 'NAND'
+        fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do, ro=a.ro, nothreads=True,
+                    fsname=os.path.realpath(a.nand), **opts)

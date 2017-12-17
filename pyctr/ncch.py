@@ -59,13 +59,14 @@ class NCCHReader:
     _seeded_key_y = None
 
     def __init__(self, *, key_y: bytes, content_size: int, partition_id: int, seed_verify: bytes, program_id: int,
-                 extheader_size: int, flags: NCCHFlags, plain_region: NCCHRegion, logo_region: NCCHRegion,
-                 exefs_region: NCCHRegion, romfs_region: NCCHRegion):
+                 product_code: str, extheader_size: int, flags: NCCHFlags, plain_region: NCCHRegion,
+                 logo_region: NCCHRegion, exefs_region: NCCHRegion, romfs_region: NCCHRegion):
         self._key_y = key_y
         self.content_size = content_size
         self.partition_id = partition_id
         self._seed_verify = seed_verify
         self.program_id = program_id
+        self.product_code = product_code
         self._extheader_size = extheader_size
         self.flags = flags
         self.plain_region = plain_region
@@ -111,6 +112,7 @@ class NCCHReader:
         content_size = util.readle(header[0x104:0x108]) * NCCH_MEDIA_UNIT
         partition_id = util.readle(header[0x108:0x110])
         seed_verify = header[0x114:0x118]
+        product_code = header[0x150:0x160].decode('ascii').strip('\0')
         program_id = util.readle(header[0x118:0x120])
         extheader_size = util.readle(header[0x180:0x184])
         flags_raw = header[0x188:0x190]
@@ -128,5 +130,6 @@ class NCCHReader:
                           no_crypto=bool(flags_raw[7] & 0x4), uses_seed=bool(flags_raw[7] & 0x20))
 
         return cls(key_y=key_y, content_size=content_size, partition_id=partition_id, seed_verify=seed_verify,
-                   program_id=program_id, extheader_size=extheader_size, flags=flags, plain_region=plain_region,
-                   logo_region=logo_region, exefs_region=exefs_region, romfs_region=romfs_region)
+                   program_id=program_id, product_code=product_code, extheader_size=extheader_size, flags=flags,
+                   plain_region=plain_region, logo_region=logo_region, exefs_region=exefs_region,
+                   romfs_region=romfs_region)
