@@ -261,4 +261,4 @@ if __name__ == '__main__':
         else:
             opts['volname'] = "Nintendo 3DS SD Card ({}…)".format(mount.root_dir[0:8])
     fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do, ro=a.ro, nothreads=True,
-                fsname=os.path.realpath(a.sd_dir), **opts)
+                fsname=os.path.realpath(a.sd_dir).replace(',', '_'), **opts)

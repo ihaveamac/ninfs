@@ -393,4 +393,4 @@ if __name__ == '__main__':
         if common.macos or common.windows:
             opts['fstypename'] = 'NAND'
         fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do, ro=a.ro, nothreads=True,
-                    fsname=os.path.realpath(a.nand), **opts)
+                    fsname=os.path.realpath(a.nand).replace(',', '_'), **opts)

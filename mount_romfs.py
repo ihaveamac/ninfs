@@ -135,4 +135,4 @@ if __name__ == '__main__':
         if common.macos or common.windows:
             opts['fstypename'] = 'RomFS'
         fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do, ro=True, nothreads=True,
-                    fsname=os.path.realpath(a.romfs), **opts)
+                    fsname=os.path.realpath(a.romfs).replace(',', '_'), **opts)

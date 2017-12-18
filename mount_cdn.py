@@ -224,4 +224,4 @@ if __name__ == '__main__':
         opts['fstypename'] = 'CDN'
         opts['volname'] = "CDN Contents ({})".format(mount.title_id.hex().upper())
     fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do, ro=True, nothreads=True,
-                fsname=os.path.realpath(a.cdn_dir), **opts)
+                fsname=os.path.realpath(a.cdn_dir).replace(',', '_'), **opts)

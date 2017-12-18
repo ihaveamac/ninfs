@@ -223,4 +223,4 @@ if __name__ == '__main__':
                 # volume label can only be up to 32 chars
                 opts['volname'] = "CIA ({})".format(mount.title_id.hex().upper())
         fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do, ro=True, nothreads=True,
-                    fsname=os.path.realpath(a.cia), **opts)
+                    fsname=os.path.realpath(a.cia).replace(',', '_'), **opts)

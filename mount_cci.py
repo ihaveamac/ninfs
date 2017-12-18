@@ -140,4 +140,4 @@ if __name__ == '__main__':
                 # volume label can only be up to 32 chars
                 opts['volname'] = "CCI ({})".format(mount.media_id[::-1].hex().upper())
         fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do, ro=True, nothreads=True,
-                    fsname=os.path.realpath(a.cci), **opts)
+                    fsname=os.path.realpath(a.cci).replace(',', '_'), **opts)
