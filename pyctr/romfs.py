@@ -1,5 +1,6 @@
 from collections import namedtuple
 from io import BytesIO
+from typing import BinaryIO
 
 from . import util
 
@@ -28,14 +29,15 @@ class RomFSFileIndexNotSetup(RomFSException):
     """RomFS file index still needs to be set up."""
 
 
-RomFSRegion = namedtuple('RomFSRegion', 'offset size')
-RomFSDirectoryEntry = namedtuple('RomFSDirectoryEntry', 'name type contents')
-RomFSFileEntry = namedtuple('RomFSFileEntry', 'name type offset size')
+RomFSRegion = namedtuple('RomFSRegion', ('offset', 'size'))
+RomFSDirectoryEntry = namedtuple('RomFSDirectoryEntry', ('name', 'type', 'contents'))
+RomFSFileEntry = namedtuple('RomFSFileEntry', ('name', 'type', 'offset', 'size'))
 
 
 class RomFSReader:
     """Class for 3DS RomFS Level 3 partition."""
 
+    lv3_offset = 0
     _index_setup = False
 
     def __init__(self, *, dirmeta: RomFSRegion, filemeta: RomFSRegion, filedata_offset: int,
@@ -86,6 +88,35 @@ class RomFSReader:
             raise InvalidRomFSHeaderException("File Metadata offset is before the end of the File Hash region")
         if filedata_offset < filemeta.offset + filemeta.size:
             raise InvalidRomFSHeaderException("File Data offset is before the end of the File Metadata region")
+
+    @classmethod
+    def load(cls, fp: BinaryIO, *, case_insensitive: bool = False) -> 'RomFSReader':
+        # reading IVFC header size just in case it is, but if it's RomFS Lv3 it will be shortened.
+        original_offset = fp.tell()
+        header = fp.read(IVFC_HEADER_SIZE)
+        try:
+            lv3_offset = get_lv3_offset_from_ivfc(header)
+            fp.seek(original_offset + lv3_offset)
+            out = cls.from_lv3_header(fp.read(ROMFS_LV3_HEADER_SIZE), case_insensitive=case_insensitive)
+        except InvalidIVFCException:
+            # see if the file header is the lv3 header. this happens in some cases like RomFS for early HANS.
+            try:
+                out = cls.from_lv3_header(header, case_insensitive=case_insensitive)
+                lv3_offset = 0
+            except InvalidRomFSHeaderException:
+                raise InvalidRomFSHeaderException("IVFC or RomFS Lv3 header not found.")
+
+        data_offset = lv3_offset + out.filedata_offset
+
+        fp.seek(lv3_offset + out.dirmeta_region.offset)
+        dirmeta = fp.read(out.dirmeta_region.size)
+        fp.seek(lv3_offset + out.filemeta_region.offset)
+        filemeta = fp.read(out.filemeta_region.size)
+
+        out.parse_metadata(dirmeta, filemeta)
+
+        out.data_offset = data_offset
+        return out
 
     @classmethod
     def from_lv3_header(cls, header: bytes, *, case_insensitive: bool = False) -> 'RomFSReader':

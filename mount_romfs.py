@@ -9,6 +9,7 @@ import os
 import stat
 import struct
 import sys
+from typing import BinaryIO
 
 import common
 from pyctr import romfs, util
@@ -23,7 +24,7 @@ except ImportError:
 class RomFSMount(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, romfs_fp, g_stat):
+    def __init__(self, romfs_fp: BinaryIO, g_stat: os.stat_result):
         # get status change, modify, and file access times
         self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
                        'st_atime': int(g_stat.st_atime)}
@@ -31,28 +32,9 @@ class RomFSMount(LoggingMixIn, Operations):
         romfs_fp.seek(0, 2)
         self.romfs_size = romfs_fp.tell()
         romfs_fp.seek(0)
-
-        # open file, read IVFC header for lv3 offset
         self.f = romfs_fp
-        ivfc_header = self.f.read(romfs.IVFC_HEADER_SIZE)
-        lv3_offset = romfs.get_lv3_offset_from_ivfc(ivfc_header)
 
-        self.f.seek(lv3_offset)
-        lv3_header = self.f.read(romfs.ROMFS_LV3_HEADER_SIZE)
-        self.romfs_reader = romfs.RomFSReader.from_lv3_header(lv3_header, case_insensitive=True)
-
-        dirmeta_region = self.romfs_reader.dirmeta_region
-        filemeta_region = self.romfs_reader.filemeta_region
-        filedata_offset = self.romfs_reader.filedata_offset
-
-        self.data_offset = lv3_offset + filedata_offset
-
-        self.f.seek(lv3_offset + dirmeta_region.offset)
-        dirmeta = self.f.read(dirmeta_region.size)
-        self.f.seek(lv3_offset + filemeta_region.offset)
-        filemeta = self.f.read(filemeta_region.size)
-
-        self.romfs_reader.parse_metadata(dirmeta, filemeta)
+        self.romfs_reader = romfs.RomFSReader.load(romfs_fp, case_insensitive=False)
 
     def getattr(self, path, fh=None):
         uid, gid, pid = fuse_get_context()
@@ -91,7 +73,7 @@ class RomFSMount(LoggingMixIn, Operations):
             return b''
         if offset + size > item.size:
             size = item.size - offset
-        self.f.seek(self.data_offset + real_offset)
+        self.f.seek(self.romfs_reader.data_offset + real_offset)
         return self.f.read(size)
 
     def statfs(self, path):
@@ -123,6 +105,7 @@ if __name__ == '__main__':
     with open(a.romfs, 'rb') as f:
         mount = RomFSMount(romfs_fp=f, g_stat=romfs_stat)
         if common.macos or common.windows:
+            opts['fstypename'] = 'RomFS'
             # assuming / is the path separator since macos. but if windows gets support for this,
             #   it will have to be done differently.
             path_to_show = os.path.realpath(a.romfs).rsplit('/', maxsplit=2)
@@ -132,7 +115,5 @@ if __name__ == '__main__':
                 # volume label can only be up to 32 chars
                 # TODO: maybe I should show the path here, if i can shorten it properly
                 opts['volname'] = "Nintendo 3DS RomFS"
-        if common.macos or common.windows:
-            opts['fstypename'] = 'RomFS'
         fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do, ro=True, nothreads=True,
                     fsname=os.path.realpath(a.romfs).replace(',', '_'), **opts)

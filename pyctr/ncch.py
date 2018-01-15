@@ -48,8 +48,9 @@ extra_cryptoflags = {0x00: 0x2C, 0x01: 0x25, 0x0A: 0x18, 0x0B: 0x1B}
 
 fixed_system_key = 0x527CE630A9CA305F3696F3CDE954194B
 
-NCCHRegion = namedtuple('NCCHRegion', 'offset size')
-NCCHFlags = namedtuple('NCCHFlags', 'crypto_method executable fixed_crypto_key no_romfs no_crypto uses_seed')
+NCCHRegion = namedtuple('NCCHRegion', ('offset', 'size'))
+NCCHFlags = namedtuple('NCCHFlags', ('crypto_method', 'executable', 'fixed_crypto_key', 'no_romfs', 'no_crypto',
+                                     'uses_seed'))
 
 
 class NCCHReader:

@@ -8,6 +8,7 @@ import os
 import stat
 import struct
 import sys
+from typing import BinaryIO
 
 import common
 from pyctr import crypto, util
@@ -15,7 +16,7 @@ from pyctr import crypto, util
 try:
     from mount_ncch import NCCHContainerMount
 except ImportError:
-    print("Failed to import import_ncch, NCCH mount will not be available.")
+    print("Failed to import mount_ncch, NCCH mount will not be available.")
     NCCHContainerMount = None
 
 try:
@@ -40,7 +41,7 @@ def new_offset(x: int) -> int:
 class CTRImportableArchiveMount(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, cia_fp, dev, g_stat, seeddb=None):
+    def __init__(self, cia_fp: BinaryIO, dev: bool, g_stat: os.stat_result, seeddb: bool = None):
         self.crypto = crypto.CTRCrypto(is_dev=dev)
 
         self.crypto.setup_keys_from_boot9()
@@ -122,7 +123,7 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
                 content_vfp = common.VirtualFileWrapper(self, filename, content_size)
                 content_fuse = NCCHContainerMount(content_vfp, dev=dev, g_stat=g_stat, seeddb=seeddb)
                 self.dirs[dirname] = content_fuse
-            except Exception as e:
+            except KeyError as e:
                 print("Failed to mount {}: {}: {}".format(filename, type(e).__name__, e))
 
     def flush(self, path, fh):
@@ -196,7 +197,7 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Mount Nintendo 3DS CTR Importable Archive files.')
+    parser = argparse.ArgumentParser(description="Mount Nintendo 3DS CTR Importable Archive files.")
     parser.add_argument('--dev', help="use dev keys", action='store_const', const=1, default=0)
     parser.add_argument('--seeddb', help="path to seeddb.bin")
     parser.add_argument('--fg', '-f', help="run in foreground", action='store_true')

@@ -58,7 +58,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
             #   happens if it happens.
             if self.ncch_reader.flags.fixed_crypto_key:
                 normal_key = ncch.fixed_system_key if self.ncch_reader.program_id & (0x10 << 32) else 0x0
-                self.crypto.set_normal_key(0x2C, normal_key)
+                self.crypto.set_normal_key(0x2C, normal_key.to_bytes(0x10, 'big'))
             else:
                 if self.ncch_reader.flags.uses_seed:
                     seeddb_path = ncch.check_seeddb_file(seeddb)
@@ -208,7 +208,6 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                 if not added:
                     files_to_read['raw{}'.format(chunk)] = [new_offset, 0x200]
 
-            total_read = 0
             for fname, info in files_to_read.items():
                 try:
                     new_data = self.read(fname, info[1], info[0], 0)

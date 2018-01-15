@@ -15,7 +15,7 @@ from pyctr import crypto, util
 try:
     from mount_ncch import NCCHContainerMount
 except ImportError:
-    print("Failed to import import_ncch, NCCH mount will not be available.")
+    print("Failed to import mount_ncch, NCCH mount will not be available.")
     NCCHContainerMount = None
 
 try:
