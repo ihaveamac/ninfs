@@ -7,15 +7,14 @@ ARM9 bootROM required. Checked in order of:
 * `~/.3ds/boot9.bin` (full)
 * `~/.3ds/boot9_prot.bin` (protected)
 
-Requires Python 3.5+, [a fork of fusepy](https://github.com/billziss-gh/fusepy), and [pycryptodomex](https://github.com/Legrandin/pycryptodome). Python 2 is not supported.
-
-Install the fusepy fork with `pip3 install git+https://github.com/billziss-gh/fusepy.git`. Make sure pip is installed, since it doesn't seem to be always included on Windows.
-
-CCI, CDN, CIA, and NCCH mounting will need [SeedDB](https://github.com/ihaveamac/3DS-rom-tools/wiki/SeedDB-list) for mounting NCCH containers. SeedDB is checked at `seeddb.bin` in current working directory, or `~/.3ds/seeddb.bin`. It can also be provided with the `--seeddb` argument.
-
+Requires Python 3.5+, fusepy ([a fork of fusepy is required for Windows](https://github.com/billziss-gh/fusepy)), [pycryptodomex](https://github.com/Legrandin/pycryptodome), and a FUSE implementation:
 * macOS: [FUSE for macOS](https://osxfuse.github.io)
 * Windows: [WinFsp](http://www.secfs.net/winfsp/) - Requires [WinFsp 2017.2](https://github.com/billziss-gh/winfsp/releases/latest) or later.
 * Linux: Most distributions should have fuse included. Use your package manager.
+
+On Windows: Install the dependencies with `py -3 -mpip install pycryptodomex https://github.com/billziss-gh/fusepy/archive/windows.zip`. Make sure pip is installed, since it doesn't seem to be always included on Windows.
+
+CCI, CDN, CIA, and NCCH mounting will need [SeedDB](https://github.com/ihaveamac/3DS-rom-tools/wiki/SeedDB-list) for mounting NCCH containers. SeedDB is checked at `seeddb.bin` in current working directory, or `~/.3ds/seeddb.bin`. It can also be provided with the `--seeddb` argument.
 
 For savedata and extdata, see [3dsfuse-ex](https://github.com/wwylele/3dsfuse-ex).
 

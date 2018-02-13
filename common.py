@@ -2,10 +2,21 @@ import sys
 
 from fuse import Operations
 
-
 windows = sys.platform in {'win32', 'cygwin'}
 macos = sys.platform == 'darwin'
 
+# this is a temporary (hopefully) thing to check for the fusepy version on windows, since a newer commit on
+# a fork of it is currently required for windows.
+# I know this is a bad idea but I just don't want users complaining about it not working properly with their
+# existing fusepy installs. I hope I can remove this when the windows support is merged into upstream.
+if windows:
+    from fuse import fuse_file_info
+    import ctypes
+    # noinspection PyProtectedMember
+    if fuse_file_info._fields_[1][1] is not ctypes.c_int:  # checking fh_old type which is different for windows
+        sys.exit('Please update fusepy to use fuse-3ds. More information can be found at:\n'
+                 '  https://github.com/ihaveamac/fuse-3ds')
+    del fuse_file_info, ctypes
 
 def parse_fuse_opts(opts):
     if not opts:
