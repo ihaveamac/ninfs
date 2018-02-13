@@ -101,7 +101,6 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         return
 
     def fsync(self, path, datasync, fh):
-        print('FSYNC req: {} {}'.format(datasync, fh))
         self.flush(path, fh)
         return
 
