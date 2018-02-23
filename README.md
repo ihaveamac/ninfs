@@ -1,8 +1,7 @@
 # fuse-3ds
 fuse-3ds enables you to read and write files for the Nintendo 3DS without extracting or separate decryption.
 
-Since it acts like a virtual filesystem, you can browse it with a file manager (e.g. Windows/File Explorer and Finder) and use any tools to read from it. Certain ones like NAND and SD can also be written back to.
-All encryption is transparently handled by fuse-3ds.
+Since it acts like a virtual filesystem, you can browse it with a file manager (e.g. Windows/File Explorer and Finder) and use any tools to read from it. Certain ones like NAND and SD can also be written back to. All encryption is transparently handled by fuse-3ds.
 
 ## Example uses
 * Mount a NAND backup and browse CTRNAND, TWLNAND, and others, and write back to them without having to extract and decrypt them first.
@@ -16,18 +15,28 @@ The ARM9 bootROM is required. You can dump it using boot9strap, which can be set
 * `~/.3ds/boot9.bin` (full)
 * `~/.3ds/boot9_prot.bin` (protected)
 
-Requires Python 3.5+, fusepy ([a fork of fusepy is required for Windows](https://github.com/billziss-gh/fusepy)), [pycryptodomex](https://github.com/Legrandin/pycryptodome), and a FUSE implementation:
-* macOS: [FUSE for macOS](https://osxfuse.github.io)
-* Windows: [WinFsp](http://www.secfs.net/winfsp/) - Requires [WinFsp 2017.2](https://github.com/billziss-gh/winfsp/releases/latest) or later.
-* Linux: Most distributions should have fuse included. Use your package manager.
-
-On Windows: Install the dependencies with `py -3 -mpip install pycryptodomex https://github.com/billziss-gh/fusepy/archive/windows.zip`. Make sure pip is installed, since it doesn't seem to be always included on Windows.
-
 CCI, CDN, CIA, and NCCH mounting will need [SeedDB](https://github.com/ihaveamac/3DS-rom-tools/wiki/SeedDB-list) for mounting NCCH containers. SeedDB is checked at `seeddb.bin` in current working directory, or `~/.3ds/seeddb.bin`. It can also be provided with the `--seeddb` argument.
+
+### Windows
+* Install the latest version of [Python 3](https://www.python.org/downloads/). Make sure you use the x86-64 version on 64-bit Windows.
+* Install the latest version of [WinFsp](http://www.secfs.net/winfsp/download/).
+* Install the Python dependencies with `py -3 -mpip install pycryptodomex https://github.com/billziss-gh/fusepy/archive/windows.zip`. Make sure pip is installed, since it doesn't seem to be always included on Windows.
+
+### macOS
+* Install the latest version of Python 3. The recommended way is [Homebrew](https://brew.sh). You can also use an installer from [python.org](https://www.python.org/downloads/) or a tool like [pyenv](https://github.com/pyenv/pyenv).
+* Install the latest version of [FUSE for macOS](https://github.com/osxfuse/osxfuse/releases/latest).
+* Install the Python dependencies with `pip3 install pycryptodomex fusepy`.
+
+### Linux
+* Most modern distributions should have Python 3.5 or later pre-installed, or included in its repositories. If not, you can use an extra repository (e.g. [deadsnakes's PPA](https://launchpad.net/%7Edeadsnakes/+archive/ubuntu/ppa) for Ubuntu), build from source, or use a tool like [pyenv](https://github.com/pyenv/pyenv).
+* Most distributions should have fuse enabled/installed by default. Use your package manager if it isn't.
+* Install the Python dependencies with `pip3 install --user pycryptodomex fusepy`. `--user` is not needed if you are not using the system Python, or are using a virtual environment.
 
 ## Useful tools
 * wwylele's [3ds-save-tool](https://github.com/wwylele/3ds-save-tool) can be used to extract game saves and extra data (DISA and DIFF, respectively).
 * [OSFMount](https://www.osforensics.com/tools/mount-disk-images.html) for Windows can mount FAT12/FAT16 partitions in NAND backups.
+
+## Mount scripts
 
 ### mount_cci.py
 Mounts CTR Cart Image (CCI, ".3ds") files, creating a virtual filesystem of separate partitions.
