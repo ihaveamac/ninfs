@@ -1,7 +1,16 @@
 # fuse-3ds
-FUSE Filesystem Python scripts for Nintendo 3DS files
+fuse-3ds enables you to read and write files for the Nintendo 3DS without extracting or separate decryption.
 
-ARM9 bootROM required. Checked in order of:
+Since it acts like a virtual filesystem, you can browse it with a file manager (e.g. Windows/File Explorer and Finder) and use any tools to read from it. Certain ones like NAND and SD can also be written back to.
+All encryption is transparently handled by fuse-3ds.
+
+## Example uses
+* Mount a NAND backup and browse CTRNAND, TWLNAND, and others, and write back to them without having to extract and decrypt them first.
+* Browse decrypted SD card contents. Dump installed games and saves, or copy contents between two system's SD contents.
+* Extract a game's files out of a CIA, CCI (".3ds"), NCCH, RomFS, raw CDN contents, just by mounting them and browsing its files.
+
+## Setup
+The ARM9 bootROM is required. You can dump it using boot9strap, which can be set up by [3DS Hacks Guide](https://3ds.hacks.guide). It is checked in order of:
 * `boot9.bin` (full) in current working directory
 * `boot9_prot.bin` (protected) in current working directory
 * `~/.3ds/boot9.bin` (full)
@@ -16,9 +25,11 @@ On Windows: Install the dependencies with `py -3 -mpip install pycryptodomex htt
 
 CCI, CDN, CIA, and NCCH mounting will need [SeedDB](https://github.com/ihaveamac/3DS-rom-tools/wiki/SeedDB-list) for mounting NCCH containers. SeedDB is checked at `seeddb.bin` in current working directory, or `~/.3ds/seeddb.bin`. It can also be provided with the `--seeddb` argument.
 
-For savedata and extdata, see [3dsfuse-ex](https://github.com/wwylele/3dsfuse-ex).
+## Useful tools
+* wwylele's [3ds-save-tool](https://github.com/wwylele/3ds-save-tool) can be used to extract game saves and extra data (DISA and DIFF, respectively).
+* [OSFMount](https://www.osforensics.com/tools/mount-disk-images.html) for Windows can mount FAT12/FAT16 partitions in NAND backups.
 
-## mount_cci.py
+### mount_cci.py
 Mounts CTR Cart Image (CCI, ".3ds") files, creating a virtual filesystem of separate partitions.
 
 ```
@@ -40,7 +51,7 @@ optional arguments:
   -o OPTIONS       mount options
 ```
 
-### Current files
+#### Current files
 ```
 mount_point
 ├── cardinfo.bin
@@ -53,7 +64,7 @@ mount_point
 └── ncsd.bin
 ```
 
-## mount_cdn.py
+### mount_cdn.py
 Mounts raw CDN contents, creating a virtual filesystem of decrypted contents (if encrypted).
 
 ```
@@ -77,7 +88,7 @@ optional arguments:
   -o OPTIONS         mount options
 ```
 
-## mount_cia.py
+### mount_cia.py
 Mounts CTR Importable Archive (CIA) files, creating a virtual filesystem of decrypted contents (if encrypted) + Ticket, Title Metadata, and Meta region (if exists).
 
 DLC with missing contents is currently not supported.
@@ -101,7 +112,7 @@ optional arguments:
   -o OPTIONS       mount options
 ```
 
-### Current files
+#### Current files
 ```
 mount_point
 ├── <id>.<index>.ncch (.nds for twl titles)
@@ -116,7 +127,7 @@ mount_point
 └── tmdchunks.bin
 ```
 
-## mount_nand.py
+### mount_nand.py
 Mounts NAND images, creating a virtual filesystem of decrypted partitions. Can read essentials backup by GodMode9, else OTP file/NAND CID must be provided in arguments.
 
 ```
@@ -143,7 +154,7 @@ optional arguments:
   -o OPTIONS   mount options
 ```
 
-### Current files
+#### Current files
 ```
 mount_point
 ├── _nandinfo.txt
@@ -163,7 +174,7 @@ mount_point
 └── twlp.img
 ```
 
-## mount_ncch.py
+### mount_ncch.py
 Mounts NCCH containers, creating a virtual filesystem of decrypted sections.
 
 ```
@@ -185,7 +196,7 @@ optional arguments:
   -o OPTIONS       mount options
 ```
 
-## mount_romfs.py
+### mount_romfs.py
 Mounts Read-only Filesystem (RomFS) files, creating a virtual filesystem of the RomFS contents.
 
 ```
@@ -204,7 +215,7 @@ optional arguments:
   -o OPTIONS   mount options
 ```
 
-## mount_sd.py
+### mount_sd.py
 Mounts SD contents under `/Nintendo 3DS`, creating a virtual filesystem with decrypted contents. `movable.sed` required.
 
 ```
