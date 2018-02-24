@@ -6,7 +6,7 @@ Since it acts like a virtual filesystem, you can browse it with a file manager (
 ## Example uses
 * Mount a NAND backup and browse CTRNAND, TWLNAND, and others, and write back to them without having to extract and decrypt them first.
 * Browse decrypted SD card contents. Dump installed games and saves, or copy contents between two system's SD contents.
-* Extract a game's files out of a CIA, CCI (".3ds"), NCCH, RomFS, raw CDN contents, just by mounting them and browsing its files.
+* Extract a game's files out of a CIA, CCI (".3ds"), NCCH, RomFS, raw CDN contents, just by mounting them and browsing its files. Or use the virtual decrypted file start playing the game in [Citra](https://citra-emu.org) right away.
 
 ## Setup
 The ARM9 bootROM is required. You can dump it using boot9strap, which can be set up by [3DS Hacks Guide](https://3ds.hacks.guide). It is checked in order of:
