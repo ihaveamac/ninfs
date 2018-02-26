@@ -1,6 +1,5 @@
-from collections import namedtuple
 from io import BytesIO
-from typing import BinaryIO
+from typing import BinaryIO, NamedTuple
 
 from . import util
 
@@ -29,9 +28,9 @@ class RomFSFileIndexNotSetup(RomFSException):
     """RomFS file index still needs to be set up."""
 
 
-RomFSRegion = namedtuple('RomFSRegion', ('offset', 'size'))
-RomFSDirectoryEntry = namedtuple('RomFSDirectoryEntry', ('name', 'type', 'contents'))
-RomFSFileEntry = namedtuple('RomFSFileEntry', ('name', 'type', 'offset', 'size'))
+RomFSRegion = NamedTuple('RomFSRegion', (('offset', int), ('size', int)))
+RomFSDirectoryEntry = NamedTuple('RomFSDirectoryEntry', (('name', str), ('type', str), ('contents', Tuple[str])))
+RomFSFileEntry = NamedTuple('RomFSFileEntry', (('name', str), ('type', str), ('offset', int), ('size', int)))
 
 
 class RomFSReader:
@@ -65,7 +64,6 @@ class RomFSReader:
             except KeyError:
                 raise RomFSFileNotFoundException(path)
         if curr['type'] == 'dir':
-            # for v in curr['contents'].values():
             contents = (k['name'] for k in curr['contents'].values())
             return RomFSDirectoryEntry(name=curr['name'], type='dir', contents=(*contents,))
         elif curr['type'] == 'file':

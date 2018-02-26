@@ -1,7 +1,7 @@
 from collections import namedtuple
 from hashlib import sha256
 from os.path import isfile
-from typing import BinaryIO
+from typing import BinaryIO, NamedTuple, Union
 
 from . import crypto, util
 
@@ -18,7 +18,7 @@ class NCCHSeedException(NCCHException):
     """NCCH seed is not set up, or attempted to set up seed when seed crypto is not used."""
 
 
-def check_seeddb_file(path=None):
+def check_seeddb_file(path=None) -> Union[str, bool]:
     """Check for seeddb.bin."""
     if path:
         paths = (path,)
@@ -30,7 +30,7 @@ def check_seeddb_file(path=None):
     return False
 
 
-def get_seed(f: BinaryIO, program_id: int):
+def get_seed(f: BinaryIO, program_id: int) -> bytes:
     """Get a seed in a seeddb.bin from an I/O stream."""
     tid_bytes = program_id.to_bytes(0x8, 'little')
     f.seek(0)
@@ -48,9 +48,9 @@ extra_cryptoflags = {0x00: 0x2C, 0x01: 0x25, 0x0A: 0x18, 0x0B: 0x1B}
 
 fixed_system_key = 0x527CE630A9CA305F3696F3CDE954194B
 
-NCCHRegion = namedtuple('NCCHRegion', ('offset', 'size'))
-NCCHFlags = namedtuple('NCCHFlags', ('crypto_method', 'executable', 'fixed_crypto_key', 'no_romfs', 'no_crypto',
-                                     'uses_seed'))
+NCCHRegion = NamedTuple('NCCHRegion', (('offset', int), ('size', int)))
+NCCHFlags = namedtuple('NCCHFlags', (('crypto_method', int), ('executable', bool), ('fixed_crypto_key', bool),
+                                     ('no_romfs', bool), ('no_crypto', bool), ('uses_seed', bool)))
 
 
 class NCCHReader:
