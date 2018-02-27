@@ -1,5 +1,5 @@
 from io import BytesIO
-from typing import BinaryIO, NamedTuple
+from typing import BinaryIO, NamedTuple, Tuple
 
 from . import util
 

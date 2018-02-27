@@ -1,4 +1,3 @@
-from collections import namedtuple
 from hashlib import sha256
 from os.path import isfile
 from typing import BinaryIO, NamedTuple, Union

@@ -1,4 +1,3 @@
-from collections import namedtuple
 from os.path import isfile, getsize
 
 from Cryptodome.Cipher import AES
