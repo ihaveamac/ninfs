@@ -20,17 +20,17 @@ CCI, CDN, CIA, and NCCH mounting will need [SeedDB](https://github.com/ihaveamac
 ### Windows
 * Install the latest version of [Python 3](https://www.python.org/downloads/). Make sure you use the x86-64 version on 64-bit Windows.
 * Install the latest version of [WinFsp](http://www.secfs.net/winfsp/download/).
-* Install fuse-3ds with `py -3 setup.py install`.
+* Install fuse-3ds with `py -3 -m pip install https://github.com/ihaveamac/fuse-3ds/archive/master.zip https://github.com/billziss-gh/fusepy/archive/windows.zip`.
 
 ### macOS
 * Install the latest version of Python 3. The recommended way is [Homebrew](https://brew.sh). You can also use an installer from [python.org](https://www.python.org/downloads/) or a tool like [pyenv](https://github.com/pyenv/pyenv).
 * Install the latest version of [FUSE for macOS](https://github.com/osxfuse/osxfuse/releases/latest).
-* Install fuse-3ds with `python3 setup.py install`.
+* Install fuse-3ds with `python3 -m pip install https://github.com/ihaveamac/fuse-3ds/archive/master.zip`.
 
 ### Linux
 * Most modern distributions should have Python 3.5 or later pre-installed, or included in its repositories. If not, you can use an extra repository (e.g. [deadsnakes's PPA](https://launchpad.net/%7Edeadsnakes/+archive/ubuntu/ppa) for Ubuntu), build from source, or use a tool like [pyenv](https://github.com/pyenv/pyenv).
 * Most distributions should have fuse enabled/installed by default. Use your package manager if it isn't.
-* Install fuse-3ds with `python3 setup.py install`.
+* Install fuse-3ds with `python3 -m pip install https://github.com/ihaveamac/fuse-3ds/archive/master.zip`.
 
 ## Useful tools
 * wwylele's [3ds-save-tool](https://github.com/wwylele/3ds-save-tool) can be used to extract game saves and extra data (DISA and DIFF, respectively).

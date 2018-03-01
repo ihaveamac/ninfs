@@ -10,6 +10,11 @@ if sys.hexversion < 0x030500f0:
 with open('README.md', 'r', encoding='utf-8') as f:
     readme = f.read()
 
+install_requires = ['pycryptodomex']
+# this should be removed once windows support is in the original fusepy.
+if sys.platform not in {'win32', 'cygwin'}:
+    install_requires.append('fusepy')
+
 setup(
     name='fuse-3ds',
     version='0.1.dev0',
@@ -27,8 +32,7 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
     ],
-    install_requires=['pycryptodomex', 'fusepy'],
-    dependency_links=['https://github.com/billziss-gh/fusepy/archive/windows.zip'],
+    install_requires=install_requires,
     entry_points={'console_scripts': ['mount_cci = fuse3ds.mount_cci:main',
                                       'mount_cdn = fuse3ds.mount_cdn:main',
                                       'mount_cia = fuse3ds.mount_cia:main',
