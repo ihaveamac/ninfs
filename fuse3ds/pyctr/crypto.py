@@ -1,4 +1,5 @@
 from os.path import isfile, getsize
+from typing import Dict
 
 from Cryptodome.Cipher import AES
 from Cryptodome.Util import Counter
@@ -39,14 +40,14 @@ def rol(val: int, r_bits: int, max_bits: int) -> int:
 class CTRCrypto:
     """Class for 3DS crypto operations, including encryption and key generation."""
 
-    b9_keys_set = False
+    b9_keys_set = False  # type: bool
 
-    b9_extdata_otp = None
-    b9_extdata_keygen = None
-    b9_extdata_keygen_iv = None
+    b9_extdata_otp = None  # type: bytes
+    b9_extdata_keygen = None  # type: bytes
+    b9_extdata_keygen_iv = None  # type: bytes
 
-    otp_key = None
-    otp_iv = None
+    otp_key = None  # type: bytes
+    otp_iv = None  # type: bytes
 
     common_key_y = (
         # eShop
@@ -64,9 +65,9 @@ class CTRCrypto:
     )
 
     def __init__(self, is_dev: int = 0):
-        self.key_x = {}
-        self.key_y = {0x03: 0xE1A00005202DDD1DBD4DC4D30AB9DC76, 0x05: 0x4D804F4E9990194613A204AC584460BE}
-        self.key_normal = {}
+        self.key_x = {}  # type: Dict[int, int]
+        self.key_y = {0x03: 0xE1A00005202DDD1DBD4DC4D30AB9DC76, 0x05: 0x4D804F4E9990194613A204AC584460BE}  # type: Dict[int, int]
+        self.key_normal = {}  # type: Dict[int, bytes]
 
         self.is_dev = is_dev
 
@@ -209,3 +210,8 @@ class CTRCrypto:
 
         # if keys are not set...
         raise BootromNotFoundException("not found at paths: {}".format(paths))
+
+    def setup_keys_from_otp(self, path: str):
+        """Set up console-unique keys from an OTP dump."""
+        # TODO: setup_keys_from_otp
+        raise NotImplementedError('setup_keys_from_otp')

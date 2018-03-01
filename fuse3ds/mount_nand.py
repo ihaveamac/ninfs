@@ -119,8 +119,7 @@ class NANDImageMount(LoggingMixIn, Operations):
         twl_cid_lo = struct.pack("I", twl_cid_lo)
         twl_cid_hi = struct.pack("I", twl_cid_hi)
 
-        twl_key_x = int.from_bytes(twl_cid_lo + b'NINTENDO' + twl_cid_hi, 'little')
-        # twl_normalkey = crypto.keygen_twl(util.readle(twl_key_x), util.readle(twl_key_y))
+        twl_key_x = util.readle(twl_cid_lo + b'NINTENDO' + twl_cid_hi)
         self.crypto.set_keyslot('x', 0x03, twl_key_x)
 
         # only keys for slots 0x04-0x07 are used, and keyX for all of them are
@@ -174,7 +173,6 @@ class NANDImageMount(LoggingMixIn, Operations):
                             util.readle(ncsd_part_raw[i + 4:i + 8]) * 0x200] for i in range(0, 0x40, 0x8)]
 
         # including padding for crypto
-        # twl_mbr = aes_ctr_dsi(twl_normalkey, self.ctr_twl + 0x1B, ncsd_header[0xB0:0x100])[0xE:0x50]
         twl_mbr = self.crypto.aes_ctr(0x03, self.ctr_twl + 0x1B, ncsd_header[0xB0:0x100])[0xE:0x50]
         twl_partitions = [[util.readle(twl_mbr[i + 8:i + 12]) * 0x200,
                            util.readle(twl_mbr[i + 12:i + 16]) * 0x200] for i in range(0, 0x40, 0x10)]
