@@ -11,25 +11,26 @@ import sys
 
 from fuse3ds import common
 from fuse3ds.pyctr import crypto, util
-
-try:
-    from fuse3ds.mount_ncch import NCCHContainerMount
-except ImportError:
-    print("Failed to import mount_ncch, NCCH mount will not be available.")
-    NCCHContainerMount = None
+from fuse3ds.mount_ncch import NCCHContainerMount
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
-except ImportError:
+except ModuleNotFoundError:
     sys.exit("fuse module not found, please install fusepy to mount images "
-             "(`pip3 install git+https://github.com/billziss-gh/fusepy.git`).")
+             "(`{} install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(common.pip_command))
+except ImportError as e:
+    sys.exit("Failed to import the fuse module:\n"
+             "{}: {}".format(type(e).__name__, e))
 
 try:
     from Cryptodome.Cipher import AES
     from Cryptodome.Util import Counter
-except ImportError:
+except ModuleNotFoundError:
     sys.exit("Cryptodome module not found, please install pycryptodomex for encryption support "
-             "(`pip3 install pycryptodomex`).")
+             "(`{} install pycryptodomex`).".format(common.pip_command))
+except ImportError as e:
+    sys.exit("Failed to import the Cryptodome module:\n"
+             "{}: {}".format(type(e).__name__, e))
 
 
 class CDNContentsMount(LoggingMixIn, Operations):

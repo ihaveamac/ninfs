@@ -16,9 +16,12 @@ from fuse3ds.pyctr import romfs, util
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
-except ImportError:
-    sys.exit('fuse module not found, please install fusepy to mount images '
-             '(`pip3 install git+https://github.com/billziss-gh/fusepy.git`).')
+except ModuleNotFoundError:
+    sys.exit("fuse module not found, please install fusepy to mount images "
+             "(`{} install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(common.pip_command))
+except ImportError as e:
+    sys.exit("Failed to import the fuse module:\n"
+             "{}: {}".format(type(e).__name__, e))
 
 
 class RomFSMount(LoggingMixIn, Operations):

@@ -5,6 +5,8 @@ from fuse import Operations
 windows = sys.platform in {'win32', 'cygwin'}
 macos = sys.platform == 'darwin'
 
+pip_command = 'py -3 -mpip' if windows else 'python3 -mpip'
+
 # this is a temporary (hopefully) thing to check for the fusepy version on windows, since a newer commit on
 # a fork of it is currently required for windows.
 # I know this is a bad idea but I just don't want users complaining about it not working properly with their

@@ -14,16 +14,22 @@ from fuse3ds.pyctr import crypto, util
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
-except ImportError:
-    sys.exit('fuse module not found, please install fusepy to mount images '
-             '(`pip3 install git+https://github.com/billziss-gh/fusepy.git`).')
+except ModuleNotFoundError:
+    sys.exit("fuse module not found, please install fusepy to mount images "
+             "(`{} install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(common.pip_command))
+except ImportError as e:
+    sys.exit("Failed to import the fuse module:\n"
+             "{}: {}".format(type(e).__name__, e))
 
 try:
     from Cryptodome.Cipher import AES
     from Cryptodome.Util import Counter
-except ImportError:
-    sys.exit('Cryptodome module not found, please install pycryptodomex for encryption support '
-             '(`pip3 install pycryptodomex`).')
+except ModuleNotFoundError:
+    sys.exit("Cryptodome module not found, please install pycryptodomex for encryption support "
+             "(`{} install pycryptodomex`).".format(common.pip_command))
+except ImportError as e:
+    sys.exit("Failed to import the Cryptodome module:\n"
+             "{}: {}".format(type(e).__name__, e))
 
 # ncsd image doesn't have the actual size
 nand_size = {0x200000: 0x3AF00000, 0x280000: 0x4D800000}

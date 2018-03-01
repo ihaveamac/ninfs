@@ -13,25 +13,26 @@ from collections import OrderedDict
 
 from fuse3ds import common
 from fuse3ds.pyctr import crypto, ncch, romfs, util
-
-try:
-    from fuse3ds.mount_romfs import RomFSMount
-except ImportError:
-    print("Failed to import mount_romfs, RomFS mount will not be available.")
-    RomFSMount = None
+from fuse3ds.mount_romfs import RomFSMount
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
-except ImportError:
+except ModuleNotFoundError:
     sys.exit("fuse module not found, please install fusepy to mount images "
-             "(`pip3 install git+https://github.com/billziss-gh/fusepy.git`).")
+             "(`{} install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(common.pip_command))
+except ImportError as e:
+    sys.exit("Failed to import the fuse module:\n"
+             "{}: {}".format(type(e).__name__, e))
 
 try:
     from Cryptodome.Cipher import AES
     from Cryptodome.Util import Counter
-except ImportError:
+except ModuleNotFoundError:
     sys.exit("Cryptodome module not found, please install pycryptodomex for encryption support "
-             "(`pip3 install pycryptodomex`).")
+             "(`{} install pycryptodomex`).".format(common.pip_command))
+except ImportError as e:
+    sys.exit("Failed to import the Cryptodome module:\n"
+             "{}: {}".format(type(e).__name__, e))
 
 
 class NCCHContainerMount(LoggingMixIn, Operations):
