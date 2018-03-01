@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+
+import sys
+
+from setuptools import setup
+
+if sys.hexversion < 0x030500f0:
+    sys.exit('Python 3.5+ is required.')
+
+with open('README.md', 'r', encoding='utf-8') as f:
+    readme = f.read()
+
+setup(
+    name='fuse-3ds',
+    version='0.1.dev0',
+    packages=['fuse3ds'],
+    url='https://github.com/ihaveamac/fuse-3ds',
+    license='MIT',
+    author='Ian Burgwin',
+    author_email='',
+    description='FUSE Filesystem Python scripts for Nintendo 3DS files',
+    long_description=readme,
+    classifiers=[
+        'Topic :: Utilities',
+        'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+    ],
+    install_requires=['pycryptodomex', 'fusepy'],
+    dependency_links=['https://github.com/billziss-gh/fusepy/archive/windows.zip'],
+    entry_points={'console_scripts': ['mount_cci = fuse3ds.mount_cci:main',
+                                      'mount_cdn = fuse3ds.mount_cdn:main',
+                                      'mount_cia = fuse3ds.mount_cia:main',
+                                      'mount_nand = fuse3ds.mount_nand:main',
+                                      'mount_ncch = fuse3ds.mount_ncch:main',
+                                      'mount_romfs = fuse3ds.mount_romfs:main',
+                                      'mount_sd = fuse3ds.mount_sd:main']}
+)

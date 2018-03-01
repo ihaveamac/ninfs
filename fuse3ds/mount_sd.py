@@ -11,8 +11,8 @@ import struct
 import sys
 from threading import Lock
 
-import common
-from pyctr import crypto, util
+from fuse3ds import common
+from fuse3ds.pyctr import crypto, util
 
 if common.windows:
     from ctypes import windll, wintypes
@@ -228,7 +228,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         return f.write(out_data)
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(description='Mount Nintendo 3DS SD card contents.')
     parser.add_argument('--movable', metavar='MOVABLESED', help='path to movable.sed', required=True)
     parser.add_argument('--ro', help='mount read-only', action='store_true')
@@ -258,3 +258,7 @@ if __name__ == '__main__':
             opts['case_insensitive'] = False
     fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do, ro=a.ro, nothreads=True,
                 fsname=os.path.realpath(a.sd_dir).replace(',', '_'), **opts)
+
+
+if __name__ == '__main__':
+    main()

@@ -20,17 +20,17 @@ CCI, CDN, CIA, and NCCH mounting will need [SeedDB](https://github.com/ihaveamac
 ### Windows
 * Install the latest version of [Python 3](https://www.python.org/downloads/). Make sure you use the x86-64 version on 64-bit Windows.
 * Install the latest version of [WinFsp](http://www.secfs.net/winfsp/download/).
-* Install the Python dependencies with `py -3 -mpip install pycryptodomex https://github.com/billziss-gh/fusepy/archive/windows.zip`. Make sure pip is installed, since it doesn't seem to be always included on Windows.
+* Install fuse-3ds with `py -3 setup.py install`.
 
 ### macOS
 * Install the latest version of Python 3. The recommended way is [Homebrew](https://brew.sh). You can also use an installer from [python.org](https://www.python.org/downloads/) or a tool like [pyenv](https://github.com/pyenv/pyenv).
 * Install the latest version of [FUSE for macOS](https://github.com/osxfuse/osxfuse/releases/latest).
-* Install the Python dependencies with `pip3 install pycryptodomex fusepy`.
+* Install fuse-3ds with `python3 setup.py install`.
 
 ### Linux
 * Most modern distributions should have Python 3.5 or later pre-installed, or included in its repositories. If not, you can use an extra repository (e.g. [deadsnakes's PPA](https://launchpad.net/%7Edeadsnakes/+archive/ubuntu/ppa) for Ubuntu), build from source, or use a tool like [pyenv](https://github.com/pyenv/pyenv).
 * Most distributions should have fuse enabled/installed by default. Use your package manager if it isn't.
-* Install the Python dependencies with `pip3 install --user pycryptodomex fusepy`. `--user` is not needed if you are not using the system Python, or are using a virtual environment.
+* Install fuse-3ds with `python3 setup.py install`.
 
 ## Useful tools
 * wwylele's [3ds-save-tool](https://github.com/wwylele/3ds-save-tool) can be used to extract game saves and extra data (DISA and DIFF, respectively).
@@ -38,11 +38,11 @@ CCI, CDN, CIA, and NCCH mounting will need [SeedDB](https://github.com/ihaveamac
 
 ## Mount scripts
 
-### mount_cci.py
+### mount_cci
 Mounts CTR Cart Image (CCI, ".3ds") files, creating a virtual filesystem of separate partitions.
 
 ```
-usage: mount_cci.py [-h] [--dev] [--seeddb SEEDDB] [--fg] [--do] [-o OPTIONS]
+usage: mount_cci [-h] [--dev] [--seeddb SEEDDB] [--fg] [--do] [-o OPTIONS]
                     cci mount_point
 
 Mount Nintendo 3DS CTR Cart Image files.
@@ -73,11 +73,11 @@ mount_point
 └── ncsd.bin
 ```
 
-### mount_cdn.py
+### mount_cdn
 Mounts raw CDN contents, creating a virtual filesystem of decrypted contents (if encrypted).
 
 ```
-usage: mount_cdn.py [-h] [--dec-key DEC_KEY] [--dev] [--seeddb SEEDDB] [--fg]
+usage: mount_cdn [-h] [--dec-key DEC_KEY] [--dev] [--seeddb SEEDDB] [--fg]
                     [--do] [-o OPTIONS]
                     cdn_dir mount_point
 
@@ -97,13 +97,13 @@ optional arguments:
   -o OPTIONS         mount options
 ```
 
-### mount_cia.py
+### mount_cia
 Mounts CTR Importable Archive (CIA) files, creating a virtual filesystem of decrypted contents (if encrypted) + Ticket, Title Metadata, and Meta region (if exists).
 
 DLC with missing contents is currently not supported.
 
 ```
-usage: mount_cia.py [-h] [--dev] [--seeddb SEEDDB] [--fg] [--do] [-o OPTIONS]
+usage: mount_cia [-h] [--dev] [--seeddb SEEDDB] [--fg] [--do] [-o OPTIONS]
                     cia mount_point
 
 Mount Nintendo 3DS CTR Importable Archive files.
@@ -136,11 +136,11 @@ mount_point
 └── tmdchunks.bin
 ```
 
-### mount_nand.py
+### mount_nand
 Mounts NAND images, creating a virtual filesystem of decrypted partitions. Can read essentials backup by GodMode9, else OTP file/NAND CID must be provided in arguments.
 
 ```
-usage: mount_nand.py [-h] [--otp OTP] [--cid CID] [--dev] [--ro] [--fg] [--do]
+usage: mount_nand [-h] [--otp OTP] [--cid CID] [--dev] [--ro] [--fg] [--do]
                      [-o OPTIONS]
                      nand mount_point
 
@@ -183,11 +183,11 @@ mount_point
 └── twlp.img
 ```
 
-### mount_ncch.py
+### mount_ncch
 Mounts NCCH containers, creating a virtual filesystem of decrypted sections.
 
 ```
-usage: mount_ncch.py [-h] [--dev] [--seeddb SEEDDB] [--fg] [--do] [-o OPTIONS]
+usage: mount_ncch [-h] [--dev] [--seeddb SEEDDB] [--fg] [--do] [-o OPTIONS]
                      ncch mount_point
 
 Mount Nintendo 3DS NCCH containers.
@@ -205,11 +205,11 @@ optional arguments:
   -o OPTIONS       mount options
 ```
 
-### mount_romfs.py
+### mount_romfs
 Mounts Read-only Filesystem (RomFS) files, creating a virtual filesystem of the RomFS contents.
 
 ```
-usage: mount_romfs.py [-h] [--fg] [--do] [-o OPTIONS] romfs mount_point
+usage: mount_romfs [-h] [--fg] [--do] [-o OPTIONS] romfs mount_point
 
 Mount Nintendo 3DS Read-only Filesystem (RomFS) files.
 
@@ -224,11 +224,11 @@ optional arguments:
   -o OPTIONS   mount options
 ```
 
-### mount_sd.py
+### mount_sd
 Mounts SD contents under `/Nintendo 3DS`, creating a virtual filesystem with decrypted contents. `movable.sed` required.
 
 ```
-usage: mount_sd.py [-h] --movable MOVABLESED [--ro] [--dev] [--fg] [--do]
+usage: mount_sd [-h] --movable MOVABLESED [--ro] [--dev] [--fg] [--do]
                    [-o OPTIONS]
                    sd_dir mount_point
 
@@ -249,6 +249,6 @@ optional arguments:
 ```
 
 # License/Credits
-`pyctr`, `common.py`, `mount_cci.py`, `mount_cdn.py`, `mount_cia.py`, `mount_nand.py`, `mount_ncch.py`, `mount_romfs.py`, `mount_sd.py` are under the MIT license.
+`pyctr`, `common`, `mount_cci`, `mount_cdn`, `mount_cia`, `mount_nand`, `mount_ncch`, `mount_romfs`, `mount_sd` are under the MIT license.
 
 Special thanks to @Stary2001 for help with NAND crypto (especially TWL), and @d0k3 for SD crypto.

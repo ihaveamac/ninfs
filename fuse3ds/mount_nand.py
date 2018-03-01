@@ -9,8 +9,8 @@ import stat
 import struct
 import sys
 
-import common
-from pyctr import crypto, util
+from fuse3ds import common
+from fuse3ds.pyctr import crypto, util
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
@@ -357,7 +357,7 @@ class NANDImageMount(LoggingMixIn, Operations):
         return real_len
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(description='Mount Nintendo 3DS NAND images.')
     parser.add_argument('--otp', help='path to otp (enc/dec); not needed if NAND image has essentials backup from '
                                       'GodMode9')
@@ -394,3 +394,7 @@ if __name__ == '__main__':
             opts['fstypename'] = 'NAND'
         fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do, ro=a.ro, nothreads=True,
                     fsname=os.path.realpath(a.nand).replace(',', '_'), **opts)
+
+
+if __name__ == '__main__':
+    main()

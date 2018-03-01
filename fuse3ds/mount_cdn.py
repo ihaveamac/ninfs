@@ -9,11 +9,11 @@ import stat
 import struct
 import sys
 
-import common
-from pyctr import crypto, util
+from fuse3ds import common
+from fuse3ds.pyctr import crypto, util
 
 try:
-    from mount_ncch import NCCHContainerMount
+    from fuse3ds.mount_ncch import NCCHContainerMount
 except ImportError:
     print("Failed to import mount_ncch, NCCH mount will not be available.")
     NCCHContainerMount = None
@@ -202,7 +202,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
                 'f_files': len(self.files)}
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(description="Mount Nintendo 3DS CDN contents.")
     parser.add_argument('--dec-key', help="decrypted titlekey")
     parser.add_argument('--dev', help="use dev keys", action='store_const', const=1, default=0)
@@ -225,3 +225,7 @@ if __name__ == '__main__':
         opts['volname'] = "CDN Contents ({})".format(mount.title_id.hex().upper())
     fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do, ro=True, nothreads=True,
                 fsname=os.path.realpath(a.cdn_dir).replace(',', '_'), **opts)
+
+
+if __name__ == '__main__':
+    main()

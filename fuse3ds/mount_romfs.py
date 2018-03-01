@@ -11,8 +11,8 @@ import struct
 import sys
 from typing import BinaryIO
 
-import common
-from pyctr import romfs, util
+from fuse3ds import common
+from fuse3ds.pyctr import romfs, util
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
@@ -85,7 +85,7 @@ class RomFSMount(LoggingMixIn, Operations):
                 'f_files': len(item.contents)}
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(description='Mount Nintendo 3DS Read-only Filesystem (RomFS) files.')
     parser.add_argument('--fg', '-f', help='run in foreground', action='store_true')
     parser.add_argument('--do', help='debug output (python logging module)', action='store_true')
@@ -117,3 +117,7 @@ if __name__ == '__main__':
                 opts['volname'] = "Nintendo 3DS RomFS"
         fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do, ro=True, nothreads=True,
                     fsname=os.path.realpath(a.romfs).replace(',', '_'), **opts)
+
+
+if __name__ == '__main__':
+    main()

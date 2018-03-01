@@ -11,11 +11,11 @@ import struct
 import sys
 from collections import OrderedDict
 
-import common
-from pyctr import crypto, ncch, romfs, util
+from fuse3ds import common
+from fuse3ds.pyctr import crypto, ncch, romfs, util
 
 try:
-    from mount_romfs import RomFSMount
+    from fuse3ds.mount_romfs import RomFSMount
 except ImportError:
     print("Failed to import mount_romfs, RomFS mount will not be available.")
     RomFSMount = None
@@ -236,7 +236,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                     'f_files': len(self.files)}
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(description="Mount Nintendo 3DS NCCH containers.")
     parser.add_argument('--dev', help="use dev keys", action='store_const', const=1, default=0)
     parser.add_argument('--seeddb', help="path to seeddb.bin")
@@ -265,3 +265,7 @@ if __name__ == '__main__':
                 opts['volname'] = "NCCH ({0.product_code})".format(mount.ncch_reader)
         fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do, ro=True, nothreads=True,
                     fsname=os.path.realpath(a.ncch).replace(',', '_'), **opts)
+
+
+if __name__ == '__main__':
+    main()
