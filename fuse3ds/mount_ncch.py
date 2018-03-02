@@ -20,7 +20,7 @@ try:
 except ModuleNotFoundError:
     sys.exit("fuse module not found, please install fusepy to mount images "
              "(`{} install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(common.pip_command))
-except ImportError as e:
+except Exception as e:
     sys.exit("Failed to import the fuse module:\n"
              "{}: {}".format(type(e).__name__, e))
 
@@ -30,7 +30,7 @@ try:
 except ModuleNotFoundError:
     sys.exit("Cryptodome module not found, please install pycryptodomex for encryption support "
              "(`{} install pycryptodomex`).".format(common.pip_command))
-except ImportError as e:
+except Exception as e:
     sys.exit("Failed to import the Cryptodome module:\n"
              "{}: {}".format(type(e).__name__, e))
 
