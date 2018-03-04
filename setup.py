@@ -5,7 +5,7 @@ import sys
 from setuptools import setup
 
 if sys.hexversion < 0x030502f0:
-    sys.exit('Python 3.5+ is required.')
+    sys.exit('Python 3.5.2+ is required.')
 
 with open('README.md', 'r', encoding='utf-8') as f:
     readme = f.read()
