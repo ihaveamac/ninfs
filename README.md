@@ -35,6 +35,25 @@ Python 3.5.2+ and fusepy are required.
 * Install fuse-3ds with `python3 -m pip install --upgrade --user https://github.com/ihaveamac/fuse-3ds/archive/master.zip`.
   * `--user` is not needed if you are using a virtual environment.
 
+## Usage
+The main way to run a mount script after installing is using "`mount_<type>`" (e.g. `mount_cci game.3ds mountpoint`).
+
+If it doesn't work, the other way is to use `<python-cmd> -mfuse3ds <type>` (e.g. Windows: `py -3 -mfuse3ds cci game.3ds mountpoint`, \*nix: `python3 -mfuse3ds cci game.3ds mountpoint`).
+
+Windows users can use a drive letter like `F:` as a mountpoint.
+
+### Examples
+* Mount a 3DS game card dump: `mount_cci game.3ds mountpoint`
+* Mount contents downloaded from CDN: `mount_cdn cdn_directory mountpoint`
+* Mount CDN contents with a specific decrypted titlekey: `mount_cdn --dec-key 3E3E6769742E696F2F76416A65423C3C cdn_directory mountpoint`
+* Mount a CIA: `mount_cia game.cia mountpoint`
+* Mount a NAND backup with `essential.exefs` embedded: `mount_nand nand.bin mountpoint`
+* Mount a NAND backup with OTP and CID files: `mount_nand --otp otp.bin --cid nandcid.bin nand.bin mountpoint`
+* Mount a NAND backup with OTP file and a CID hexstring: `mount_nand --otp otp.bin --cid 7468616E6B7334636865636B696E6721 nand.bin mountpoint`
+* Mount an NCCH container (.app, .cxi, .cfa, .ncch): `mount_ncch content.cxi mountpoint`
+* Mount a RomFS: `mount_romfs romfs.bin mountpoint`
+* Mount a `Nintendo 3DS` directory from an SD card: `mount_sd --movable movable.sed "/path/to/Nintendo 3DS" mountpoint`
+
 ## Useful tools
 * wwylele's [3ds-save-tool](https://github.com/wwylele/3ds-save-tool) can be used to extract game saves and extra data (DISA and DIFF, respectively).
 * [OSFMount](https://www.osforensics.com/tools/mount-disk-images.html) for Windows can mount FAT12/FAT16 partitions in NAND backups.
@@ -209,7 +228,7 @@ optional arguments:
 ```
 
 ### mount_romfs
-Mounts Read-only Filesystem (RomFS) files, creating a virtual filesystem of the RomFS contents.
+Mounts Read-only Filesystem (RomFS) files, creating a virtual filesystem of the RomFS contents. Accepts ones with and without an IVFC header (original HANS format).
 
 ```
 usage: mount_romfs [-h] [--fg] [--do] [-o OPTIONS] romfs mount_point
