@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Mounts NAND images, creating a virtual filesystem of decrypted partitions. Can read essentials backup by GodMode9, else OTP file/NAND CID must be provided in arguments.
+"""
+
 import argparse
 import errno
 import hashlib

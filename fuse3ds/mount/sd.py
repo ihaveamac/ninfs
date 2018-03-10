@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Mounts SD contents under `/Nintendo 3DS`, creating a virtual filesystem with decrypted contents. movable.sed required.
+"""
+
 import argparse
 import ctypes
 import errno

@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Mounts CTR Cart Image (CCI, ".3ds") files, creating a virtual filesystem of separate partitions.
+"""
+
 import argparse
 import errno
 import logging

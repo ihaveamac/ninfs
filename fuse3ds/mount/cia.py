@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 
+"""
+Mounts CTR Importable Archive (CIA) files, creating a virtual filesystem of decrypted contents (if encrypted) + Ticket, Title Metadata, and Meta region (if exists).
+
+DLC with missing contents is currently not supported.
+"""
+
 import argparse
 import errno
 import hashlib

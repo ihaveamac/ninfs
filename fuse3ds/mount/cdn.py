@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Mounts raw CDN contents, creating a virtual filesystem of decrypted contents (if encrypted).
+"""
+
 import argparse
 import errno
 import hashlib

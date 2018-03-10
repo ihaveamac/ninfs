@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Mounts NCCH containers, creating a virtual filesystem of decrypted sections.
+"""
+
 import argparse
 import errno
 import hashlib
