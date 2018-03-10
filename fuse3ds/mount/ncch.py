@@ -13,7 +13,7 @@ from collections import OrderedDict
 
 from fuse3ds import common
 from fuse3ds.pyctr import crypto, ncch, romfs, util
-from fuse3ds.mount_romfs import RomFSMount
+from fuse3ds.mount.romfs import RomFSMount
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context

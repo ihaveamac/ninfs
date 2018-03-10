@@ -11,7 +11,7 @@ import sys
 
 from fuse3ds import common
 from fuse3ds.pyctr import crypto, util
-from fuse3ds.mount_ncch import NCCHContainerMount
+from fuse3ds.mount.ncch import NCCHContainerMount
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context

@@ -18,6 +18,6 @@ if mount_type not in mount_types:
     print_types()
     sys.exit(1)
 
-module = importlib.import_module('fuse3ds.mount_' + mount_type)
+module = importlib.import_module('fuse3ds.mount.' + mount_type)
 del sys.argv[1]
 sys.exit(module.main())

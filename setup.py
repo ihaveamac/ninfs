@@ -18,7 +18,7 @@ if sys.platform not in {'win32', 'cygwin'}:
 setup(
     name='fuse-3ds',
     version='0.1.dev0',
-    packages=['fuse3ds', 'fuse3ds.pyctr'],
+    packages=['fuse3ds', 'fuse3ds.pyctr', 'fuse3ds.mount'],
     url='https://github.com/ihaveamac/fuse-3ds',
     license='MIT',
     author='Ian Burgwin',
@@ -33,11 +33,11 @@ setup(
         'Programming Language :: Python :: 3.6',
     ],
     install_requires=install_requires,
-    entry_points={'console_scripts': ['mount_cci = fuse3ds.mount_cci:main',
-                                      'mount_cdn = fuse3ds.mount_cdn:main',
-                                      'mount_cia = fuse3ds.mount_cia:main',
-                                      'mount_nand = fuse3ds.mount_nand:main',
-                                      'mount_ncch = fuse3ds.mount_ncch:main',
-                                      'mount_romfs = fuse3ds.mount_romfs:main',
-                                      'mount_sd = fuse3ds.mount_sd:main']}
+    entry_points={'console_scripts': ['mount_cci = fuse3ds.mount.cci:main',
+                                      'mount_cdn = fuse3ds.mount.cdn:main',
+                                      'mount_cia = fuse3ds.mount.cia:main',
+                                      'mount_nand = fuse3ds.mount.nand:main',
+                                      'mount_ncch = fuse3ds.mount.ncch:main',
+                                      'mount_romfs = fuse3ds.mount.romfs:main',
+                                      'mount_sd = fuse3ds.mount.sd:main']}
 )
