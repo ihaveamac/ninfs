@@ -33,11 +33,11 @@ setup(
         'Programming Language :: Python :: 3.6',
     ],
     install_requires=install_requires,
-    entry_points={'console_scripts': ['mount_cci = fuse3ds.mount.cci:main',
-                                      'mount_cdn = fuse3ds.mount.cdn:main',
-                                      'mount_cia = fuse3ds.mount.cia:main',
-                                      'mount_nand = fuse3ds.mount.nand:main',
-                                      'mount_ncch = fuse3ds.mount.ncch:main',
-                                      'mount_romfs = fuse3ds.mount.romfs:main',
-                                      'mount_sd = fuse3ds.mount.sd:main']}
+    entry_points={'console_scripts': ['mount_cci = fuse3ds.__main__:main',
+                                      'mount_cdn = fuse3ds.__main__:main',
+                                      'mount_cia = fuse3ds.__main__:main',
+                                      'mount_nand = fuse3ds.__main__:main',
+                                      'mount_ncch = fuse3ds.__main__:main',
+                                      'mount_romfs = fuse3ds.__main__:main',
+                                      'mount_sd = fuse3ds.__main__:main']}
 )
