@@ -3,6 +3,10 @@ from typing import BinaryIO, NamedTuple, Tuple
 
 from . import util
 
+__all__ = ['IVFC_HEADER_SIZE', 'IVFC_ROMFS_MAGIC_NUM', 'ROMFS_LV3_HEADER_SIZE', 'RomFSException',
+           'InvalidIVFCException', 'InvalidRomFSHeaderException', 'RomFSFileNotFoundException',
+           'RomFSFileIndexNotSetup']
+
 IVFC_HEADER_SIZE = 0x5C
 IVFC_ROMFS_MAGIC_NUM = 0x10000
 ROMFS_LV3_HEADER_SIZE = 0x28
