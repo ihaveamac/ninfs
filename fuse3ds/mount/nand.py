@@ -47,7 +47,7 @@ class NANDImageMount(LoggingMixIn, Operations):
 
         try:
             self.crypto.setup_keys_from_boot9()
-        except crypto.BootromNotFoundException as e:
+        except crypto.BootromNotFoundError as e:
             print("Bootrom was not found.")
 
         self.f = nand_fp

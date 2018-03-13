@@ -15,9 +15,9 @@ import struct
 import sys
 from collections import OrderedDict
 
-from fuse3ds import common
-from fuse3ds.pyctr import crypto, ncch, romfs, util
-from fuse3ds.mount.romfs import RomFSMount
+from .. import common
+from ..pyctr import crypto, ncch, romfs, util
+from .romfs import RomFSMount
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context

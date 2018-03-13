@@ -15,8 +15,8 @@ import struct
 import sys
 from threading import Lock
 
-from fuse3ds import common
-from fuse3ds.pyctr import crypto, util
+from .. import common
+from ..pyctr import crypto, util
 
 if common.windows:
     from ctypes import windll, wintypes

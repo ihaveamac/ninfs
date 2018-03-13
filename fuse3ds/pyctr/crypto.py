@@ -6,19 +6,19 @@ from Cryptodome.Util import Counter
 
 from . import util
 
-__all__ = ['CryptoException', 'KeyslotMissingException', 'BootromNotFoundException', 'CTRCrypto']
+__all__ = ['CryptoError', 'KeyslotMissingError', 'BootromNotFoundError', 'CTRCrypto']
 
 
-class CryptoException(Exception):
+class CryptoError(Exception):
     """Generic exception for cryptography operations."""
 
 
-class KeyslotMissingException(CryptoException):
+class KeyslotMissingError(CryptoError):
     """Normal key is not set up for the keyslot."""
 
 
 # wonder if I'm doing this right...
-class BootromNotFoundException(CryptoException):
+class BootromNotFoundError(CryptoError):
     """ARM9 bootROM was not found."""
 
 
@@ -44,12 +44,12 @@ class CTRCrypto:
 
     b9_keys_set = False  # type: bool
 
-    b9_extdata_otp = None  # type: bytes
-    b9_extdata_keygen = None  # type: bytes
-    b9_extdata_keygen_iv = None  # type: bytes
+    _b9_extdata_otp = None  # type: bytes
+    _b9_extdata_keygen = None  # type: bytes
+    _b9_extdata_keygen_iv = None  # type: bytes
 
-    otp_key = None  # type: bytes
-    otp_iv = None  # type: bytes
+    _otp_key = None  # type: bytes
+    _otp_iv = None  # type: bytes
 
     common_key_y = (
         # eShop
@@ -76,12 +76,42 @@ class CTRCrypto:
         for keyslot, keys in base_key_x.items():
             self.key_x[keyslot] = keys[is_dev]
 
+    @property
+    def b9_extdata_otp(self) -> bytes:
+        if not self.b9_keys_set:
+            raise KeyslotMissingError("bootrom is required to set up keys")
+        return self._b9_extdata_otp
+
+    @property
+    def b9_extdata_keygen(self) -> bytes:
+        if not self.b9_keys_set:
+            raise KeyslotMissingError("bootrom is required to set up keys")
+        return self._b9_extdata_keygen
+
+    @property
+    def b9_extdata_keygen_iv(self) -> bytes:
+        if not self.b9_keys_set:
+            raise KeyslotMissingError("bootrom is required to set up keys")
+        return self._b9_extdata_keygen_iv
+
+    @property
+    def otp_key(self) -> bytes:
+        if not self.b9_keys_set:
+            raise KeyslotMissingError("bootrom is required to set up keys")
+        return self._otp_key
+
+    @property
+    def otp_iv(self) -> bytes:
+        if not self.b9_keys_set:
+            raise KeyslotMissingError("bootrom is required to set up keys")
+        return self._otp_iv
+
     def aes_cbc_decrypt(self, keyslot: int, iv: bytes, data: bytes) -> bytes:
         """Do AES-CBC crypto with the given keyslot and data."""
         try:
             key = self.key_normal[keyslot]
         except KeyError:
-            raise KeyslotMissingException("normal key for keyslot 0x{:02x} is not set up".format(keyslot))
+            raise KeyslotMissingError("normal key for keyslot 0x{:02x} is not set up".format(keyslot))
 
         cipher = AES.new(key, AES.MODE_CBC, iv)
         return cipher.decrypt(data)
@@ -95,7 +125,7 @@ class CTRCrypto:
         try:
             key = self.key_normal[keyslot]
         except KeyError:
-            raise KeyslotMissingException("normal key for keyslot 0x{:02x} is not set up".format(keyslot))
+            raise KeyslotMissingError("normal key for keyslot 0x{:02x} is not set up".format(keyslot))
 
         counter = Counter.new(128, initial_value=ctr)
         cipher = AES.new(key, AES.MODE_CTR, counter=counter)
@@ -179,13 +209,13 @@ class CTRCrypto:
 
                 with open(p, 'rb') as b9:
                     b9.seek(otp_key_offset)
-                    self.otp_key = b9.read(0x10)
-                    self.otp_iv = b9.read(0x10)
+                    self._otp_key = b9.read(0x10)
+                    self._otp_iv = b9.read(0x10)
 
                     b9.seek(keyblob_offset)
-                    self.b9_extdata_otp = b9.read(0x24)
-                    self.b9_extdata_keygen = b9.read(0x10)
-                    self.b9_extdata_keygen_iv = b9.read(0x10)
+                    self._b9_extdata_otp = b9.read(0x24)
+                    self._b9_extdata_keygen = b9.read(0x10)
+                    self._b9_extdata_keygen_iv = b9.read(0x10)
 
                     # Original NCCH
                     b9.seek(keyblob_offset + 0x170)
@@ -211,7 +241,7 @@ class CTRCrypto:
                 return
 
         # if keys are not set...
-        raise BootromNotFoundException("not found at paths: {}".format(paths))
+        raise BootromNotFoundError("not found at paths: {}".format(paths))
 
     def setup_keys_from_otp(self, path: str):
         """Set up console-unique keys from an OTP dump."""

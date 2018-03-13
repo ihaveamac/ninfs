@@ -4,7 +4,13 @@ from importlib import import_module
 from sys import exit, argv
 from os.path import basename
 
-from . import __version__
+try:
+    from . import __version__
+except ImportError:
+    try:
+        from __init__ import __version__
+    except ImportError:
+        __version__ = '<unset>'
 
 mount_types = ('cci', 'cdn', 'cia', 'nand', 'ncch', 'romfs', 'sd')
 

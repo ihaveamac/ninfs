@@ -15,8 +15,8 @@ import struct
 import sys
 from typing import BinaryIO
 
-from fuse3ds import common
-from fuse3ds.pyctr import romfs, util
+from .. import common
+from ..pyctr import romfs, util
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
@@ -47,7 +47,7 @@ class RomFSMount(LoggingMixIn, Operations):
         uid, gid, pid = fuse_get_context()
         try:
             item = self.romfs_reader.get_info_from_path(path)
-        except romfs.RomFSFileNotFoundException:
+        except romfs.RomFSFileNotFoundError:
             raise FuseOSError(errno.ENOENT)
         if item.type == 'dir':
             st = {'st_mode': (stat.S_IFDIR | 0o555), 'st_nlink': 2}
@@ -65,14 +65,14 @@ class RomFSMount(LoggingMixIn, Operations):
     def readdir(self, path, fh):
         try:
             item = self.romfs_reader.get_info_from_path(path)
-        except romfs.RomFSFileNotFoundException:
+        except romfs.RomFSFileNotFoundError:
             raise FuseOSError(errno.ENOENT)
         return ['.', '..', *item.contents]
 
     def read(self, path, size, offset, fh):
         try:
             item = self.romfs_reader.get_info_from_path(path)
-        except romfs.RomFSFileNotFoundException:
+        except romfs.RomFSFileNotFoundError:
             raise FuseOSError(errno.ENOENT)
         real_offset = item.offset + offset
         if real_offset > item.offset + item.size:
@@ -86,7 +86,7 @@ class RomFSMount(LoggingMixIn, Operations):
     def statfs(self, path):
         try:
             item = self.romfs_reader.get_info_from_path(path)
-        except romfs.RomFSFileNotFoundException:
+        except romfs.RomFSFileNotFoundError:
             raise FuseOSError(errno.ENOENT)
         return {'f_bsize': 4096, 'f_blocks': self.romfs_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
                 'f_files': len(item.contents)}
