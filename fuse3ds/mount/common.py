@@ -1,3 +1,4 @@
+import argparse
 import sys
 
 from fuse import Operations
@@ -19,6 +20,12 @@ if windows:
         sys.exit('Please update fusepy to use fuse-3ds. More information can be found at:\n'
                  '  https://github.com/ihaveamac/fuse-3ds')
     del fuse_file_info, ctypes
+
+default_argparser = argparse.ArgumentParser(add_help=False)
+default_argparser.add_argument('--fg', '-f', help='run in foreground', action='store_true')
+default_argparser.add_argument('--do', help='debug output (python logging module)', action='store_true')
+default_argparser.add_argument('-o', metavar='OPTIONS', help='mount options')
+
 
 def parse_fuse_opts(opts):
     if not opts:

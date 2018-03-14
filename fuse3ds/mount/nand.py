@@ -13,8 +13,8 @@ import stat
 import struct
 import sys
 
-from fuse3ds import common
-from fuse3ds.pyctr import crypto, util
+from . import common
+from pyctr import crypto, util
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
@@ -366,15 +366,12 @@ class NANDImageMount(LoggingMixIn, Operations):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Mount Nintendo 3DS NAND images.')
+    parser = argparse.ArgumentParser(description='Mount Nintendo 3DS NAND images.', parents=[common.default_argparser])
     parser.add_argument('--otp', help='path to otp (enc/dec); not needed if NAND image has essentials backup from '
                                       'GodMode9')
     parser.add_argument('--cid', help='NAND CID; not needed if NAND image has essentials backup from GodMode9')
     parser.add_argument('--dev', help='use dev keys', action='store_const', const=1, default=0)
     parser.add_argument('--ro', help='mount read-only', action='store_true')
-    parser.add_argument('--fg', '-f', help='run in foreground', action='store_true')
-    parser.add_argument('--do', help='debug output (python logging module)', action='store_true')
-    parser.add_argument('-o', metavar='OPTIONS', help='mount options')
     parser.add_argument('nand', help='NAND image')
     parser.add_argument('mount_point', help='mount point')
 

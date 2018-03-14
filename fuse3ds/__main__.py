@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 from importlib import import_module
-from sys import exit, argv
-from os.path import basename
+from sys import exit, argv, path
+from os.path import basename, dirname, realpath
 
 try:
     from . import __version__
@@ -14,6 +14,7 @@ except ImportError:
 
 mount_types = ('cci', 'cdn', 'cia', 'nand', 'ncch', 'romfs', 'sd')
 
+print(__file__)
 print('fuse-3ds {} - https://github.com/ihaveamac/fuse-3ds'.format(__version__))
 
 def exit_print_types():
@@ -25,7 +26,7 @@ def mount(mount_type: str) -> int:
     if mount_type not in mount_types:
         exit_print_types()
 
-    module = import_module('fuse3ds.mount.' + mount_type)
+    module = import_module('mount.' + mount_type)
     return module.main()
 
 def main():
@@ -35,4 +36,6 @@ if __name__ == '__main__':
     if len(argv) < 2:
         exit_print_types()
 
+    # path fun times
+    path.extend(dirname(realpath(__file__)))
     exit(mount(argv.pop(1).lower()))

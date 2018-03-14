@@ -15,8 +15,8 @@ import struct
 import sys
 from typing import BinaryIO
 
-from .. import common
-from ..pyctr import romfs, util
+from . import common
+from pyctr import romfs, util
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
@@ -93,10 +93,8 @@ class RomFSMount(LoggingMixIn, Operations):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Mount Nintendo 3DS Read-only Filesystem (RomFS) files.')
-    parser.add_argument('--fg', '-f', help='run in foreground', action='store_true')
-    parser.add_argument('--do', help='debug output (python logging module)', action='store_true')
-    parser.add_argument('-o', metavar='OPTIONS', help='mount options')
+    parser = argparse.ArgumentParser(description='Mount Nintendo 3DS Read-only Filesystem (RomFS) files.',
+                                     parents=[common.default_argparser])
     parser.add_argument('romfs', help='RomFS file')
     parser.add_argument('mount_point', help='mount point')
 

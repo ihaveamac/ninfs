@@ -13,8 +13,8 @@ import stat
 import struct
 import sys
 
-from .. import common
-from ..pyctr import crypto, util
+from . import common
+from pyctr import crypto, util
 from .ncch import NCCHContainerMount
 
 try:
@@ -208,13 +208,10 @@ class CDNContentsMount(LoggingMixIn, Operations):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Mount Nintendo 3DS CDN contents.")
+    parser = argparse.ArgumentParser(description="Mount Nintendo 3DS CDN contents.", parents=[common.default_argparser])
     parser.add_argument('--dec-key', help="decrypted titlekey")
     parser.add_argument('--dev', help="use dev keys", action='store_const', const=1, default=0)
     parser.add_argument('--seeddb', help="path to seeddb.bin")
-    parser.add_argument('--fg', '-f', help="run in foreground", action='store_true')
-    parser.add_argument('--do', help="debug output (python logging module)", action='store_true')
-    parser.add_argument('-o', metavar='OPTIONS', help="mount options")
     parser.add_argument('cdn_dir', help="directory with CDN contents")
     parser.add_argument('mount_point', help="mount point")
 

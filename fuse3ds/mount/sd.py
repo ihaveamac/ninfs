@@ -15,8 +15,8 @@ import struct
 import sys
 from threading import Lock
 
-from .. import common
-from ..pyctr import crypto, util
+from . import common
+from pyctr import crypto, util
 
 if common.windows:
     from ctypes import windll, wintypes
@@ -239,15 +239,13 @@ class SDFilesystemMount(LoggingMixIn, Operations):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Mount Nintendo 3DS SD card contents.')
+    parser = argparse.ArgumentParser(description='Mount Nintendo 3DS SD card contents.',
+                                     parents=[common.default_argparser])
     parser.add_argument('--movable', metavar='MOVABLESED', help='path to movable.sed', required=True)
     parser.add_argument('--ro', help='mount read-only', action='store_true')
     parser.add_argument('--dev', help='use dev keys', action='store_const', const=1, default=0)
-    parser.add_argument('--fg', help='run in foreground', action='store_true')
-    parser.add_argument('--do', help='debug output (python logging module)', action='store_true')
     # parser.add_argument('--allow-rename', help='allow renaming of files (warning: files will be re-encrypted '
     #                                            'when renamed!)', action='store_true')
-    parser.add_argument('-o', metavar='OPTIONS', help='mount options')
     parser.add_argument('sd_dir', help='path to folder with SD contents (on SD: /Nintendo 3DS)')
     parser.add_argument('mount_point', help='mount point')
 
