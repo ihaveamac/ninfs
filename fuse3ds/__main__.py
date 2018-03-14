@@ -14,7 +14,6 @@ except ImportError:
 
 mount_types = ('cci', 'cdn', 'cia', 'nand', 'ncch', 'romfs', 'sd')
 
-print(__file__)
 print('fuse-3ds {} - https://github.com/ihaveamac/fuse-3ds'.format(__version__))
 
 def exit_print_types():
