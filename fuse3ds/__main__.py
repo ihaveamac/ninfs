@@ -29,7 +29,7 @@ def mount(mount_type: str) -> int:
     return module.main()
 
 def main():
-    path.extend(dirname(realpath(__file__)))
+    path.append(dirname(realpath(__file__)))
     exit(mount(basename(argv[0])[6:].lower()))
 
 if __name__ == '__main__':
@@ -37,5 +37,5 @@ if __name__ == '__main__':
         exit_print_types()
 
     # path fun times
-    path.extend(dirname(realpath(__file__)))
+    path.append(dirname(realpath(__file__)))
     exit(mount(argv.pop(1).lower()))
