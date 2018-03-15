@@ -233,11 +233,10 @@ class SDFilesystemMount(LoggingMixIn, Operations):
 
 def main():
     parser = argparse.ArgumentParser(description='Mount Nintendo 3DS SD card contents.',
-                                     parents=[common.default_argp, common.readonly_argp])
+                                     parents=(common.default_argp, common.readonly_argp, common.dev_argp,
+                                              common.main_positional_args(
+                                                  'sd_dir', "path to folder with SD contents (on SD: /Nintendo 3DS)")))
     parser.add_argument('--movable', metavar='MOVABLESED', help='path to movable.sed', required=True)
-    parser.add_argument('--dev', help='use dev keys', action='store_const', const=1, default=0)
-    parser.add_argument('sd_dir', help='path to folder with SD contents (on SD: /Nintendo 3DS)')
-    parser.add_argument('mount_point', help='mount point')
 
     a = parser.parse_args()
     opts = dict(common.parse_fuse_opts(a.o))

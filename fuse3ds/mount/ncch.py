@@ -242,11 +242,9 @@ class NCCHContainerMount(LoggingMixIn, Operations):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Mount Nintendo 3DS NCCH containers.", parents=[common.default_argp])
-    parser.add_argument('--dev', help="use dev keys", action='store_const', const=1, default=0)
-    parser.add_argument('--seeddb', help="path to seeddb.bin")
-    parser.add_argument('ncch', help="NCCH file")
-    parser.add_argument('mount_point', help="mount point")
+    parser = argparse.ArgumentParser(description="Mount Nintendo 3DS NCCH containers.",
+                                     parents=(common.default_argp, common.dev_argp, common.seeddb_argp,
+                                              common.main_positional_args('ncch', "NCCH file")))
 
     a = parser.parse_args()
     opts = dict(common.parse_fuse_opts(a.o))

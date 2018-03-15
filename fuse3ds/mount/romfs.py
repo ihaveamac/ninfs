@@ -94,9 +94,7 @@ class RomFSMount(LoggingMixIn, Operations):
 
 def main():
     parser = argparse.ArgumentParser(description='Mount Nintendo 3DS Read-only Filesystem (RomFS) files.',
-                                     parents=[common.default_argp])
-    parser.add_argument('romfs', help='RomFS file')
-    parser.add_argument('mount_point', help='mount point')
+                                     parents=(common.default_argp, common.main_positional_args('romfs', 'RomFS file')))
 
     a = parser.parse_args()
     opts = dict(common.parse_fuse_opts(a.o))

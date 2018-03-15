@@ -17,7 +17,9 @@ import sys
 from typing import BinaryIO
 
 from . import common
-from pyctr import crypto, util
+from pyctr.crypto import CTRCrypto
+from pyctr.util import readbe
+from pyctr.tmd import TitleMetadataReader
 from .ncch import NCCHContainerMount
 
 try:
@@ -49,7 +51,7 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
     fd = 0
 
     def __init__(self, cia_fp: BinaryIO, dev: bool, g_stat: os.stat_result, seeddb: bool = None):
-        self.crypto = crypto.CTRCrypto(is_dev=dev)
+        self.crypto = CTRCrypto(is_dev=dev)
 
         self.crypto.setup_keys_from_boot9()
 
@@ -73,9 +75,13 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
         content_offset = tmd_offset + new_offset(tmd_size)
         meta_offset = content_offset + new_offset(content_size)
 
+        # load tmd
+        tmd = TitleMetadataReader.load(self.f)
+        self.title_id = tmd.title_id
+
         # read title id, encrypted titlekey and common key index
         self.f.seek(ticket_offset + 0x1DC)
-        self.title_id = self.f.read(8)
+        tik_title_id = self.f.read(8)
         self.f.seek(ticket_offset + 0x1BF)
         enc_titlekey = self.f.read(0x10)
         self.f.seek(ticket_offset + 0x1F1)
@@ -83,16 +89,8 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
 
         # decrypt titlekey
         self.crypto.set_keyslot('y', 0x3D, self.crypto.get_common_key(common_key_index))
-        titlekey = self.crypto.aes_cbc_decrypt(0x3D, self.title_id + (b'\0' * 8), enc_titlekey)
+        titlekey = self.crypto.aes_cbc_decrypt(0x3D, tik_title_id + (b'\0' * 8), enc_titlekey)
         self.crypto.set_normal_key(0x40, titlekey)
-
-        # get content count
-        self.f.seek(tmd_offset + 0x1DE)
-        content_count = util.readbe(self.f.read(2))
-
-        # get offset for tmd chunks, mostly so it can be put into a tmdchunks.bin virtual file
-        tmd_chunks_offset = tmd_offset + 0xB04
-        tmd_chunks_size = content_count * 0x30
 
         # create virtual files
         self.files = {'/header.bin': {'size': archive_header_size, 'offset': 0, 'type': 'raw'},
@@ -117,9 +115,9 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
         for chunk in (tmd_chunks_raw[i:i + 30] for i in range(0, content_count * 0x30, 0x30)):
             content_id = chunk[0:4]
             content_index = chunk[4:6]
-            content_size = util.readbe(chunk[8:16])
-            content_is_encrypted = util.readbe(chunk[6:8]) & 1
-            file_ext = 'nds' if content_index == b'\0\0' and util.readbe(self.title_id) >> 44 == 0x48 else 'ncch'
+            content_size = readbe(chunk[8:16])
+            content_is_encrypted = readbe(chunk[6:8]) & 1
+            file_ext = 'nds' if content_index == b'\0\0' and readbe(self.title_id) >> 44 == 0x48 else 'ncch'
             filename = '/{}.{}.{}'.format(content_index.hex(), content_id.hex(), file_ext)
             self.files[filename] = {'size': content_size, 'offset': current_offset, 'index': content_index,
                                     'type': 'enc' if content_is_encrypted else 'raw'}
@@ -205,11 +203,8 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
 
 def main():
     parser = argparse.ArgumentParser(description="Mount Nintendo 3DS CTR Importable Archive files.",
-                                     parents=[common.default_argp])
-    parser.add_argument('--dev', help="use dev keys", action='store_const', const=1, default=0)
-    parser.add_argument('--seeddb', help="path to seeddb.bin")
-    parser.add_argument('cia', help="CIA file")
-    parser.add_argument('mount_point', help="mount point")
+                                     parents=(common.default_argp, common.dev_argp, common.seeddb_argp,
+                                              common.main_positional_args('cia', "CIA file")))
 
     a = parser.parse_args()
     opts = dict(common.parse_fuse_opts(a.o))
@@ -224,10 +219,10 @@ def main():
         if common.macos or common.windows:
             opts['fstypename'] = 'CIA'
             if common.macos:
-                opts['volname'] = "CTR Importable Archive ({})".format(mount.title_id.hex().upper())
+                opts['volname'] = "CTR Importable Archive ({})".format(mount.title_id.upper())
             elif common.windows:
                 # volume label can only be up to 32 chars
-                opts['volname'] = "CIA ({})".format(mount.title_id.hex().upper())
+                opts['volname'] = "CIA ({})".format(mount.title_id.upper())
         fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do, ro=True, nothreads=True,
                     fsname=os.path.realpath(a.cia).replace(',', '_'), **opts)
 

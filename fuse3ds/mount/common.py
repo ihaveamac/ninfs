@@ -1,6 +1,7 @@
 import inspect
 import sys
 from argparse import ArgumentParser
+from typing import Generator, Tuple, Union
 
 from fuse import Operations
 
@@ -30,8 +31,21 @@ default_argp.add_argument('-o', metavar='OPTIONS', help='mount options')
 readonly_argp = ArgumentParser(add_help=False)
 readonly_argp.add_argument('-r', '--ro', help='mount read-only', action='store_true')
 
+dev_argp = ArgumentParser(add_help=False)
+dev_argp.add_argument('--dev', help="use dev keys", action='store_const', const=1, default=0)
 
-def parse_fuse_opts(opts):
+seeddb_argp = ArgumentParser(add_help=False)
+seeddb_argp.add_argument('--seeddb', help="path to seeddb.bin")
+
+def main_positional_args(name: str, help: str) -> ArgumentParser:
+    parser = ArgumentParser(add_help=False)
+    parser.add_argument(name, help=help)
+    parser.add_argument('mount_point', help='mount_point')
+    return parser
+
+
+# aren't type hints great?
+def parse_fuse_opts(opts) -> Generator[Tuple[str, Union[str, bool]], None, None]:
     if not opts:
         return
     for arg in opts.split(','):
