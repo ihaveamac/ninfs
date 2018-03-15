@@ -14,7 +14,9 @@ import struct
 import sys
 
 from . import common
-from pyctr import crypto, util
+from pyctr.crypto import CTRCrypto
+from pyctr.util import readbe
+from pyctr.tmd import TitleMetadataReader, CHUNK_RECORD_SIZE
 from .ncch import NCCHContainerMount
 
 try:
@@ -47,8 +49,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
     def __init__(self, cdn_dir, dev, dec_key=None, seeddb=None):
         self.cdn_dir = cdn_dir
 
-        self.crypto = crypto.CTRCrypto(is_dev=dev)
-
+        self.crypto = CTRCrypto(is_dev=dev)
         self.crypto.setup_keys_from_boot9()
 
         # get status change, modify, and file access times
@@ -56,19 +57,12 @@ class CDNContentsMount(LoggingMixIn, Operations):
         self.g_stat = {'st_ctime': int(cdn_stat.st_ctime), 'st_mtime': int(cdn_stat.st_mtime),
                        'st_atime': int(cdn_stat.st_atime)}
 
-        if not os.path.isfile(self.rp('tmd')):
+        try:
+            tmd = TitleMetadataReader.from_file(self.rp('tmd'))
+        except FileNotFoundError:
             sys.exit('tmd not found.')
-
-        with open(self.rp('tmd'), 'rb') as tmd:
-            # get title and content count
-            tmd.seek(0x18C)
-            self.title_id = tmd.read(8)
-            tmd.seek(0x1DE)
-            content_count = util.readbe(tmd.read(2))
-            tmd_chunks_size = content_count * 0x30
-
-            tmd.seek(0xB04)
-            tmd_chunks_raw = tmd.read(tmd_chunks_size)
+        
+        self.title_id = tmd.title_id
 
         if not os.path.isfile(self.rp('cetk')):
             if not dec_key:
@@ -92,45 +86,42 @@ class CDNContentsMount(LoggingMixIn, Operations):
 
             # decrypt titlekey
             self.crypto.set_keyslot('y', 0x3D, self.crypto.get_common_key(common_key_index))
-            titlekey = self.crypto.aes_cbc_decrypt(0x3D, self.title_id + (b'\0' * 8), enc_titlekey)
+            titlekey = self.crypto.aes_cbc_decrypt(0x3D, bytes.fromhex(self.title_id) + (b'\0' * 8), enc_titlekey)
             self.crypto.set_normal_key(0x40, titlekey)
 
         # create virtual files
         self.files = {'/ticket.bin': {'size': 0x350, 'offset': 0, 'type': 'raw', 'real_filepath': self.rp('cetk')},
-                      '/tmd.bin': {'size': 0xB04 + tmd_chunks_size, 'offset': 0, 'type': 'raw',
+                      '/tmd.bin': {'size': 0xB04 + tmd.content_count * CHUNK_RECORD_SIZE, 'offset': 0, 'type': 'raw',
                                    'real_filepath': self.rp('tmd')},
-                      '/tmdchunks.bin': {'size': tmd_chunks_size, 'offset': 0xB04, 'type': 'raw',
+                      '/tmdchunks.bin': {'size': tmd.content_count * CHUNK_RECORD_SIZE, 'offset': 0xB04, 'type': 'raw',
                                          'real_filepath': self.rp('tmd')}}
 
         self.dirs = {}
 
         # read contents to generate virtual files
         self.cdn_content_size = 0
-        for chunk in [tmd_chunks_raw[i:i + 30] for i in range(0, tmd_chunks_size, 0x30)]:
-            content_id = chunk[0:4]
-            content_index = chunk[4:6]
-            if os.path.isfile(self.rp(content_id.hex())):
-                real_filename = content_id.hex()
-            elif os.path.isfile(self.rp(content_id.hex().upper())):
-                real_filename = content_id.hex().upper()
+        for chunk in tmd.chunk_records:
+            if os.path.isfile(self.rp(chunk.id)):
+                real_filename = chunk.id
+            elif os.path.isfile(self.rp(chunk.id.upper())):
+                real_filename = chunk.id.upper()
             else:
-                print("Content {}:{} not found, will not be included.".format(content_index.hex(), content_id.hex()))
+                print("Content {}:{} not found, will not be included.".format(chunk.cindex, chunk.id))
                 continue
-            content_size = util.readbe(chunk[8:16])
             filesize = os.path.getsize(self.rp(real_filename))
-            if content_size != filesize:
-                print("Warning: TMD Content size and filesize of {} are different.".format(content_id.hex()))
-            self.cdn_content_size += content_size
-            content_is_encrypted = util.readbe(chunk[6:8]) & 1
-            file_ext = 'nds' if content_index == b'\0\0' and util.readbe(self.title_id) >> 44 == 0x48 else 'ncch'
-            filename = '/{}.{}.{}'.format(content_index.hex(), content_id.hex(), file_ext)
-            self.files[filename] = {'size': content_size, 'offset': 0, 'index': content_index,
-                                    'type': 'enc' if content_is_encrypted else 'raw',
+            if chunk.size != filesize:
+                print("Warning: TMD Content size and filesize of", chunk.id, "are different.")
+            self.cdn_content_size += chunk.size
+            content_is_encrypted = readbe(chunk[6:8]) & 1
+            file_ext = 'nds' if chunk.cindex == 0 and int(self.title_id, 16) >> 44 == 0x48 else 'ncch'
+            filename = '/{:04x}.{}.{}'.format(chunk.cindex, chunk.id, file_ext)
+            self.files[filename] = {'size': chunk.size, 'offset': 0, 'index': chunk.cindex.to_bytes(2, 'big'),
+                                    'type': 'enc' if chunk.type.encrypted else 'raw',
                                     'real_filepath': self.rp(real_filename)}
 
-            dirname = '/{}.{}'.format(content_index.hex(), content_id.hex())
+            dirname = '/{:04x}.{}'.format(chunk.cindex, chunk.id)
             try:
-                content_vfp = common.VirtualFileWrapper(self, filename, content_size)
+                content_vfp = common.VirtualFileWrapper(self, filename, chunk.size)
                 content_fuse = NCCHContainerMount(content_vfp, dev=dev, g_stat=cdn_stat, seeddb=seeddb)
                 self.dirs[dirname] = content_fuse
             except Exception as e:
@@ -208,7 +199,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Mount Nintendo 3DS CDN contents.", parents=[common.default_argparser])
+    parser = argparse.ArgumentParser(description="Mount Nintendo 3DS CDN contents.", parents=[common.default_argp])
     parser.add_argument('--dec-key', help="decrypted titlekey")
     parser.add_argument('--dev', help="use dev keys", action='store_const', const=1, default=0)
     parser.add_argument('--seeddb', help="path to seeddb.bin")
@@ -224,7 +215,7 @@ def main():
     mount = CDNContentsMount(cdn_dir=a.cdn_dir, dev=a.dev, dec_key=a.dec_key, seeddb=a.seeddb)
     if common.macos or common.windows:
         opts['fstypename'] = 'CDN'
-        opts['volname'] = "CDN Contents ({})".format(mount.title_id.hex().upper())
+        opts['volname'] = "CDN Contents ({})".format(mount.title_id.upper())
     fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do, ro=True, nothreads=True,
                 fsname=os.path.realpath(a.cdn_dir).replace(',', '_'), **opts)
 

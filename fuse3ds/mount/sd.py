@@ -162,9 +162,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         ld = os.listdir(path)
         if common.windows:
             # I should figure out how to mark hidden files, if possible
-            for d in ld:
-                if not d.startswith('.'):
-                    yield d
+            yield from (d for d in ld if not d.startswith('.'))
         else:
             yield from ld
 
@@ -175,13 +173,8 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         del self.fds[fh]
 
     def rename(self, old, new):
-        # TODO: proper rename support - this may not happen because there's not
-        #   much reason to rename files here. copying might work since either
-        #   way, the file[s] would have to be re-encrypted.
+        # renaming's too difficult. just copy the file to the name you want if you really need it.
         raise FuseOSError(errno.EROFS if self.readonly else errno.EPERM)
-        # if self.readonly:
-        #     raise FuseOSError(errno.EROFS)
-        # return os.rename(old, self.root + new)
 
     rmdir = os.rmdir
 
@@ -240,12 +233,9 @@ class SDFilesystemMount(LoggingMixIn, Operations):
 
 def main():
     parser = argparse.ArgumentParser(description='Mount Nintendo 3DS SD card contents.',
-                                     parents=[common.default_argparser])
+                                     parents=[common.default_argp, common.readonly_argp])
     parser.add_argument('--movable', metavar='MOVABLESED', help='path to movable.sed', required=True)
-    parser.add_argument('--ro', help='mount read-only', action='store_true')
     parser.add_argument('--dev', help='use dev keys', action='store_const', const=1, default=0)
-    # parser.add_argument('--allow-rename', help='allow renaming of files (warning: files will be re-encrypted '
-    #                                            'when renamed!)', action='store_true')
     parser.add_argument('sd_dir', help='path to folder with SD contents (on SD: /Nintendo 3DS)')
     parser.add_argument('mount_point', help='mount point')
 

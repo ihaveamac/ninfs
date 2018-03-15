@@ -120,6 +120,11 @@ class RomFSReader:
         return out
 
     @classmethod
+    def from_file(cls, fn: str, case_insensitive: bool = False) -> 'RomFSReader':
+        with open(fn, 'rb') as f:
+            return cls.load(f, case_insensitive=case_insensitive)
+
+    @classmethod
     def from_lv3_header(cls, header: bytes, *, case_insensitive: bool = False) -> 'RomFSReader':
         """Create a RomFSReader from a Level 3 header."""
         header_length = len(header)

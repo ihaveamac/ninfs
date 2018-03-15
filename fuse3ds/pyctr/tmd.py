@@ -3,8 +3,10 @@ from typing import BinaryIO, NamedTuple, Iterable
 
 from .util import readbe
 
-__all__ = ['TitleMetadataError', 'InvalidSignatureTypeError', 'InvalidHashError', 'ContentInfoRecord',
-           'ContentChunkRecord', 'TitleVersion', 'TitleMetadataReader']
+__all__ = ['CHUNK_RECORD_SIZE', 'TitleMetadataError', 'InvalidSignatureTypeError', 'InvalidHashError',
+           'ContentInfoRecord', 'ContentChunkRecord', 'ContentTypeFlags', 'TitleVersion', 'TitleMetadataReader']
+
+CHUNK_RECORD_SIZE = 0x30
 
 signature_types = {
     # RSA_4096 SHA1 (unused on 3DS)
@@ -34,6 +36,26 @@ class InvalidHashError(TitleMetadataError):
     """Hash mismatch in the Title Metadata."""
 
 
+# apparently typing.NamedTuple being subclassed this way does not properly support type hints in PyCharm...
+# maybe I should stop supporting 3.5
+class ContentTypeFlags(NamedTuple('_ContentTypeFlags',
+                       (('encrypted', bool), ('disc', bool), ('cfm', bool), ('optional', bool), ('shared', bool)))):
+    __slots__ = ()
+    def __index__(self) -> int:
+        return self.encrypted | (self.disc << 1) | (self.cfm << 2) | (self.optional << 14) | (self.shared << 15)
+
+    __int__ = __index__
+
+    def __format__(self, format_spec: str) -> str:
+        return self.__int__().__format__(format_spec)
+
+    @classmethod
+    def from_int(cls, flags: int) -> 'ContentTypeFlags':
+        # PyCharm's inspector is wrong here, cls returns ContentTypeFlags.
+        # noinspection PyTypeChecker
+        return cls(bool(flags & 1), bool(flags & 2), bool(flags & 4), bool(flags & 0x4000), bool(flags & 0x8000))
+
+
 class ContentInfoRecord(NamedTuple('_ContentInfoRecord',
                                    (('index_offset', int), ('command_count', int), ('hash', bytes)))):
     __slots__ = ()
@@ -42,11 +64,13 @@ class ContentInfoRecord(NamedTuple('_ContentInfoRecord',
 
 
 class ContentChunkRecord(NamedTuple('_ContentChunkRecord',
-                                    (('id', str), ('cindex', int), ('type', int), ('size', int), ('hash', bytes)))):
+                                    (('id', str), ('cindex', int), ('type', ContentTypeFlags), ('size', int),
+                                     ('hash', bytes)))):
     __slots__ = ()
     def __bytes__(self) -> bytes:
         return b''.join((bytes.fromhex(self.id), self.cindex.to_bytes(2, 'big'), self.type.to_bytes(2, 'big'),
                          self.size.to_bytes(8, 'big'), self.hash))
+
 
 class TitleVersion(NamedTuple('_TitleVersion', (('major', int), ('minor', int), ('micro', int)))):
     __slots__ = ()
@@ -54,7 +78,7 @@ class TitleVersion(NamedTuple('_TitleVersion', (('major', int), ('minor', int), 
         return '{0.major}.{0.minor}.{0.micro}'.format(self)
 
     def __index__(self) -> int:
-        return ((self.major << 6) + self.minor << 4) + self.micro
+        return (self.major << 10) | (self.minor << 4) | self.micro
 
     __int__ = __index__
 
@@ -63,7 +87,7 @@ class TitleVersion(NamedTuple('_TitleVersion', (('major', int), ('minor', int), 
 
     @classmethod
     def from_int(cls, ver: int) -> 'TitleVersion':
-        # PyCharm's inspector is wrong here, cls returns a TitleVersion.
+        # PyCharm's inspector is wrong here, cls returns TitleVersion.
         # noinspection PyTypeChecker
         return cls((ver >> 10) & 0x3F, (ver >> 4) & 0x3F, ver & 0xF)
 
@@ -135,14 +159,15 @@ class TitleMetadataReader:
                                                       command_count=readbe(ir[2:4]),
                                                       hash=ir[4:36]))
 
-        content_chunk_records_raw = fp.read(content_count * 0x30)
+        content_chunk_records_raw = fp.read(content_count * CHUNK_RECORD_SIZE)
         # TODO: verify hashes of chunk_records (needs more testing)
 
         chunk_records = []
-        for cr in (content_chunk_records_raw[i:i + 0x30] for i in range(0, content_count * 0x30, 0x30)):
+        for cr in (content_chunk_records_raw[i:i + CHUNK_RECORD_SIZE] for i in
+                   range(0, content_count * CHUNK_RECORD_SIZE, CHUNK_RECORD_SIZE)):
             chunk_records.append(ContentChunkRecord(id=cr[0:4].hex(),
                                                     cindex=readbe(cr[4:6]),
-                                                    type=readbe(cr[6:8]),
+                                                    type=ContentTypeFlags.from_int(readbe(cr[6:8])),
                                                     size=readbe(cr[8:16]),
                                                     hash=cr[16:48]))
 
@@ -150,6 +175,6 @@ class TitleMetadataReader:
                    info_records=info_records, chunk_records=chunk_records)
 
     @classmethod
-    def from_file(cls, fn: str) -> 'TitleMetadataReader':
+    def from_file(cls, fn: str, *, verify_hashes: bool = True) -> 'TitleMetadataReader':
         with open(fn, 'rb') as f:
-            return cls.load(f)
+            return cls.load(f, verify_hashes=verify_hashes)

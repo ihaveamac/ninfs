@@ -1,5 +1,6 @@
-import argparse
+import inspect
 import sys
+from argparse import ArgumentParser
 
 from fuse import Operations
 
@@ -21,10 +22,13 @@ if windows:
                  '  https://github.com/ihaveamac/fuse-3ds')
     del fuse_file_info, ctypes
 
-default_argparser = argparse.ArgumentParser(add_help=False)
-default_argparser.add_argument('--fg', '-f', help='run in foreground', action='store_true')
-default_argparser.add_argument('--do', help='debug output (python logging module)', action='store_true')
-default_argparser.add_argument('-o', metavar='OPTIONS', help='mount options')
+default_argp = ArgumentParser(add_help=False)
+default_argp.add_argument('--fg', '-f', help='run in foreground', action='store_true')
+default_argp.add_argument('--do', help='debug output (python logging module)', action='store_true')
+default_argp.add_argument('-o', metavar='OPTIONS', help='mount options')
+
+readonly_argp = ArgumentParser(add_help=False)
+readonly_argp.add_argument('-r', '--ro', help='mount read-only', action='store_true')
 
 
 def parse_fuse_opts(opts):
@@ -52,6 +56,17 @@ def get_first_dir(path: str) -> str:
         return path[:sep]
 
 
+def raise_if_closed(func):
+    def decorator(self, *args, **kwargs):
+        if self.closed:
+            raise ValueError("I/O operation on closed file.")
+        return func(self, *args, **kwargs)
+    decorator.__signature__ = inspect.signature(func)
+    decorator.__annotations__ = func.__annotations__
+    decorator.__name__ = func.__name__
+    decorator.__doc__ = func.__doc__
+    return decorator
+
 class VirtualFileWrapper:
     """Wrapper for a FUSE Operations class for things that need a file-like object."""
 
@@ -63,18 +78,16 @@ class VirtualFileWrapper:
         self.path = path
         self.size = size
 
+    @raise_if_closed
     def read(self, size: int = -1) -> bytes:
-        if self.closed:
-            raise ValueError("I/O operation on closed file.")
         if size == -1:
             size = self.size - self._seek
         data = self.fuse_op.read(self.path, size, self._seek, 0)
         self._seek += len(data)
         return data
 
+    @raise_if_closed
     def seek(self, seek: int, whence: int = 0) -> int:
-        if self.closed:
-            raise ValueError("I/O operation on closed file.")
         if whence == 0:
             if seek < 0:
                 raise ValueError("negative seek value -1")
@@ -85,20 +98,21 @@ class VirtualFileWrapper:
             self._seek = max(self.size + seek, 0)
         return self._seek
 
+    @raise_if_closed
     def tell(self) -> int:
-        if self.closed:
-            raise ValueError("I/O operation on closed file.")
         return self._seek
 
     def close(self):
         self.closed = True
 
+    @raise_if_closed
     def readable(self) -> bool:
-        if self.closed:
-            raise ValueError("I/O operation on closed file.")
         return True
 
+    @raise_if_closed
     def writable(self) -> bool:
-        if self.closed:
-            raise ValueError("I/O operation on closed file.")
+        return False
+
+    @raise_if_closed
+    def seekable(self) -> bool:
         return False

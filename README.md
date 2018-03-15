@@ -74,8 +74,8 @@ Windows users can use a drive letter like `F:` as a mountpoint.
 Mounts CTR Cart Image (CCI, ".3ds") files, creating a virtual filesystem of separate partitions.
 
 ```
-usage: mount_cci [-h] [--dev] [--seeddb SEEDDB] [--fg] [--do] [-o OPTIONS]
-                    cci mount_point
+usage: mount_cci [-h] [--fg] [--do] [-o OPTIONS] [--dev] [--seeddb SEEDDB]
+                 cci mount_point
 
 Mount Nintendo 3DS CTR Cart Image files.
 
@@ -85,11 +85,12 @@ positional arguments:
 
 optional arguments:
   -h, --help       show this help message and exit
-  --dev            use dev keys
-  --seeddb SEEDDB  path to seeddb.bin
   --fg, -f         run in foreground
   --do             debug output (python logging module)
   -o OPTIONS       mount options
+  --dev            use dev keys
+  --seeddb SEEDDB  path to seeddb.bin
+
 ```
 
 #### Current files
@@ -109,9 +110,9 @@ mount_point
 Mounts raw CDN contents, creating a virtual filesystem of decrypted contents (if encrypted).
 
 ```
-usage: mount_cdn [-h] [--dec-key DEC_KEY] [--dev] [--seeddb SEEDDB] [--fg]
-                    [--do] [-o OPTIONS]
-                    cdn_dir mount_point
+usage: mount_cdn [-h] [--fg] [--do] [-o OPTIONS] [--dec-key DEC_KEY] [--dev]
+                 [--seeddb SEEDDB]
+                 cdn_dir mount_point
 
 Mount Nintendo 3DS CDN contents.
 
@@ -121,12 +122,13 @@ positional arguments:
 
 optional arguments:
   -h, --help         show this help message and exit
-  --dec-key DEC_KEY  decrypted titlekey
-  --dev              use dev keys
-  --seeddb SEEDDB    path to seeddb.bin
   --fg, -f           run in foreground
   --do               debug output (python logging module)
   -o OPTIONS         mount options
+  --dec-key DEC_KEY  decrypted titlekey
+  --dev              use dev keys
+  --seeddb SEEDDB    path to seeddb.bin
+
 ```
 
 ### mount_cia
@@ -135,8 +137,8 @@ Mounts CTR Importable Archive (CIA) files, creating a virtual filesystem of decr
 DLC with missing contents is currently not supported.
 
 ```
-usage: mount_cia [-h] [--dev] [--seeddb SEEDDB] [--fg] [--do] [-o OPTIONS]
-                    cia mount_point
+usage: mount_cia [-h] [--fg] [--do] [-o OPTIONS] [--dev] [--seeddb SEEDDB]
+                 cia mount_point
 
 Mount Nintendo 3DS CTR Importable Archive files.
 
@@ -146,11 +148,12 @@ positional arguments:
 
 optional arguments:
   -h, --help       show this help message and exit
-  --dev            use dev keys
-  --seeddb SEEDDB  path to seeddb.bin
   --fg, -f         run in foreground
   --do             debug output (python logging module)
   -o OPTIONS       mount options
+  --dev            use dev keys
+  --seeddb SEEDDB  path to seeddb.bin
+
 ```
 
 #### Current files
@@ -161,8 +164,6 @@ mount_point
 ├── header.bin
 ├── icon.bin          (only if meta region exists)
 ├── meta.bin          (only if meta region exists)
-├── firm0.bin
-├── firm1.bin         (up to 8 firm partitions may be displayed)
 ├── ticket.bin
 ├── tmd.bin
 └── tmdchunks.bin
@@ -172,9 +173,9 @@ mount_point
 Mounts NAND images, creating a virtual filesystem of decrypted partitions. Can read essentials backup by GodMode9, else OTP file/NAND CID must be provided in arguments.
 
 ```
-usage: mount_nand [-h] [--otp OTP] [--cid CID] [--dev] [--ro] [--fg] [--do]
-                     [-o OPTIONS]
-                     nand mount_point
+usage: mount_nand [-h] [--fg] [--do] [-o OPTIONS] [-r] [--otp OTP] [--cid CID]
+                  [--dev]
+                  nand mount_point
 
 Mount Nintendo 3DS NAND images.
 
@@ -184,15 +185,15 @@ positional arguments:
 
 optional arguments:
   -h, --help   show this help message and exit
+  --fg, -f     run in foreground
+  --do         debug output (python logging module)
+  -o OPTIONS   mount options
+  -r, --ro     mount read-only
   --otp OTP    path to otp (enc/dec); not needed if NAND image has essentials
                backup from GodMode9
   --cid CID    NAND CID; not needed if NAND image has essentials backup from
                GodMode9
   --dev        use dev keys
-  --ro         mount read-only
-  --fg, -f     run in foreground
-  --do         debug output (python logging module)
-  -o OPTIONS   mount options
 ```
 
 #### Current files
@@ -219,8 +220,8 @@ mount_point
 Mounts NCCH containers, creating a virtual filesystem of decrypted sections.
 
 ```
-usage: mount_ncch [-h] [--dev] [--seeddb SEEDDB] [--fg] [--do] [-o OPTIONS]
-                     ncch mount_point
+usage: mount_ncch [-h] [--fg] [--do] [-o OPTIONS] [--dev] [--seeddb SEEDDB]
+                  ncch mount_point
 
 Mount Nintendo 3DS NCCH containers.
 
@@ -230,11 +231,11 @@ positional arguments:
 
 optional arguments:
   -h, --help       show this help message and exit
-  --dev            use dev keys
-  --seeddb SEEDDB  path to seeddb.bin
   --fg, -f         run in foreground
   --do             debug output (python logging module)
   -o OPTIONS       mount options
+  --dev            use dev keys
+  --seeddb SEEDDB  path to seeddb.bin
 ```
 
 ### mount_romfs
@@ -260,9 +261,9 @@ optional arguments:
 Mounts SD contents under `/Nintendo 3DS`, creating a virtual filesystem with decrypted contents. `movable.sed` required.
 
 ```
-usage: mount_sd [-h] --movable MOVABLESED [--ro] [--dev] [--fg] [--do]
-                   [-o OPTIONS]
-                   sd_dir mount_point
+usage: mount_sd [-h] [--fg] [--do] [-o OPTIONS] [-r] --movable MOVABLESED
+                [--dev]
+                sd_dir mount_point
 
 Mount Nintendo 3DS SD card contents.
 
@@ -272,12 +273,12 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  --movable MOVABLESED  path to movable.sed
-  --ro                  mount read-only
-  --dev                 use dev keys
-  --fg                  run in foreground
+  --fg, -f              run in foreground
   --do                  debug output (python logging module)
   -o OPTIONS            mount options
+  -r, --ro              mount read-only
+  --movable MOVABLESED  path to movable.sed
+  --dev                 use dev keys
 ```
 
 # License/Credits
