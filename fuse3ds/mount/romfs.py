@@ -15,14 +15,14 @@ import struct
 import sys
 from typing import BinaryIO
 
-from . import common
+from . import _common
 from pyctr import romfs, util
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ModuleNotFoundError:
     sys.exit("fuse module not found, please install fusepy to mount images "
-             "(`{} install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(common.pip_command))
+             "(`{} install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_common.pip_command))
 except Exception as e:
     sys.exit("Failed to import the fuse module:\n"
              "{}: {}".format(type(e).__name__, e))
@@ -94,10 +94,11 @@ class RomFSMount(LoggingMixIn, Operations):
 
 def main():
     parser = argparse.ArgumentParser(description='Mount Nintendo 3DS Read-only Filesystem (RomFS) files.',
-                                     parents=(common.default_argp, common.main_positional_args('romfs', 'RomFS file')))
+                                     parents=(_common.default_argp,
+                                              _common.main_positional_args('romfs', 'RomFS file')))
 
     a = parser.parse_args()
-    opts = dict(common.parse_fuse_opts(a.o))
+    opts = dict(_common.parse_fuse_opts(a.o))
 
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
@@ -107,14 +108,14 @@ def main():
 
     with open(a.romfs, 'rb') as f:
         mount = RomFSMount(romfs_fp=f, g_stat=romfs_stat)
-        if common.macos or common.windows:
+        if _common.macos or _common.windows:
             opts['fstypename'] = 'RomFS'
             # assuming / is the path separator since macos. but if windows gets support for this,
             #   it will have to be done differently.
             path_to_show = os.path.realpath(a.romfs).rsplit('/', maxsplit=2)
-            if common.macos:
+            if _common.macos:
                 opts['volname'] = "Nintendo 3DS RomFS ({}/{})".format(path_to_show[-2], path_to_show[-1])
-            elif common.windows:
+            elif _common.windows:
                 # volume label can only be up to 32 chars
                 # TODO: maybe I should show the path here, if i can shorten it properly
                 opts['volname'] = "Nintendo 3DS RomFS"

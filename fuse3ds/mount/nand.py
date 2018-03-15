@@ -13,14 +13,14 @@ import stat
 import struct
 import sys
 
-from . import common
+from . import _common
 from pyctr import crypto, util
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ModuleNotFoundError:
     sys.exit("fuse module not found, please install fusepy to mount images "
-             "(`{} install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(common.pip_command))
+             "(`{} install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_common.pip_command))
 except Exception as e:
     sys.exit("Failed to import the fuse module:\n"
              "{}: {}".format(type(e).__name__, e))
@@ -30,7 +30,7 @@ try:
     from Cryptodome.Util import Counter
 except ModuleNotFoundError:
     sys.exit("Cryptodome module not found, please install pycryptodomex for encryption support "
-             "(`{} install pycryptodomex`).".format(common.pip_command))
+             "(`{} install pycryptodomex`).".format(_common.pip_command))
 except Exception as e:
     sys.exit("Failed to import the Cryptodome module:\n"
              "{}: {}".format(type(e).__name__, e))
@@ -367,14 +367,14 @@ class NANDImageMount(LoggingMixIn, Operations):
 
 def main():
     parser = argparse.ArgumentParser(description='Mount Nintendo 3DS NAND images.',
-                                     parents=(common.default_argp, common.readonly_argp, common.dev_argp,
-                                              common.main_positional_args('nand', "NAND image")))
+                                     parents=(_common.default_argp, _common.readonly_argp, _common.dev_argp,
+                                              _common.main_positional_args('nand', "NAND image")))
     parser.add_argument('--otp', help='path to otp (enc/dec); not needed if NAND image has essentials backup from '
                                       'GodMode9')
     parser.add_argument('--cid', help='NAND CID; not needed if NAND image has essentials backup from GodMode9')
 
     a = parser.parse_args()
-    opts = dict(common.parse_fuse_opts(a.o))
+    opts = dict(_common.parse_fuse_opts(a.o))
 
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
@@ -383,17 +383,17 @@ def main():
 
     with open(a.nand, 'r{}b'.format('' if a.ro else '+')) as f:
         mount = NANDImageMount(nand_fp=f, dev=a.dev, g_stat=nand_stat, readonly=a.ro, otp=a.otp, cid=a.cid)
-        if common.macos or common.windows:
+        if _common.macos or _common.windows:
             # assuming / is the path separator since macos. but if windows gets support for this,
             #   it will have to be done differently.
             path_to_show = os.path.realpath(a.nand).rsplit('/', maxsplit=2)
-            if common.macos:
+            if _common.macos:
                 opts['volname'] = "Nintendo 3DS NAND ({}/{})".format(path_to_show[-2], path_to_show[-1])
-            elif common.windows:
+            elif _common.windows:
                 # volume label can only be up to 32 chars
                 # TODO: maybe I should show the path here, if i can shorten it properly
                 opts['volname'] = "Nintendo 3DS NAND"
-        if common.macos or common.windows:
+        if _common.macos or _common.windows:
             opts['fstypename'] = 'NAND'
         fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do, ro=a.ro, nothreads=True,
                     fsname=os.path.realpath(a.nand).replace(',', '_'), **opts)

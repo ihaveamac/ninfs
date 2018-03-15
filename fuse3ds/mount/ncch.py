@@ -15,7 +15,7 @@ import struct
 import sys
 from collections import OrderedDict
 
-from . import common
+from . import _common
 from pyctr import crypto, ncch, romfs, util
 from .romfs import RomFSMount
 
@@ -23,7 +23,7 @@ try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ModuleNotFoundError:
     sys.exit("fuse module not found, please install fusepy to mount images "
-             "(`{} install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(common.pip_command))
+             "(`{} install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_common.pip_command))
 except Exception as e:
     sys.exit("Failed to import the fuse module:\n"
              "{}: {}".format(type(e).__name__, e))
@@ -33,7 +33,7 @@ try:
     from Cryptodome.Util import Counter
 except ModuleNotFoundError:
     sys.exit("Cryptodome module not found, please install pycryptodomex for encryption support "
-             "(`{} install pycryptodomex`).".format(common.pip_command))
+             "(`{} install pycryptodomex`).".format(_common.pip_command))
 except Exception as e:
     sys.exit("Failed to import the Cryptodome module:\n"
              "{}: {}".format(type(e).__name__, e))
@@ -115,7 +115,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                                             'iv': (self.ncch_reader.partition_id << 64 | (0x03 << 56))}
 
             try:
-                romfs_vfp = common.VirtualFileWrapper(self, '/romfs.bin', romfs_region.size)
+                romfs_vfp = _common.VirtualFileWrapper(self, '/romfs.bin', romfs_region.size)
                 romfs_fuse = RomFSMount(romfs_vfp, g_stat)
                 self.romfs_fuse = romfs_fuse
                 self._romfs_mounted = True
@@ -128,7 +128,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
     def getattr(self, path, fh=None):
         lpath = path.lower()
         if lpath.startswith('/romfs/'):
-            return self.romfs_fuse.getattr(common.remove_first_dir(path), fh)
+            return self.romfs_fuse.getattr(_common.remove_first_dir(path), fh)
         uid, gid, pid = fuse_get_context()
         if lpath == '/' or lpath == '/romfs':
             st = {'st_mode': (stat.S_IFDIR | 0o555), 'st_nlink': 2}
@@ -144,7 +144,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
 
     def readdir(self, path, fh):
         if path.startswith('/romfs'):
-            return self.romfs_fuse.readdir(common.remove_first_dir(path), fh)
+            return self.romfs_fuse.readdir(_common.remove_first_dir(path), fh)
         elif path == '/':
             out = ['.', '..'] + [x[1:] for x in self.files]
             if self._romfs_mounted:
@@ -154,7 +154,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
     def read(self, path, size, offset, fh):
         lpath = path.lower()
         if lpath.startswith('/romfs/'):
-            return self.romfs_fuse.read(common.remove_first_dir(path), size, offset, fh)
+            return self.romfs_fuse.read(_common.remove_first_dir(path), size, offset, fh)
         fi = self.files[lpath]
         real_offset = fi['offset'] + offset
         if fi['enctype'] == 'none' or self.ncch_reader.flags.no_crypto:
@@ -235,7 +235,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
 
     def statfs(self, path):
         if path.startswith('/romfs/'):
-            return self.romfs_fuse.statfs(common.remove_first_dir(path))
+            return self.romfs_fuse.statfs(_common.remove_first_dir(path))
         else:
             return {'f_bsize': 4096, 'f_blocks': self.ncch_reader.content_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
                     'f_files': len(self.files)}
@@ -243,11 +243,11 @@ class NCCHContainerMount(LoggingMixIn, Operations):
 
 def main():
     parser = argparse.ArgumentParser(description="Mount Nintendo 3DS NCCH containers.",
-                                     parents=(common.default_argp, common.dev_argp, common.seeddb_argp,
-                                              common.main_positional_args('ncch', "NCCH file")))
+                                     parents=(_common.default_argp, _common.dev_argp, _common.seeddb_argp,
+                                              _common.main_positional_args('ncch', "NCCH file")))
 
     a = parser.parse_args()
-    opts = dict(common.parse_fuse_opts(a.o))
+    opts = dict(_common.parse_fuse_opts(a.o))
 
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
@@ -256,11 +256,11 @@ def main():
 
     with open(a.ncch, 'rb') as f:
         mount = NCCHContainerMount(ncch_fp=f, dev=a.dev, g_stat=ncch_stat, seeddb=a.seeddb)
-        if common.macos or common.windows:
+        if _common.macos or _common.windows:
             opts['fstypename'] = 'NCCH'
-            if common.macos:
+            if _common.macos:
                 opts['volname'] = "NCCH Container ({0.product_code}; {0.program_id:016X})".format(mount.ncch_reader)
-            elif common.windows:
+            elif _common.windows:
                 # volume label can only be up to 32 chars
                 opts['volname'] = "NCCH ({0.product_code})".format(mount.ncch_reader)
         fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do, ro=True, nothreads=True,
