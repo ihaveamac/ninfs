@@ -51,6 +51,8 @@ Windows users can use a drive letter like `F:` as a mountpoint.
   `mount_cdn --dec-key 3E3E6769742E696F2F76416A65423C3C cdn_directory mountpoint`
 * Mount a CIA:  
   `mount_cia game.cia mountpoint`
+* Mount an ExeFS:
+  `mount_exefs exefs.bin mountpoint`
 * Mount a NAND backup with `essential.exefs` embedded:    
   `mount_nand nand.bin mountpoint`
 * Mount a NAND backup with OTP and CID files:  
@@ -167,6 +169,27 @@ mount_point
 ├── ticket.bin
 ├── tmd.bin
 └── tmdchunks.bin
+```
+
+### mount_exefs
+Mounts Executable Filesystem (ExeFS) files, creating a virtual filesystem of the ExeFS contents.
+
+```
+usage: mount_exefs [-h] [--fg] [--do] [-o OPTIONS] [--decompress-code]
+                   exefs mount_point
+
+Mount Nintendo 3DS Executable Filesystem (ExeFS) files.
+
+positional arguments:
+  exefs              ExeFS file
+  mount_point        mount_point
+
+optional arguments:
+  -h, --help         show this help message and exit
+  --fg, -f           run in foreground
+  --do               debug output (python logging module)
+  -o OPTIONS         mount options
+  --decompress-code  decompress the .code section
 ```
 
 ### mount_nand
