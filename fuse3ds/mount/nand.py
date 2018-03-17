@@ -19,6 +19,7 @@ from pyctr.exefs import ExeFSReader
 from pyctr.util import readbe, readle, roundup
 
 from . import _common
+from .exefs import ExeFSMount
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
@@ -46,6 +47,8 @@ nand_size = {0x200000: 0x3AF00000, 0x280000: 0x4D800000}
 class NANDImageMount(LoggingMixIn, Operations):
     fd = 0
 
+    _essentials_mounted = False
+
     def __init__(self, nand_fp: BinaryIO, dev: bool, g_stat: os.stat_result, readonly=False, otp=None, cid=None):
         self.crypto = CTRCrypto(is_dev=dev)
 
@@ -66,9 +69,9 @@ class NANDImageMount(LoggingMixIn, Operations):
         # check for essential.exefs
         self.f.seek(0x200)
         try:
-            self.exefs = ExeFSReader.load(self.f)
+            exefs = ExeFSReader.load(self.f)
         except InvalidExeFSError:
-            self.exefs = None
+            exefs = None
         if otp or cid:
             if otp:
                 with open(otp, 'rb') as f:
@@ -89,18 +92,18 @@ class NANDImageMount(LoggingMixIn, Operations):
             else:
                 exit('NAND CID not found, provide cid with --cid (or embed essentials backup with GodMode9)')
         else:
-            if self.exefs is None:
+            if exefs is None:
                 if not otp:
                     exit('OTP not found, provide otp-file with --otp (or embed essentials backup with GodMode9)')
                 if not cid:
                     exit('NAND CID not found, provide cid with --cid (or embed essentials backup with GodMode9)')
             else:
-                if 'otp' in self.exefs.entries:
-                    self.f.seek(self.exefs['otp'].offset + 0x400)
-                    otp = self.f.read(self.exefs['otp'].size)
-                if 'nand_cid' in self.exefs.entries:
-                    self.f.seek(self.exefs['nand_cid'].offset + 0x400)
-                    cid = self.f.read(self.exefs['nand_cid'].size)
+                if 'otp' in exefs.entries:
+                    self.f.seek(exefs['otp'].offset + 0x400)
+                    otp = self.f.read(exefs['otp'].size)
+                if 'nand_cid' in exefs.entries:
+                    self.f.seek(exefs['nand_cid'].offset + 0x400)
+                    cid = self.f.read(exefs['nand_cid'].size)
                 if not (otp or cid):
                     exit('otp and nand_cid somehow not found in essentials backup. update with GodMode9 or '
                          'provide OTP/NAND CID with --otp/--cid.')
@@ -157,9 +160,16 @@ class NANDImageMount(LoggingMixIn, Operations):
                       '/nand.bin': {'size': raw_nand_size, 'offset': 0, 'keyslot': 0xFF, 'type': 'raw'},
                       '/nand_minsize.bin': {'size': self.real_nand_size, 'offset': 0, 'keyslot': 0xFF, 'type': 'raw'}}
 
-        if self.exefs is not None:
-            exefs_size = sum(roundup(x.size, 0x200) for x in self.exefs.entries.values()) + 0x200
+        if exefs is not None:
+            exefs_size = sum(roundup(x.size, 0x200) for x in exefs.entries.values()) + 0x200
             self.files['/essential.exefs'] = {'size': exefs_size, 'offset': 0x200, 'keyslot': 0xFF, 'type': 'raw'}
+            try:
+                exefs_vfp = _common.VirtualFileWrapper(self, '/essential.exefs', exefs_size)
+                # noinspection PyTypeChecker
+                self.exefs_fuse = ExeFSMount(exefs_vfp, g_stat=g_stat)
+                self._essentials_mounted = True
+            except Exception as e:
+                print("Failed to mount essential.exefs: {}: {}".format(type(e).__name__, e))
 
         self.f.seek(0x12C00)
         keysect_enc = self.f.read(0x200)
@@ -277,25 +287,41 @@ class NANDImageMount(LoggingMixIn, Operations):
         return self.f.flush()
 
     def getattr(self, path, fh=None):
-        uid, gid, pid = fuse_get_context()
-        if path == '/':
-            st = {'st_mode': (S_IFDIR | (0o555 if self.readonly else 0o777)), 'st_nlink': 2}
-        elif path.lower() in self.files:
-            st = {'st_mode': (S_IFREG | (0o444 if (self.readonly or path.lower() == '/_nandinfo.txt') else 0o666)),
-                  'st_size': self.files[path.lower()]['size'], 'st_nlink': 1}
+        lpath = path.lower()
+        if lpath.startswith('/essential/'):
+            return self.exefs_fuse.getattr(_common.remove_first_dir(path), fh)
         else:
-            raise FuseOSError(ENOENT)
-        return {**st, **self.g_stat, 'st_uid': uid, 'st_gid': gid}
+            uid, gid, pid = fuse_get_context()
+            if path in {'/', '/essential'}:
+                st = {'st_mode': (S_IFDIR | (0o555 if self.readonly else 0o777)), 'st_nlink': 2}
+            elif path.lower() in self.files:
+                st = {'st_mode': (S_IFREG | (0o444 if (self.readonly or lpath == '/_nandinfo.txt') else 0o666)),
+                      'st_size': self.files[path.lower()]['size'], 'st_nlink': 1}
+            else:
+                raise FuseOSError(ENOENT)
+            return {**st, **self.g_stat, 'st_uid': uid, 'st_gid': gid}
 
     def open(self, path, flags):
         self.fd += 1
         return self.fd
 
     def readdir(self, path, fh):
-        return ['.', '..'] + [x[1:] for x in self.files]
+        lpath = path.lower()
+        if lpath.startswith('/essential'):
+            yield from self.exefs_fuse.readdir(_common.remove_first_dir(path), fh)
+        elif lpath == '/':
+            yield from ('.', '..')
+            yield from (x[1:] for x in self.files)
+            if self._essentials_mounted:
+                yield 'essential'
 
     def read(self, path, size, offset, fh):
-        fi = self.files[path.lower()]
+        lpath = path.lower()
+        if lpath.startswith('/essential/'):
+            return self.exefs_fuse.read(_common.remove_first_dir(path), size, offset, fh)
+        if lpath == '/essential.exefs':
+            print('READ:', hex(size), hex(offset))
+        fi = self.files[lpath]
         real_offset = fi['offset'] + offset
         if fi['type'] == 'raw':
             self.f.seek(real_offset)
@@ -319,13 +345,18 @@ class NANDImageMount(LoggingMixIn, Operations):
         return data
 
     def statfs(self, path):
+        if path.startswith('/essential/'):
+            return self.exefs_fuse.statfs(_common.remove_first_dir(path))
         return {'f_bsize': 4096, 'f_blocks': self.real_nand_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
                 'f_files': len(self.files)}
 
     def write(self, path, data, offset, fh):
+        lpath = path.lower()
         if self.readonly:
             raise FuseOSError(EROFS)
-        fi = self.files[path.lower()]
+        if lpath.startswith('/essential/'):
+            raise FuseOSError(EPERM)
+        fi = self.files[lpath]
         if fi['type'] == 'info':
             raise FuseOSError(EPERM)
         real_offset = fi['offset'] + offset

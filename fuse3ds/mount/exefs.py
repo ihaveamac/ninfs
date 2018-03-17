@@ -71,7 +71,7 @@ class ExeFSMount(LoggingMixIn, Operations):
         yield from ('.', '..')
         yield from (x[1:] for x in self.files)
 
-    def read(self, path, size, offset, fh):  # TODO: this
+    def read(self, path, size, offset, fh):
         try:
             item = self.files[path]
         except KeyError:
@@ -81,7 +81,7 @@ class ExeFSMount(LoggingMixIn, Operations):
             return self.code_dec[offset:offset + size]
 
         real_offset = 0x200 + item.offset + offset
-        if real_offset > item.offset + item.size:
+        if real_offset > item.offset + item.size + 0x200:
             return b''
         if offset + size > item.size:
             size = item.size - offset
