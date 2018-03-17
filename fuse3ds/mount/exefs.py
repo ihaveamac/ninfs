@@ -4,13 +4,13 @@
 Mounts Executable Filesystem (ExeFS) files, creating a virtual filesystem of the ExeFS contents.
 """
 
-import argparse
-import errno
-import hashlib
 import logging
 import os
-import stat
-import sys
+from argparse import ArgumentParser
+from errno import ENOENT
+from hashlib import sha256
+from stat import S_IFDIR, S_IFREG
+from sys import exit
 from typing import BinaryIO
 
 from pyctr.exefs import ExeFSReader, ExeFSEntry, CodeDecompressionError, decompress_code as _decompress_code
@@ -20,10 +20,10 @@ from . import _common
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ModuleNotFoundError:
-    sys.exit("fuse module not found, please install fusepy to mount images "
+    exit("fuse module not found, please install fusepy to mount images "
              "(`{} install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_common.pip_command))
 except Exception as e:
-    sys.exit("Failed to import the fuse module:\n"
+    exit("Failed to import the fuse module:\n"
              "{}: {}".format(type(e).__name__, e))
 
 
@@ -48,7 +48,7 @@ class ExeFSMount(LoggingMixIn, Operations):
                     f.write(self.read('/code.bin', item.size, item.offset, 0))
                 self.code_dec = _decompress_code(self.read('/code.bin', item.size, item.offset, 0))
                 self.files['/code-dec.bin'] = ExeFSEntry(name='code-dec', offset=-1, size=len(self.code_dec),
-                                                         hash=hashlib.sha256(self.code_dec).digest())
+                                                         hash=sha256(self.code_dec).digest())
                 print(' done!')
             except CodeDecompressionError as e:
                 print('\nFailed to decompress .code: {}: {}'.format(type(e).__name__, e))
@@ -56,13 +56,13 @@ class ExeFSMount(LoggingMixIn, Operations):
     def getattr(self, path, fh=None):
         uid, gid, pid = fuse_get_context()
         if path == '/':
-            st = {'st_mode': (stat.S_IFDIR | 0o555), 'st_nlink': 2}
+            st = {'st_mode': (S_IFDIR | 0o555), 'st_nlink': 2}
         else:
             try:
                 item = self.files[path]
             except KeyError:
-                raise FuseOSError(errno.ENOENT)
-            st = {'st_mode': (stat.S_IFREG | 0o444), 'st_size': item.size, 'st_nlink': 1}
+                raise FuseOSError(ENOENT)
+            st = {'st_mode': (S_IFREG | 0o444), 'st_size': item.size, 'st_nlink': 1}
         return {**st, **self.g_stat, 'st_uid': uid, 'st_gid': gid}
 
     def open(self, path, flags):
@@ -77,7 +77,7 @@ class ExeFSMount(LoggingMixIn, Operations):
         try:
             item = self.files[path]
         except KeyError:
-            raise FuseOSError(errno.ENOENT)
+            raise FuseOSError(ENOENT)
         if item.offset == -1:
             # special case for code-dec
             return self.code_dec[offset:offset + size]
@@ -96,8 +96,8 @@ class ExeFSMount(LoggingMixIn, Operations):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Mount Nintendo 3DS Executable Filesystem (ExeFS) files.',
-                                     parents=(_common.default_argp,
+    parser = ArgumentParser(description='Mount Nintendo 3DS Executable Filesystem (ExeFS) files.',
+                            parents=(_common.default_argp,
                                               _common.main_positional_args('exefs', 'ExeFS file')))
     parser.add_argument('--decompress-code', help='decompress the .code section', action='store_true')
 

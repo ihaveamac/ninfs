@@ -4,12 +4,12 @@
 Mounts raw CDN contents, creating a virtual filesystem of decrypted contents (if encrypted).
 """
 
-import argparse
-import errno
+from argparse import ArgumentParser
+from errno import ENOENT
 import logging
 import os
-import stat
-import sys
+from stat import S_IFDIR, S_IFREG
+from sys import exit
 
 from pyctr.crypto import CTRCrypto
 from pyctr.tmd import TitleMetadataReader, CHUNK_RECORD_SIZE
@@ -21,20 +21,20 @@ from .ncch import NCCHContainerMount
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ModuleNotFoundError:
-    sys.exit("fuse module not found, please install fusepy to mount images "
+    exit("fuse module not found, please install fusepy to mount images "
              "(`{} install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_common.pip_command))
 except Exception as e:
-    sys.exit("Failed to import the fuse module:\n"
+    exit("Failed to import the fuse module:\n"
              "{}: {}".format(type(e).__name__, e))
 
 try:
     from Cryptodome.Cipher import AES
     from Cryptodome.Util import Counter
 except ModuleNotFoundError:
-    sys.exit("Cryptodome module not found, please install pycryptodomex for encryption support "
+    exit("Cryptodome module not found, please install pycryptodomex for encryption support "
              "(`{} install pycryptodomex`).".format(_common.pip_command))
 except Exception as e:
-    sys.exit("Failed to import the Cryptodome module:\n"
+    exit("Failed to import the Cryptodome module:\n"
              "{}: {}".format(type(e).__name__, e))
 
 
@@ -59,21 +59,21 @@ class CDNContentsMount(LoggingMixIn, Operations):
         try:
             tmd = TitleMetadataReader.from_file(self.rp('tmd'))
         except FileNotFoundError:
-            sys.exit('tmd not found.')
+            exit('tmd not found.')
         
         self.title_id = tmd.title_id
 
         if not os.path.isfile(self.rp('cetk')):
             if not dec_key:
-                sys.exit('cetk not found. Provide the ticket or decrypted titlekey with --dec-key.')
+                exit('cetk not found. Provide the ticket or decrypted titlekey with --dec-key.')
 
         if dec_key:
             try:
                 self.titlekey = bytes.fromhex(dec_key)
                 if len(self.titlekey) != 16:
-                    sys.exit('--dec-key input is not 32 hex characters.')
+                    exit('--dec-key input is not 32 hex characters.')
             except ValueError:
-                sys.exit('Failed to convert --dec-key input to bytes. Non-hex character likely found, or is not '
+                exit('Failed to convert --dec-key input to bytes. Non-hex character likely found, or is not '
                          '32 hex characters.')
         else:
             with open(self.rp('cetk'), 'rb') as tik:
@@ -111,7 +111,6 @@ class CDNContentsMount(LoggingMixIn, Operations):
             if chunk.size != filesize:
                 print("Warning: TMD Content size and filesize of", chunk.id, "are different.")
             self.cdn_content_size += chunk.size
-            content_is_encrypted = readbe(chunk[6:8]) & 1
             file_ext = 'nds' if chunk.cindex == 0 and int(self.title_id, 16) >> 44 == 0x48 else 'ncch'
             filename = '/{:04x}.{}.{}'.format(chunk.cindex, chunk.id, file_ext)
             self.files[filename] = {'size': chunk.size, 'offset': 0, 'index': chunk.cindex.to_bytes(2, 'big'),
@@ -132,11 +131,11 @@ class CDNContentsMount(LoggingMixIn, Operations):
             return self.dirs[first_dir].getattr(_common.remove_first_dir(path), fh)
         uid, gid, pid = fuse_get_context()
         if path == '/' or path in self.dirs:
-            st = {'st_mode': (stat.S_IFDIR | 0o555), 'st_nlink': 2}
+            st = {'st_mode': (S_IFDIR | 0o555), 'st_nlink': 2}
         elif path.lower() in self.files:
-            st = {'st_mode': (stat.S_IFREG | 0o444), 'st_size': self.files[path.lower()]['size'], 'st_nlink': 1}
+            st = {'st_mode': (S_IFREG | 0o444), 'st_size': self.files[path.lower()]['size'], 'st_nlink': 1}
         else:
-            raise FuseOSError(errno.ENOENT)
+            raise FuseOSError(ENOENT)
         return {**st, **self.g_stat, 'st_uid': uid, 'st_gid': gid}
 
     def open(self, path, flags):
@@ -198,8 +197,8 @@ class CDNContentsMount(LoggingMixIn, Operations):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Mount Nintendo 3DS CDN contents.",
-                                     parents=(_common.default_argp, _common.dev_argp, _common.seeddb_argp,
+    parser = ArgumentParser(description="Mount Nintendo 3DS CDN contents.",
+                            parents=(_common.default_argp, _common.dev_argp, _common.seeddb_argp,
                                               _common.main_positional_args('cdn_dir', "directory with CDN contents")))
     parser.add_argument('--dec-key', help="decrypted titlekey")
 

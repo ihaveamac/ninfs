@@ -4,14 +4,14 @@
 Mounts NAND images, creating a virtual filesystem of decrypted partitions. Can read essentials backup by GodMode9, else OTP file/NAND CID must be provided in arguments.
 """
 
-import argparse
-import errno
-import hashlib
 import logging
 import os
-import stat
-import struct
-import sys
+from argparse import ArgumentParser
+from errno import EPERM, ENOENT, EROFS
+from hashlib import sha1, sha256
+from stat import S_IFDIR, S_IFREG
+from struct import unpack, pack
+from sys import exit
 
 from pyctr import crypto, util
 
@@ -20,20 +20,20 @@ from . import _common
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ModuleNotFoundError:
-    sys.exit("fuse module not found, please install fusepy to mount images "
+    exit("fuse module not found, please install fusepy to mount images "
              "(`{} install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_common.pip_command))
 except Exception as e:
-    sys.exit("Failed to import the fuse module:\n"
+    exit("Failed to import the fuse module:\n"
              "{}: {}".format(type(e).__name__, e))
 
 try:
     from Cryptodome.Cipher import AES
     from Cryptodome.Util import Counter
 except ModuleNotFoundError:
-    sys.exit("Cryptodome module not found, please install pycryptodomex for encryption support "
+    exit("Cryptodome module not found, please install pycryptodomex for encryption support "
              "(`{} install pycryptodomex`).".format(_common.pip_command))
 except Exception as e:
-    sys.exit("Failed to import the Cryptodome module:\n"
+    exit("Failed to import the Cryptodome module:\n"
              "{}: {}".format(type(e).__name__, e))
 
 # ncsd image doesn't have the actual size
@@ -55,10 +55,10 @@ class NANDImageMount(LoggingMixIn, Operations):
         self.f.seek(0x100)  # screw the signature
         ncsd_header = self.f.read(0x100)
         if ncsd_header[0:4] != b'NCSD':
-            sys.exit('NCSD magic not found, is this a real Nintendo 3DS NAND image?')
+            exit('NCSD magic not found, is this a real Nintendo 3DS NAND image?')
         media_id = ncsd_header[0x8:0x10]
         if media_id != b'\0' * 8:
-            sys.exit('Media ID not all-zero, is this a real Nintendo 3DS NAND image?')
+            exit('Media ID not all-zero, is this a real Nintendo 3DS NAND image?')
 
         # check for essential.exefs
         self.f.seek(0x200)
@@ -68,7 +68,7 @@ class NANDImageMount(LoggingMixIn, Operations):
                 with open(otp, 'rb') as f:
                     otp = f.read(0x200)
             else:
-                sys.exit('OTP not found, provide otp-file with --otp (or embed essentials backup with GodMode9)')
+                exit('OTP not found, provide otp-file with --otp (or embed essentials backup with GodMode9)')
             if cid:
                 try:
                     cid = bytes.fromhex(cid)
@@ -76,19 +76,19 @@ class NANDImageMount(LoggingMixIn, Operations):
                     with open(cid, 'rb') as f:
                         cid = f.read(0x10)
                 except FileNotFoundError:
-                    sys.exit('Failed to convert CID to bytes, or file did not exist.')
+                    exit('Failed to convert CID to bytes, or file did not exist.')
                 if len(cid) != 0x10:
-                    sys.exit('CID is not 16 bytes.')
-                self.ctr = util.readbe(hashlib.sha256(cid).digest()[0:16])
-                self.ctr_twl = util.readle(hashlib.sha1(cid).digest()[0:16])
+                    exit('CID is not 16 bytes.')
+                self.ctr = util.readbe(sha256(cid).digest()[0:16])
+                self.ctr_twl = util.readle(sha1(cid).digest()[0:16])
             else:
-                sys.exit('NAND CID not found, provide cid with --cid (or embed essentials backup with GodMode9)')
+                exit('NAND CID not found, provide cid with --cid (or embed essentials backup with GodMode9)')
         else:
             if essentials_headers_raw == b'\0' * 0xA0 or essentials_headers_raw == b'\xFF' * 0xA0:
                 if not otp:
-                    sys.exit('OTP not found, provide otp-file with --otp (or embed essentials backup with GodMode9)')
+                    exit('OTP not found, provide otp-file with --otp (or embed essentials backup with GodMode9)')
                 if not cid:
-                    sys.exit('NAND CID not found, provide cid with --cid (or embed essentials backup with GodMode9)')
+                    exit('NAND CID not found, provide cid with --cid (or embed essentials backup with GodMode9)')
             else:
                 essentials_headers = [[essentials_headers_raw[i:i + 8].decode('utf-8').rstrip('\0'),
                                        util.readle(essentials_headers_raw[i + 8:i + 12]),
@@ -101,28 +101,28 @@ class NANDImageMount(LoggingMixIn, Operations):
                     elif header[0] == 'nand_cid':
                         self.f.seek(0x400 + header[1])
                         cid = self.f.read(header[2])
-                        self.ctr = util.readbe(hashlib.sha256(cid).digest()[0:16])
-                        self.ctr_twl = util.readle(hashlib.sha1(cid).digest()[0:16])
+                        self.ctr = util.readbe(sha256(cid).digest()[0:16])
+                        self.ctr_twl = util.readle(sha1(cid).digest()[0:16])
                 if not (otp or cid):
-                    sys.exit('otp and nand_cid somehow not found in essentials backup. update with GodMode9 or '
+                    exit('otp and nand_cid somehow not found in essentials backup. update with GodMode9 or '
                              'provide OTP/NAND CID with --otp/--cid.')
 
         cipher_otp = AES.new(self.crypto.otp_key, AES.MODE_CBC, self.crypto.otp_iv)
         if otp[0:4][::-1] == b'\xDE\xAD\xB0\x0F':
             otp_enc = cipher_otp.encrypt(otp)
-            otp_keysect_hash = hashlib.sha256(otp_enc[0:0x90]).digest()
+            otp_keysect_hash = sha256(otp_enc[0:0x90]).digest()
         else:
-            otp_keysect_hash = hashlib.sha256(otp[0:0x90]).digest()
+            otp_keysect_hash = sha256(otp[0:0x90]).digest()
             otp = cipher_otp.decrypt(otp)
 
         # generate twl keys
         # TODO: put this in CTRCrypto
-        twl_cid_lo, twl_cid_hi = struct.unpack("II", otp[0x08:0x10])
+        twl_cid_lo, twl_cid_hi = unpack("II", otp[0x08:0x10])
         twl_cid_lo ^= 0xB358A6AF
         twl_cid_lo |= 0x80000000
         twl_cid_hi ^= 0x08C267B7
-        twl_cid_lo = struct.pack("I", twl_cid_lo)
-        twl_cid_hi = struct.pack("I", twl_cid_hi)
+        twl_cid_lo = pack("I", twl_cid_lo)
+        twl_cid_hi = pack("I", twl_cid_hi)
 
         twl_key_x = util.readle(twl_cid_lo + b'NINTENDO' + twl_cid_hi)
         self.crypto.set_keyslot('x', 0x03, twl_key_x)
@@ -131,7 +131,7 @@ class NANDImageMount(LoggingMixIn, Operations):
         #   the same, so this only uses the data needed for this key
         # thanks Stary2001 (from 3ds_tools)
         tmp_otp_data = otp[0x90:0xAC] + self.crypto.b9_extdata_otp
-        console_key_xy = hashlib.sha256(tmp_otp_data).digest()
+        console_key_xy = sha256(tmp_otp_data).digest()
         console_key_x = util.readbe(console_key_xy[0:16])
         console_key_y = util.readbe(console_key_xy[16:32])
         console_normalkey = self.crypto.keygen_manual(console_key_x, console_key_y)
@@ -274,12 +274,12 @@ class NANDImageMount(LoggingMixIn, Operations):
     def getattr(self, path, fh=None):
         uid, gid, pid = fuse_get_context()
         if path == '/':
-            st = {'st_mode': (stat.S_IFDIR | (0o555 if self.readonly else 0o777)), 'st_nlink': 2}
+            st = {'st_mode': (S_IFDIR | (0o555 if self.readonly else 0o777)), 'st_nlink': 2}
         elif path.lower() in self.files:
-            st = {'st_mode': (stat.S_IFREG | (0o444 if (self.readonly or path.lower() == '/_nandinfo.txt') else 0o666)),
+            st = {'st_mode': (S_IFREG | (0o444 if (self.readonly or path.lower() == '/_nandinfo.txt') else 0o666)),
                   'st_size': self.files[path.lower()]['size'], 'st_nlink': 1}
         else:
-            raise FuseOSError(errno.ENOENT)
+            raise FuseOSError(ENOENT)
         return {**st, **self.g_stat, 'st_uid': uid, 'st_gid': gid}
 
     def open(self, path, flags):
@@ -319,10 +319,10 @@ class NANDImageMount(LoggingMixIn, Operations):
 
     def write(self, path, data, offset, fh):
         if self.readonly:
-            raise FuseOSError(errno.EROFS)
+            raise FuseOSError(EROFS)
         fi = self.files[path.lower()]
         if fi['type'] == 'info':
-            raise FuseOSError(errno.EPERM)
+            raise FuseOSError(EPERM)
         real_offset = fi['offset'] + offset
         real_len = len(data)
         if offset >= fi['size']:
@@ -367,8 +367,8 @@ class NANDImageMount(LoggingMixIn, Operations):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Mount Nintendo 3DS NAND images.',
-                                     parents=(_common.default_argp, _common.readonly_argp, _common.dev_argp,
+    parser = ArgumentParser(description='Mount Nintendo 3DS NAND images.',
+                            parents=(_common.default_argp, _common.readonly_argp, _common.dev_argp,
                                               _common.main_positional_args('nand', "NAND image")))
     parser.add_argument('--otp', help='path to otp (enc/dec); not needed if NAND image has essentials backup from '
                                       'GodMode9')

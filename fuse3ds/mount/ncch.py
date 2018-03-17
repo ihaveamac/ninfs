@@ -4,15 +4,15 @@
 Mounts NCCH containers, creating a virtual filesystem of decrypted sections.
 """
 
-import argparse
-import errno
 import logging
-import math
 import os
-import stat
-import struct
-import sys
+from argparse import ArgumentParser
 from collections import OrderedDict
+from errno import ENOENT
+from math import ceil
+from stat import S_IFDIR, S_IFREG
+from struct import iter_unpack
+from sys import exit
 
 from pyctr import crypto, ncch, util
 
@@ -23,20 +23,20 @@ from .romfs import RomFSMount
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ModuleNotFoundError:
-    sys.exit("fuse module not found, please install fusepy to mount images "
+    exit("fuse module not found, please install fusepy to mount images "
              "(`{} install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_common.pip_command))
 except Exception as e:
-    sys.exit("Failed to import the fuse module:\n"
+    exit("Failed to import the fuse module:\n"
              "{}: {}".format(type(e).__name__, e))
 
 try:
     from Cryptodome.Cipher import AES
     from Cryptodome.Util import Counter
 except ModuleNotFoundError:
-    sys.exit("Cryptodome module not found, please install pycryptodomex for encryption support "
+    exit("Cryptodome module not found, please install pycryptodomex for encryption support "
              "(`{} install pycryptodomex`).".format(_common.pip_command))
 except Exception as e:
-    sys.exit("Failed to import the Cryptodome module:\n"
+    exit("Failed to import the Cryptodome module:\n"
              "{}: {}".format(type(e).__name__, e))
 
 
@@ -103,7 +103,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                 self.f.seek(exefs_region.offset)
                 exefs_header = self.crypto.aes_ctr(0x2C, self.files['/exefs.bin']['iv'], self.f.read(0xA0))
                 exefs_normal_ranges = [(0, 0x200)]
-                for name, offset, size in struct.iter_unpack('<8sII', exefs_header):
+                for name, offset, size in iter_unpack('<8sII', exefs_header):
                     uname = name.decode('utf-8').strip('\0')
                     if uname in ('icon', 'banner'):
                         exefs_normal_ranges.append((offset + 0x200, offset + 0x200 + util.roundup(size, 0x200)))
@@ -150,11 +150,11 @@ class NCCHContainerMount(LoggingMixIn, Operations):
             return self.romfs_fuse.getattr(_common.remove_first_dir(path), fh)
         uid, gid, pid = fuse_get_context()
         if lpath == '/' or lpath == '/romfs' or lpath == '/exefs':
-            st = {'st_mode': (stat.S_IFDIR | 0o555), 'st_nlink': 2}
+            st = {'st_mode': (S_IFDIR | 0o555), 'st_nlink': 2}
         elif lpath in self.files:
-            st = {'st_mode': (stat.S_IFREG | 0o444), 'st_size': self.files[path.lower()]['size'], 'st_nlink': 1}
+            st = {'st_mode': (S_IFREG | 0o444), 'st_size': self.files[path.lower()]['size'], 'st_nlink': 1}
         else:
-            raise FuseOSError(errno.ENOENT)
+            raise FuseOSError(ENOENT)
         return {**st, **self.g_stat, 'st_uid': uid, 'st_gid': gid}
 
     def open(self, path, flags):
@@ -205,7 +205,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
             aligned_size = size + before
             self.f.seek(aligned_real_offset)
             data = b''
-            for chunk in range(math.ceil(aligned_size / 0x200)):
+            for chunk in range(ceil(aligned_size / 0x200)):
                 iv = fi['iv'] + ((aligned_offset + (chunk * 0x200)) >> 4)
                 keyslot = fi['keyslot_extra']
                 for r in fi['keyslot_normal_range']:
@@ -224,7 +224,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
             self.f.seek(aligned_real_offset)
             data = b''
             files_to_read = OrderedDict()
-            for chunk in range(math.ceil(aligned_size / 0x200)):
+            for chunk in range(ceil(aligned_size / 0x200)):
                 new_offset = (aligned_offset + (chunk * 0x200))
                 added = False
                 for fname, attrs in self.files.items():
@@ -269,8 +269,8 @@ class NCCHContainerMount(LoggingMixIn, Operations):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Mount Nintendo 3DS NCCH containers.",
-                                     parents=(_common.default_argp, _common.dev_argp, _common.seeddb_argp,
+    parser = ArgumentParser(description="Mount Nintendo 3DS NCCH containers.",
+                            parents=(_common.default_argp, _common.dev_argp, _common.seeddb_argp,
                                               _common.main_positional_args('ncch', "NCCH file")))
 
     a = parser.parse_args()

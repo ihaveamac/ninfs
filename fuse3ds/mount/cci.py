@@ -4,12 +4,12 @@
 Mounts CTR Cart Image (CCI, ".3ds") files, creating a virtual filesystem of separate partitions.
 """
 
-import argparse
-import errno
 import logging
 import os
-import stat
-import sys
+from argparse import ArgumentParser
+from errno import ENOENT
+from stat import S_IFDIR, S_IFREG
+from sys import exit
 
 from pyctr import util
 
@@ -19,10 +19,10 @@ from .ncch import NCCHContainerMount
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ModuleNotFoundError:
-    sys.exit("fuse module not found, please install fusepy to mount images "
+    exit("fuse module not found, please install fusepy to mount images "
              "(`{} install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_common.pip_command))
 except Exception as e:
-    sys.exit("Failed to import the fuse module:\n"
+    exit("Failed to import the fuse module:\n"
              "{}: {}".format(type(e).__name__, e))
 
 
@@ -40,10 +40,10 @@ class CTRCartImageMount(LoggingMixIn, Operations):
         self.f.seek(0x100)
         ncsd_header = self.f.read(0x100)
         if ncsd_header[0:4] != b'NCSD':
-            sys.exit('NCSD magic not found, is this a real CCI?')
+            exit('NCSD magic not found, is this a real CCI?')
         self.media_id = ncsd_header[0x8:0x10]
         if self.media_id == b'\0' * 8:
-            sys.exit('Media ID is all-zero, is this a CCI?')
+            exit('Media ID is all-zero, is this a CCI?')
 
         self.cci_size = util.readle(ncsd_header[4:8]) * 0x200
 
@@ -81,11 +81,11 @@ class CTRCartImageMount(LoggingMixIn, Operations):
             return self.dirs[first_dir].getattr(_common.remove_first_dir(path), fh)
         uid, gid, pid = fuse_get_context()
         if path == '/':
-            st = {'st_mode': (stat.S_IFDIR | 0o555), 'st_nlink': 2}
+            st = {'st_mode': (S_IFDIR | 0o555), 'st_nlink': 2}
         elif path.lower() in self.files:
-            st = {'st_mode': (stat.S_IFREG | 0o444), 'st_size': self.files[path.lower()]['size'], 'st_nlink': 1}
+            st = {'st_mode': (S_IFREG | 0o444), 'st_size': self.files[path.lower()]['size'], 'st_nlink': 1}
         else:
-            raise FuseOSError(errno.ENOENT)
+            raise FuseOSError(ENOENT)
         return {**st, **self.g_stat, 'st_uid': uid, 'st_gid': gid}
 
     def open(self, path, flags):
@@ -116,8 +116,8 @@ class CTRCartImageMount(LoggingMixIn, Operations):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Mount Nintendo 3DS CTR Cart Image files.',
-                                     parents=(_common.default_argp, _common.dev_argp, _common.seeddb_argp,
+    parser = ArgumentParser(description='Mount Nintendo 3DS CTR Cart Image files.',
+                            parents=(_common.default_argp, _common.dev_argp, _common.seeddb_argp,
                                               _common.main_positional_args('cci', "CCI file")))
 
     a = parser.parse_args()

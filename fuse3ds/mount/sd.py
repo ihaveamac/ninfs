@@ -4,14 +4,14 @@
 Mounts SD contents under `/Nintendo 3DS`, creating a virtual filesystem with decrypted contents. movable.sed required.
 """
 
-import argparse
-import ctypes
-import errno
-import hashlib
 import logging
 import os
-import struct
-import sys
+from argparse import ArgumentParser
+from ctypes import c_wchar_p, pointer, c_ulonglong
+from errno import EPERM, EACCES, EROFS, EBADF
+from hashlib import sha256
+from struct import unpack
+from sys import exit
 
 from pyctr import crypto, util
 
@@ -23,26 +23,26 @@ if _common.windows:
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ModuleNotFoundError:
-    sys.exit("fuse module not found, please install fusepy to mount images "
+    exit("fuse module not found, please install fusepy to mount images "
              "(`{} install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_common.pip_command))
 except Exception as e:
-    sys.exit("Failed to import the fuse module:\n"
+    exit("Failed to import the fuse module:\n"
              "{}: {}".format(type(e).__name__, e))
 
 try:
     from Cryptodome.Cipher import AES
     from Cryptodome.Util import Counter
 except ModuleNotFoundError:
-    sys.exit("Cryptodome module not found, please install pycryptodomex for encryption support "
+    exit("Cryptodome module not found, please install pycryptodomex for encryption support "
              "(`{} install pycryptodomex`).".format(_common.pip_command))
 except Exception as e:
-    sys.exit("Failed to import the Cryptodome module:\n"
+    exit("Failed to import the Cryptodome module:\n"
              "{}: {}".format(type(e).__name__, e))
 
 
 class SDFilesystemMount(LoggingMixIn, Operations):
     def path_to_iv(self, path):
-        path_hash = hashlib.sha256(path[self.root_len + 33:].lower().encode('utf-16le') + b'\0\0').digest()
+        path_hash = sha256(path[self.root_len + 33:].lower().encode('utf-16le') + b'\0\0').digest()
         hash_p1 = util.readbe(path_hash[0:16])
         hash_p2 = util.readbe(path_hash[16:32])
         return hash_p1 ^ hash_p2
@@ -57,12 +57,12 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         mv.seek(0x110)
         key_y = mv.read(0x10)
         mv.close()
-        key_hash = hashlib.sha256(key_y).digest()
-        hash_parts = struct.unpack('<IIII', key_hash[0:16])
+        key_hash = sha256(key_y).digest()
+        hash_parts = unpack('<IIII', key_hash[0:16])
         self.root_dir = '{0[0]:08x}{0[1]:08x}{0[2]:08x}{0[3]:08x}'.format(hash_parts)
 
         if not os.path.isdir(sd_dir + '/' + self.root_dir):
-            sys.exit('Failed to find {} in the SD dir.'.format(self.root_dir))
+            exit('Failed to find {} in the SD dir.'.format(self.root_dir))
 
         print('Root dir: ' + self.root_dir)
 
@@ -84,7 +84,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
 
     def access(self, path, mode):
         if not os.access(path, mode):
-            raise FuseOSError(errno.EACCES)
+            raise FuseOSError(EACCES)
 
     chmod = os.chmod
 
@@ -94,7 +94,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
 
     def create(self, path, mode, **kwargs):
         if self.readonly:
-            raise FuseOSError(errno.EROFS)
+            raise FuseOSError(EROFS)
         fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode)
         self.fds[fd] = os.fdopen(fd, 'wb')
         return fd
@@ -104,7 +104,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
             os.fsync(fh)
         except OSError as e:
             # I am not sure why this is happening on Windows. if anyone can give me a hint, please do.
-            if e.errno != errno.EBADF:  # "Bad file descriptor"
+            if e.errno != EBADF:  # "Bad file descriptor"
                 raise
         return
 
@@ -131,7 +131,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
 
     def mknod(self, path, *args, **kwargs):
         if self.readonly:
-            raise FuseOSError(errno.EROFS)
+            raise FuseOSError(EROFS)
         if not _common.windows:
             os.mknod(path, *args, **kwargs)
 
@@ -172,20 +172,20 @@ class SDFilesystemMount(LoggingMixIn, Operations):
 
     def rename(self, old, new):
         # renaming's too difficult. just copy the file to the name you want if you really need it.
-        raise FuseOSError(errno.EROFS if self.readonly else errno.EPERM)
+        raise FuseOSError(EROFS if self.readonly else EPERM)
 
     rmdir = os.rmdir
 
     def statfs(self, path):
         if _common.windows:
-            lpSectorsPerCluster = ctypes.c_ulonglong(0)
-            lpBytesPerSector = ctypes.c_ulonglong(0)
-            lpNumberOfFreeClusters = ctypes.c_ulonglong(0)
-            lpTotalNumberOfClusters = ctypes.c_ulonglong(0)
-            ret = windll.kernel32.GetDiskFreeSpaceW(ctypes.c_wchar_p(path), ctypes.pointer(lpSectorsPerCluster),
-                                                    ctypes.pointer(lpBytesPerSector),
-                                                    ctypes.pointer(lpNumberOfFreeClusters),
-                                                    ctypes.pointer(lpTotalNumberOfClusters))
+            lpSectorsPerCluster = c_ulonglong(0)
+            lpBytesPerSector = c_ulonglong(0)
+            lpNumberOfFreeClusters = c_ulonglong(0)
+            lpTotalNumberOfClusters = c_ulonglong(0)
+            ret = windll.kernel32.GetDiskFreeSpaceW(c_wchar_p(path), pointer(lpSectorsPerCluster),
+                                                    pointer(lpBytesPerSector),
+                                                    pointer(lpNumberOfFreeClusters),
+                                                    pointer(lpTotalNumberOfClusters))
             if not ret:
                 raise WindowsError
             free_blocks = lpNumberOfFreeClusters.value * lpSectorsPerCluster.value
@@ -218,7 +218,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
 
     def write(self, path, data, offset, fh):
         if self.readonly:
-            raise FuseOSError(errno.EROFS)
+            raise FuseOSError(EROFS)
         f = self.fds[fh]
         # special check for special files
         if os.path.basename(path).startswith('.') or 'Nintendo DSiWare' in path:
@@ -233,8 +233,8 @@ class SDFilesystemMount(LoggingMixIn, Operations):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Mount Nintendo 3DS SD card contents.',
-                                     parents=(_common.default_argp, _common.readonly_argp, _common.dev_argp,
+    parser = ArgumentParser(description='Mount Nintendo 3DS SD card contents.',
+                            parents=(_common.default_argp, _common.readonly_argp, _common.dev_argp,
                                               _common.main_positional_args(
                                                   'sd_dir', "path to folder with SD contents (on SD: /Nintendo 3DS)")))
     parser.add_argument('--movable', metavar='MOVABLESED', help='path to movable.sed', required=True)

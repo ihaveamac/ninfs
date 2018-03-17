@@ -4,12 +4,12 @@
 Mounts Read-only Filesystem (RomFS) files, creating a virtual filesystem of the RomFS contents. Accepts ones with and without an IVFC header (original HANS format).
 """
 
-import argparse
-import errno
 import logging
 import os
-import stat
-import sys
+from argparse import ArgumentParser
+from errno import ENOENT
+from stat import S_IFDIR, S_IFREG
+from sys import exit
 from typing import BinaryIO
 
 from pyctr.romfs import RomFSReader, RomFSFileNotFoundError
@@ -19,10 +19,10 @@ from . import _common
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ModuleNotFoundError:
-    sys.exit("fuse module not found, please install fusepy to mount images "
+    exit("fuse module not found, please install fusepy to mount images "
              "(`{} install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_common.pip_command))
 except Exception as e:
-    sys.exit("Failed to import the fuse module:\n"
+    exit("Failed to import the fuse module:\n"
              "{}: {}".format(type(e).__name__, e))
 
 
@@ -46,14 +46,14 @@ class RomFSMount(LoggingMixIn, Operations):
         try:
             item = self.romfs_reader.get_info_from_path(path)
         except RomFSFileNotFoundError:
-            raise FuseOSError(errno.ENOENT)
+            raise FuseOSError(ENOENT)
         if item.type == 'dir':
-            st = {'st_mode': (stat.S_IFDIR | 0o555), 'st_nlink': 2}
+            st = {'st_mode': (S_IFDIR | 0o555), 'st_nlink': 2}
         elif item.type == 'file':
-            st = {'st_mode': (stat.S_IFREG | 0o444), 'st_size': item.size, 'st_nlink': 1}
+            st = {'st_mode': (S_IFREG | 0o444), 'st_size': item.size, 'st_nlink': 1}
         else:
             # this won't happen unless I fucked up
-            raise FuseOSError(errno.ENOENT)
+            raise FuseOSError(ENOENT)
         return {**st, **self.g_stat, 'st_uid': uid, 'st_gid': gid}
 
     def open(self, path, flags):
@@ -64,7 +64,7 @@ class RomFSMount(LoggingMixIn, Operations):
         try:
             item = self.romfs_reader.get_info_from_path(path)
         except RomFSFileNotFoundError:
-            raise FuseOSError(errno.ENOENT)
+            raise FuseOSError(ENOENT)
         yield from ('.', '..')
         yield from item.contents
 
@@ -72,7 +72,7 @@ class RomFSMount(LoggingMixIn, Operations):
         try:
             item = self.romfs_reader.get_info_from_path(path)
         except RomFSFileNotFoundError:
-            raise FuseOSError(errno.ENOENT)
+            raise FuseOSError(ENOENT)
         real_offset = item.offset + offset
         if real_offset > item.offset + item.size:
             # do I raise an exception or return nothing? I'm not sure
@@ -86,14 +86,14 @@ class RomFSMount(LoggingMixIn, Operations):
         try:
             item = self.romfs_reader.get_info_from_path(path)
         except RomFSFileNotFoundError:
-            raise FuseOSError(errno.ENOENT)
+            raise FuseOSError(ENOENT)
         return {'f_bsize': 4096, 'f_blocks': self.romfs_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
                 'f_files': len(item.contents)}
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Mount Nintendo 3DS Read-only Filesystem (RomFS) files.',
-                                     parents=(_common.default_argp,
+    parser = ArgumentParser(description='Mount Nintendo 3DS Read-only Filesystem (RomFS) files.',
+                            parents=(_common.default_argp,
                                               _common.main_positional_args('romfs', 'RomFS file')))
 
     a = parser.parse_args()

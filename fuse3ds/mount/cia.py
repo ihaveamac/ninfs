@@ -6,17 +6,17 @@ Mounts CTR Importable Archive (CIA) files, creating a virtual filesystem of decr
 DLC with missing contents is currently not supported.
 """
 
-import argparse
-import errno
 import logging
 import os
-import stat
-import struct
-import sys
+from argparse import ArgumentParser
+from errno import ENOENT
+from stat import S_IFDIR, S_IFREG
+from struct import unpack
+from sys import exit
 from typing import BinaryIO
 
 from pyctr.crypto import CTRCrypto
-from pyctr.tmd import TitleMetadataReader
+from pyctr.tmd import TitleMetadataReader, CHUNK_RECORD_SIZE
 from pyctr.util import readbe
 
 from . import _common
@@ -25,20 +25,20 @@ from .ncch import NCCHContainerMount
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ModuleNotFoundError:
-    sys.exit("fuse module not found, please install fusepy to mount images "
+    exit("fuse module not found, please install fusepy to mount images "
              "(`{} install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_common.pip_command))
 except Exception as e:
-    sys.exit("Failed to import the fuse module:\n"
+    exit("Failed to import the fuse module:\n"
              "{}: {}".format(type(e).__name__, e))
 
 try:
     from Cryptodome.Cipher import AES
     from Cryptodome.Util import Counter
 except ModuleNotFoundError:
-    sys.exit("Cryptodome module not found, please install pycryptodomex for encryption support "
+    exit("Cryptodome module not found, please install pycryptodomex for encryption support "
              "(`{} install pycryptodomex`).".format(_common.pip_command))
 except Exception as e:
-    sys.exit("Failed to import the Cryptodome module:\n"
+    exit("Failed to import the Cryptodome module:\n"
              "{}: {}".format(type(e).__name__, e))
 
 
@@ -62,7 +62,7 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
         # open cia and get section sizes
         self.f = cia_fp
         archive_header_size, cia_type, cia_version, cert_chain_size, \
-            ticket_size, tmd_size, meta_size, content_size = struct.unpack('<IHHIIIIQ', self.f.read(0x20))
+            ticket_size, tmd_size, meta_size, content_size = unpack('<IHHIIIIQ', self.f.read(0x20))
 
         self.cia_size = new_offset(archive_header_size) + new_offset(cert_chain_size) + new_offset(ticket_size)\
             + new_offset(tmd_size) + new_offset(meta_size) + new_offset(content_size)
@@ -76,6 +76,7 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
         meta_offset = content_offset + new_offset(content_size)
 
         # load tmd
+        self.f.seek(tmd_offset)
         tmd = TitleMetadataReader.load(self.f)
         self.title_id = tmd.title_id
 
@@ -97,7 +98,8 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
                       '/cert.bin': {'size': cert_chain_size, 'offset': cert_chain_offset, 'type': 'raw'},
                       '/ticket.bin': {'size': ticket_size, 'offset': ticket_offset, 'type': 'raw'},
                       '/tmd.bin': {'size': tmd_size, 'offset': tmd_offset, 'type': 'raw'},
-                      '/tmdchunks.bin': {'size': tmd_chunks_size, 'offset': tmd_chunks_offset, 'type': 'raw'}}
+                      '/tmdchunks.bin': {'size': tmd.content_count * CHUNK_RECORD_SIZE,
+                                         'offset': tmd_offset + 0xB04, 'type': 'raw'}}
         if meta_size:
             self.files['/meta.bin'] = {'size': meta_size, 'offset': meta_offset, 'type': 'raw'}
             # show icon.bin if meta size is the expected size
@@ -105,27 +107,21 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
             if meta_size == 0x3AC0:
                 self.files['/icon.bin'] = {'size': 0x36C0, 'offset': meta_offset + 0x400, 'type': 'raw'}
 
-        self.f.seek(tmd_chunks_offset)
-        tmd_chunks_raw = self.f.read(tmd_chunks_size)
-
         self.dirs = {}
 
         # read chunks to generate virtual files
         current_offset = content_offset
-        for chunk in (tmd_chunks_raw[i:i + 30] for i in range(0, content_count * 0x30, 0x30)):
-            content_id = chunk[0:4]
-            content_index = chunk[4:6]
-            content_size = readbe(chunk[8:16])
-            content_is_encrypted = readbe(chunk[6:8]) & 1
-            file_ext = 'nds' if content_index == b'\0\0' and readbe(self.title_id) >> 44 == 0x48 else 'ncch'
-            filename = '/{}.{}.{}'.format(content_index.hex(), content_id.hex(), file_ext)
-            self.files[filename] = {'size': content_size, 'offset': current_offset, 'index': content_index,
-                                    'type': 'enc' if content_is_encrypted else 'raw'}
-            current_offset += new_offset(content_size)
+        for chunk in tmd.chunk_records:
+            file_ext = 'nds' if chunk.cindex == b'\0\0' and readbe(self.title_id) >> 44 == 0x48 else 'ncch'
+            filename = '/{:04x}.{}.{}'.format(chunk.cindex, chunk.id, file_ext)
+            self.files[filename] = {'size': chunk.size, 'offset': current_offset,
+                                    'index': chunk.cindex.to_bytes(2, 'big'),
+                                    'type': 'enc' if chunk.type.encrypted else 'raw'}
+            current_offset += new_offset(chunk.size)
 
-            dirname = '/{}.{}'.format(content_index.hex(), content_id.hex())
+            dirname = '/{:04x}.{}'.format(chunk.cindex, chunk.id)
             try:
-                content_vfp = _common.VirtualFileWrapper(self, filename, content_size)
+                content_vfp = _common.VirtualFileWrapper(self, filename, chunk.size)
                 content_fuse = NCCHContainerMount(content_vfp, dev=dev, g_stat=g_stat, seeddb=seeddb)
                 self.dirs[dirname] = content_fuse
             except KeyError as e:
@@ -140,11 +136,11 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
             return self.dirs[first_dir].getattr(_common.remove_first_dir(path), fh)
         uid, gid, pid = fuse_get_context()
         if path == '/' or path in self.dirs:
-            st = {'st_mode': (stat.S_IFDIR | 0o555), 'st_nlink': 2}
+            st = {'st_mode': (S_IFDIR | 0o555), 'st_nlink': 2}
         elif path.lower() in self.files:
-            st = {'st_mode': (stat.S_IFREG | 0o444), 'st_size': self.files[path.lower()]['size'], 'st_nlink': 1}
+            st = {'st_mode': (S_IFREG | 0o444), 'st_size': self.files[path.lower()]['size'], 'st_nlink': 1}
         else:
-            raise FuseOSError(errno.ENOENT)
+            raise FuseOSError(ENOENT)
         return {**st, **self.g_stat, 'st_uid': uid, 'st_gid': gid}
 
     def open(self, path, flags):
@@ -202,8 +198,8 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Mount Nintendo 3DS CTR Importable Archive files.",
-                                     parents=(_common.default_argp, _common.dev_argp, _common.seeddb_argp,
+    parser = ArgumentParser(description="Mount Nintendo 3DS CTR Importable Archive files.",
+                            parents=(_common.default_argp, _common.dev_argp, _common.seeddb_argp,
                                               _common.main_positional_args('cia', "CIA file")))
 
     a = parser.parse_args()
