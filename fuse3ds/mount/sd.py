@@ -156,7 +156,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         return self.crypto.aes_ctr(0x34, iv, data)[before:]
 
     def readdir(self, path, fh):
-        yield from ['.', '..']
+        yield from ('.', '..')
         ld = os.listdir(path)
         if _common.windows:
             # I should figure out how to mark hidden files, if possible
