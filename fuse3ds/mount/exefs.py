@@ -44,8 +44,6 @@ class ExeFSMount(LoggingMixIn, Operations):
             print('ExeFS: Decompressing .code...', end='', flush=True)
             try:
                 item = self.files['/code.bin']
-                with open('/Volumes/ThingsMore/nintendo/3DS/fuse-3ds/CODE.bin', 'wb') as f:
-                    f.write(self.read('/code.bin', item.size, item.offset, 0))
                 self.code_dec = _decompress_code(self.read('/code.bin', item.size, item.offset, 0))
                 self.files['/code-dec.bin'] = ExeFSEntry(name='code-dec', offset=-1, size=len(self.code_dec),
                                                          hash=sha256(self.code_dec).digest())
