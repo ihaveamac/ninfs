@@ -13,8 +13,9 @@ import stat
 import struct
 import sys
 
-from . import _common
 from pyctr import crypto, util
+
+from . import _common
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context

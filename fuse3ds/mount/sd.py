@@ -10,13 +10,12 @@ import errno
 import hashlib
 import logging
 import os
-import stat
 import struct
 import sys
-from threading import Lock
+
+from pyctr import crypto, util
 
 from . import _common
-from pyctr import crypto, util
 
 if _common.windows:
     from ctypes import windll, wintypes
@@ -72,7 +71,6 @@ class SDFilesystemMount(LoggingMixIn, Operations):
 
         self.root = os.path.realpath(sd_dir + '/' + self.root_dir)
         self.root_len = len(self.root)
-        self.rwlock = Lock()
 
         self.readonly = readonly
 

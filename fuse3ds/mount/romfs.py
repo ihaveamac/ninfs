@@ -6,17 +6,15 @@ Mounts Read-only Filesystem (RomFS) files, creating a virtual filesystem of the 
 
 import argparse
 import errno
-import hashlib
 import logging
-import math
 import os
 import stat
-import struct
 import sys
 from typing import BinaryIO
 
+from pyctr import romfs
+
 from . import _common
-from pyctr import romfs, util
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context

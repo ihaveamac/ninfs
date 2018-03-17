@@ -6,7 +6,6 @@ Mounts NCCH containers, creating a virtual filesystem of decrypted sections.
 
 import argparse
 import errno
-import hashlib
 import logging
 import math
 import os
@@ -15,8 +14,9 @@ import struct
 import sys
 from collections import OrderedDict
 
+from pyctr import crypto, ncch, util
+
 from . import _common
-from pyctr import crypto, ncch, romfs, util
 from .romfs import RomFSMount
 
 try:

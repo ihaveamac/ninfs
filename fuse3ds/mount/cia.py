@@ -8,7 +8,6 @@ DLC with missing contents is currently not supported.
 
 import argparse
 import errno
-import hashlib
 import logging
 import os
 import stat
@@ -16,10 +15,11 @@ import struct
 import sys
 from typing import BinaryIO
 
-from . import _common
 from pyctr.crypto import CTRCrypto
-from pyctr.util import readbe
 from pyctr.tmd import TitleMetadataReader
+from pyctr.util import readbe
+
+from . import _common
 from .ncch import NCCHContainerMount
 
 try:

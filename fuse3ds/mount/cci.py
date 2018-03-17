@@ -11,8 +11,9 @@ import os
 import stat
 import sys
 
-from . import _common
 from pyctr import util
+
+from . import _common
 from .ncch import NCCHContainerMount
 
 try:
