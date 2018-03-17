@@ -1,10 +1,10 @@
 from io import BytesIO
-from typing import BinaryIO, NamedTuple, Tuple
+from typing import BinaryIO, NamedTuple, Tuple, Union
 
-from . import util
+from .util import readle, roundup
 
 __all__ = ['IVFC_HEADER_SIZE', 'IVFC_ROMFS_MAGIC_NUM', 'ROMFS_LV3_HEADER_SIZE', 'RomFSError', 'InvalidIVFCError',
-           'InvalidRomFSHeaderError', 'RomFSFileNotFoundError', 'RomFSFileIndexNotSetup']
+           'InvalidRomFSHeaderError', 'RomFSFileNotFoundError', 'RomFSFileIndexNotSetup', 'RomFSReader']
 
 IVFC_HEADER_SIZE = 0x5C
 IVFC_ROMFS_MAGIC_NUM = 0x10000
@@ -50,7 +50,7 @@ class RomFSReader:
         self.filedata_offset = filedata_offset
         self.case_insensitive = case_insensitive
 
-    def get_info_from_path(self, path):
+    def get_info_from_path(self, path: str) -> Union[RomFSDirectoryEntry, RomFSFileEntry]:
         """Get a directory or file entry"""
         if not self._index_setup:
             raise RomFSFileIndexNotSetup("file index must be set up with parse_metadata")
@@ -81,8 +81,7 @@ class RomFSReader:
         if dirhash.offset < length:
             raise InvalidRomFSHeaderError("Directory Hash offset is before the end of the Lv3 header")
         if dirmeta.offset < dirhash.offset + dirhash.size:
-            raise InvalidRomFSHeaderError("Directory Metadata offset is before the end of the Directory Hash "
-                                              "region")
+            raise InvalidRomFSHeaderError("Directory Metadata offset is before the end of the Directory Hash region")
         if filehash.offset < dirmeta.offset + dirmeta.size:
             raise InvalidRomFSHeaderError("File Hash offset is before the end of the Directory Metadata region")
         if filemeta.offset < filehash.offset + filehash.size:
@@ -132,12 +131,12 @@ class RomFSReader:
             raise InvalidRomFSHeaderError("RomFS Lv3 given header length is too short "
                                               "(0x{:X} instead of 0x{:X})".format(header_length, ROMFS_LV3_HEADER_SIZE))
 
-        lv3_header_length = util.readle(header[0x0:0x4])
-        lv3_dirhash = RomFSRegion(offset=util.readle(header[0x4:0x8]), size=util.readle(header[0x8:0xC]))
-        lv3_dirmeta = RomFSRegion(offset=util.readle(header[0xC:0x10]), size=util.readle(header[0x10:0x14]))
-        lv3_filehash = RomFSRegion(offset=util.readle(header[0x14:0x18]), size=util.readle(header[0x18:0x1C]))
-        lv3_filemeta = RomFSRegion(offset=util.readle(header[0x1C:0x20]), size=util.readle(header[0x20:0x24]))
-        lv3_filedata_offset = util.readle(header[0x24:0x28])
+        lv3_header_length = readle(header[0x0:0x4])
+        lv3_dirhash = RomFSRegion(offset=readle(header[0x4:0x8]), size=readle(header[0x8:0xC]))
+        lv3_dirmeta = RomFSRegion(offset=readle(header[0xC:0x10]), size=readle(header[0x10:0x14]))
+        lv3_filehash = RomFSRegion(offset=readle(header[0x14:0x18]), size=readle(header[0x18:0x1C]))
+        lv3_filemeta = RomFSRegion(offset=readle(header[0x1C:0x20]), size=readle(header[0x20:0x24]))
+        lv3_filedata_offset = readle(header[0x24:0x28])
 
         cls.validate_lv3_header(lv3_header_length, lv3_dirhash, lv3_dirmeta, lv3_filehash, lv3_filemeta,
                                 lv3_filedata_offset)
@@ -152,8 +151,8 @@ class RomFSReader:
 
         # maybe this should be switched to BytesIO
         def iterate_dir(out: dict, raw: bytes, current_path: str):
-            first_child_dir = util.readle(raw[0x8:0xC])
-            first_file = util.readle(raw[0xC:0x10])
+            first_child_dir = readle(raw[0x8:0xC])
+            first_file = readle(raw[0xC:0x10])
 
             out['type'] = 'dir'
             out['contents'] = {}
@@ -163,8 +162,8 @@ class RomFSReader:
                 dirmeta_io.seek(first_child_dir)
                 while True:
                     child_dir_meta = dirmeta_io.read(0x18)
-                    next_sibling_dir = util.readle(child_dir_meta[0x4:0x8])
-                    child_dir_name = dirmeta_io.read(util.readle(child_dir_meta[0x14:0x18])).decode('utf-16le')
+                    next_sibling_dir = readle(child_dir_meta[0x4:0x8])
+                    child_dir_name = dirmeta_io.read(readle(child_dir_meta[0x14:0x18])).decode('utf-16le')
                     child_dir_name_meta = child_dir_name.lower() if self.case_insensitive else child_dir_name
                     if child_dir_name_meta in out['contents']:
                         print("WARNING: Dirname collision! {}{}".format(current_path, child_dir_name))
@@ -180,10 +179,10 @@ class RomFSReader:
                 filemeta_io.seek(first_file)
                 while True:
                     child_file_meta = filemeta_io.read(0x20)
-                    next_sibling_file = util.readle(child_file_meta[0x4:0x8])
-                    child_file_offset = util.readle(child_file_meta[0x8:0x10])
-                    child_file_size = util.readle(child_file_meta[0x10:0x18])
-                    child_file_name = filemeta_io.read(util.readle(child_file_meta[0x1C:0x20])).decode('utf-16le')
+                    next_sibling_file = readle(child_file_meta[0x4:0x8])
+                    child_file_offset = readle(child_file_meta[0x8:0x10])
+                    child_file_size = readle(child_file_meta[0x10:0x18])
+                    child_file_name = filemeta_io.read(readle(child_file_meta[0x1C:0x20])).decode('utf-16le')
                     child_file_name_meta = child_file_name.lower() if self.case_insensitive else child_file_name
                     if child_file_name_meta in out['contents']:
                         print("WARNING: Filename collision! {}{}".format(current_path, child_file_name))
@@ -211,7 +210,7 @@ def get_lv3_offset_from_ivfc(header: bytes) -> int:
     """
     header_length = len(header)
     header_magic = header[0x0:0x4]
-    header_magic_num = util.readle(header[0x4:0x8])
+    header_magic_num = readle(header[0x4:0x8])
 
     if header_magic != b'IVFC':
         raise InvalidIVFCError("IVFC magic not found in given header")
@@ -222,8 +221,8 @@ def get_lv3_offset_from_ivfc(header: bytes) -> int:
         raise InvalidIVFCError("IVFC given header length is too short "
                                    "(0x{:X} instead of 0x{:X})".format(header_length, IVFC_HEADER_SIZE))
 
-    master_hash_size = util.readle(header[0x8:0xC])
-    lv3_block_size = util.readle(header[0x4C:0x50])
+    master_hash_size = readle(header[0x8:0xC])
+    lv3_block_size = readle(header[0x4C:0x50])
     lv3_hash_block_size = 1 << lv3_block_size
-    lv3_offset = util.roundup(0x60 + master_hash_size, lv3_hash_block_size)
+    lv3_offset = roundup(0x60 + master_hash_size, lv3_hash_block_size)
     return lv3_offset

@@ -17,6 +17,7 @@ from collections import OrderedDict
 from pyctr import crypto, ncch, util
 
 from . import _common
+from .exefs import ExeFSMount
 from .romfs import RomFSMount
 
 try:
@@ -41,6 +42,7 @@ except Exception as e:
 
 class NCCHContainerMount(LoggingMixIn, Operations):
     fd = 0
+    _exefs_mounted = False
     _romfs_mounted = False
 
     def __init__(self, ncch_fp, dev, g_stat, seeddb=None):
@@ -107,6 +109,20 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                         exefs_normal_ranges.append((offset + 0x200, offset + 0x200 + util.roundup(size, 0x200)))
                         self.files['/exefs.bin']['keyslot_normal_range'] = exefs_normal_ranges
 
+            try:
+                # get code compression bit
+                decompress = False
+                if self.ncch_reader.check_for_extheader():
+                    exh_flag = self.read('/extheader.bin', 1, 0xD, 0)
+                    decompress = exh_flag[0] & 1
+                exefs_vfp = _common.VirtualFileWrapper(self, '/exefs.bin', exefs_region.size)
+                # noinspection PyTypeChecker
+                exefs_fuse = ExeFSMount(exefs_vfp, g_stat, decompress_code=decompress)
+                self.exefs_fuse = exefs_fuse
+                self._exefs_mounted = True
+            except Exception as e:
+                print("Failed to mount ExeFS: {}: {}".format(type(e).__name__, e))
+
         if not self.ncch_reader.flags.no_romfs:
             romfs_region = self.ncch_reader.romfs_region
             if romfs_region.offset:
@@ -116,6 +132,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
 
             try:
                 romfs_vfp = _common.VirtualFileWrapper(self, '/romfs.bin', romfs_region.size)
+                # noinspection PyTypeChecker
                 romfs_fuse = RomFSMount(romfs_vfp, g_stat)
                 self.romfs_fuse = romfs_fuse
                 self._romfs_mounted = True
@@ -127,10 +144,12 @@ class NCCHContainerMount(LoggingMixIn, Operations):
 
     def getattr(self, path, fh=None):
         lpath = path.lower()
-        if lpath.startswith('/romfs/'):
+        if lpath.startswith('/exefs/'):
+            return self.exefs_fuse.getattr(_common.remove_first_dir(path), fh)
+        elif lpath.startswith('/romfs/'):
             return self.romfs_fuse.getattr(_common.remove_first_dir(path), fh)
         uid, gid, pid = fuse_get_context()
-        if lpath == '/' or lpath == '/romfs':
+        if lpath == '/' or lpath == '/romfs' or lpath == '/exefs':
             st = {'st_mode': (stat.S_IFDIR | 0o555), 'st_nlink': 2}
         elif lpath in self.files:
             st = {'st_mode': (stat.S_IFREG | 0o444), 'st_size': self.files[path.lower()]['size'], 'st_nlink': 1}
@@ -143,17 +162,23 @@ class NCCHContainerMount(LoggingMixIn, Operations):
         return self.fd
 
     def readdir(self, path, fh):
-        if path.startswith('/romfs'):
-            return self.romfs_fuse.readdir(_common.remove_first_dir(path), fh)
+        if path.startswith('/exefs'):
+            yield from self.exefs_fuse.readdir(_common.remove_first_dir(path), fh)
+        elif path.startswith('/romfs'):
+            yield from self.romfs_fuse.readdir(_common.remove_first_dir(path), fh)
         elif path == '/':
-            out = ['.', '..'] + [x[1:] for x in self.files]
+            yield from ('.', '..')
+            yield from (x[1:] for x in self.files)
+            if self._exefs_mounted:
+                yield 'exefs'
             if self._romfs_mounted:
-                out.append('romfs')
-            return out
+                yield 'romfs'
 
     def read(self, path, size, offset, fh):
         lpath = path.lower()
-        if lpath.startswith('/romfs/'):
+        if lpath.startswith('/exefs/'):
+            return self.exefs_fuse.read(_common.remove_first_dir(path), size, offset, fh)
+        elif lpath.startswith('/romfs/'):
             return self.romfs_fuse.read(_common.remove_first_dir(path), size, offset, fh)
         fi = self.files[lpath]
         real_offset = fi['offset'] + offset
@@ -234,6 +259,8 @@ class NCCHContainerMount(LoggingMixIn, Operations):
         return data
 
     def statfs(self, path):
+        if path.startswith('/exefs/'):
+            return self.exefs_fuse.statfs(_common.remove_first_dir(path))
         if path.startswith('/romfs/'):
             return self.romfs_fuse.statfs(_common.remove_first_dir(path))
         else:

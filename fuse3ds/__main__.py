@@ -12,7 +12,7 @@ except ImportError:
     except ImportError:
         __version__ = '<unset>'
 
-mount_types = ('cci', 'cdn', 'cia', 'nand', 'ncch', 'romfs', 'sd')
+mount_types = ('cci', 'cdn', 'cia', 'exefs', 'nand', 'ncch', 'romfs', 'sd')
 
 print('fuse-3ds {} - https://github.com/ihaveamac/fuse-3ds'.format(__version__))
 

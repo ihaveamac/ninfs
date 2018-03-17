@@ -12,7 +12,7 @@ import stat
 import sys
 from typing import BinaryIO
 
-from pyctr import romfs
+from pyctr.romfs import RomFSReader, RomFSFileNotFoundError
 
 from . import _common
 
@@ -39,13 +39,13 @@ class RomFSMount(LoggingMixIn, Operations):
         romfs_fp.seek(0)
         self.f = romfs_fp
 
-        self.romfs_reader = romfs.RomFSReader.load(romfs_fp, case_insensitive=False)
+        self.romfs_reader = RomFSReader.load(romfs_fp, case_insensitive=False)
 
     def getattr(self, path, fh=None):
         uid, gid, pid = fuse_get_context()
         try:
             item = self.romfs_reader.get_info_from_path(path)
-        except romfs.RomFSFileNotFoundError:
+        except RomFSFileNotFoundError:
             raise FuseOSError(errno.ENOENT)
         if item.type == 'dir':
             st = {'st_mode': (stat.S_IFDIR | 0o555), 'st_nlink': 2}
@@ -63,14 +63,15 @@ class RomFSMount(LoggingMixIn, Operations):
     def readdir(self, path, fh):
         try:
             item = self.romfs_reader.get_info_from_path(path)
-        except romfs.RomFSFileNotFoundError:
+        except RomFSFileNotFoundError:
             raise FuseOSError(errno.ENOENT)
-        return ['.', '..', *item.contents]
+        yield from ('.', '..')
+        yield from item.contents
 
     def read(self, path, size, offset, fh):
         try:
             item = self.romfs_reader.get_info_from_path(path)
-        except romfs.RomFSFileNotFoundError:
+        except RomFSFileNotFoundError:
             raise FuseOSError(errno.ENOENT)
         real_offset = item.offset + offset
         if real_offset > item.offset + item.size:
@@ -84,7 +85,7 @@ class RomFSMount(LoggingMixIn, Operations):
     def statfs(self, path):
         try:
             item = self.romfs_reader.get_info_from_path(path)
-        except romfs.RomFSFileNotFoundError:
+        except RomFSFileNotFoundError:
             raise FuseOSError(errno.ENOENT)
         return {'f_bsize': 4096, 'f_blocks': self.romfs_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
                 'f_files': len(item.contents)}
@@ -102,7 +103,7 @@ def main():
         logging.basicConfig(level=logging.DEBUG)
 
     romfs_stat = os.stat(a.romfs)
-    romfs_size = os.path.getsize(a.romfs)
+    romfs_size = romfs_stat.st_size
 
     with open(a.romfs, 'rb') as f:
         mount = RomFSMount(romfs_fp=f, g_stat=romfs_stat)

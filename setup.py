@@ -36,6 +36,7 @@ setup(
     entry_points={'console_scripts': ['mount_cci = fuse3ds.__main__:main',
                                       'mount_cdn = fuse3ds.__main__:main',
                                       'mount_cia = fuse3ds.__main__:main',
+                                      'mount_exefs = fuse3ds.__main__:main',
                                       'mount_nand = fuse3ds.__main__:main',
                                       'mount_ncch = fuse3ds.__main__:main',
                                       'mount_romfs = fuse3ds.__main__:main',
