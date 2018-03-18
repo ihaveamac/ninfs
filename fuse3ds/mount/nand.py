@@ -58,9 +58,8 @@ class NANDImageMount(LoggingMixIn, Operations):
         except crypto.BootromNotFoundError as e:
             print("Bootrom was not found.")
 
-        self.f = nand_fp
-        self.f.seek(0x100)  # screw the signature
-        ncsd_header = self.f.read(0x100)
+        nand_fp.seek(0x100)  # screw the signature
+        ncsd_header = nand_fp.read(0x100)
         if ncsd_header[0:4] != b'NCSD':
             exit('NCSD magic not found, is this a real Nintendo 3DS NAND image?')
         media_id = ncsd_header[0x8:0x10]
@@ -68,7 +67,7 @@ class NANDImageMount(LoggingMixIn, Operations):
             exit('Media ID not all-zero, is this a real Nintendo 3DS NAND image?')
 
         # check for essential.exefs
-        self.f.seek(0x200)
+        nand_fp.seek(0x200)
         try:
             exefs = ExeFSReader.load(self.f)
         except InvalidExeFSError:
@@ -100,11 +99,11 @@ class NANDImageMount(LoggingMixIn, Operations):
                     exit('NAND CID not found, provide cid with --cid (or embed essentials backup with GodMode9)')
             else:
                 if 'otp' in exefs.entries:
-                    self.f.seek(exefs['otp'].offset + 0x400)
-                    otp = self.f.read(exefs['otp'].size)
+                    nand_fp.seek(exefs['otp'].offset + 0x400)
+                    otp = nand_fp.read(exefs['otp'].size)
                 if 'nand_cid' in exefs.entries:
-                    self.f.seek(exefs['nand_cid'].offset + 0x400)
-                    cid = self.f.read(exefs['nand_cid'].size)
+                    nand_fp.seek(exefs['nand_cid'].offset + 0x400)
+                    cid = nand_fp.read(exefs['nand_cid'].size)
                 if not (otp or cid):
                     exit('otp and nand_cid somehow not found in essentials backup. update with GodMode9 or '
                          'provide OTP/NAND CID with --otp/--cid.')
@@ -152,8 +151,8 @@ class NANDImageMount(LoggingMixIn, Operations):
         self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
                        'st_atime': int(g_stat.st_atime)}
 
-        self.f.seek(0, 2)
-        raw_nand_size = self.f.tell()
+        nand_fp.seek(0, 2)
+        raw_nand_size = nand_fp.tell()
 
         self.real_nand_size = nand_size[readle(ncsd_header[4:8])]
 
@@ -172,8 +171,8 @@ class NANDImageMount(LoggingMixIn, Operations):
             except Exception as e:
                 print("Failed to mount essential.exefs: {}: {}".format(type(e).__name__, e))
 
-        self.f.seek(0x12C00)
-        keysect_enc = self.f.read(0x200)
+        nand_fp.seek(0x12C00)
+        keysect_enc = nand_fp.read(0x200)
         if keysect_enc != b'\0' * 0x200 and keysect_enc != b'\xFF' * 0x200:
             keysect_x = otp_keysect_hash[0:16]
             keysect_y = otp_keysect_hash[16:32]
@@ -246,9 +245,9 @@ class NANDImageMount(LoggingMixIn, Operations):
                     self.files['/ctrnand_full.img'] = {'size': part[1], 'offset': part[0], 'keyslot': ctrnand_keyslot,
                                                        'type': 'enc'}
                     print('/ctrnand_full.img')
-                    self.f.seek(part[0])
+                    nand_fp.seek(part[0])
                     iv = self.ctr + (part[0] >> 4)
-                    ctr_mbr = self.crypto.aes_ctr(ctrnand_keyslot, iv, self.f.read(0x200))[0x1BE:0x1FE]
+                    ctr_mbr = self.crypto.aes_ctr(ctrnand_keyslot, iv, nand_fp.read(0x200))[0x1BE:0x1FE]
                     ctr_partitions = [[readle(ctr_mbr[i + 8:i + 12]) * 0x200,
                                        readle(ctr_mbr[i + 12:i + 16]) * 0x200]
                                       for i in range(0, 0x40, 0x10)]
@@ -278,11 +277,13 @@ class NANDImageMount(LoggingMixIn, Operations):
 
         # GM9 bonus drive
         if raw_nand_size != self.real_nand_size:
-            self.f.seek(self.real_nand_size)
+            nand_fp.seek(self.real_nand_size)
             bonus_drive_header = self.f.read(0x200)
             if bonus_drive_header[0x1FE:0x200] == b'\x55\xAA':
                 self.files['/bonus.img'] = {'size': raw_nand_size - self.real_nand_size, 'offset': self.real_nand_size,
                                             'keyslot': 0xFF, 'type': 'raw'}
+
+        self.f = nand_fp
 
     def flush(self, path, fh):
         return self.f.flush()

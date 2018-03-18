@@ -37,9 +37,8 @@ class CTRCartImageMount(LoggingMixIn, Operations):
                        'st_atime': int(g_stat.st_atime)}
 
         # open cci and get section sizes
-        self.f = cci_fp
-        self.f.seek(0x100)
-        ncsd_header = self.f.read(0x100)
+        cci_fp.seek(0x100)
+        ncsd_header = cci_fp.read(0x100)
         if ncsd_header[0:4] != b'NCSD':
             exit('NCSD magic not found, is this a real CCI?')
         self.media_id = ncsd_header[0x8:0x10]
@@ -72,6 +71,8 @@ class CTRCartImageMount(LoggingMixIn, Operations):
                     self.dirs[dirname] = content_fuse
                 except Exception as e:
                     print("Failed to mount {}: {}: {}".format(filename, type(e).__name__, e))
+
+        self.f = cci_fp
 
     def flush(self, path, fh):
         return self.f.flush()

@@ -60,9 +60,8 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
                        'st_atime': int(g_stat.st_atime)}
 
         # open cia and get section sizes
-        self.f = cia_fp
         archive_header_size, cia_type, cia_version, cert_chain_size, \
-            ticket_size, tmd_size, meta_size, content_size = unpack('<IHHIIIIQ', self.f.read(0x20))
+            ticket_size, tmd_size, meta_size, content_size = unpack('<IHHIIIIQ', cia_fp.read(0x20))
 
         self.cia_size = new_offset(archive_header_size) + new_offset(cert_chain_size) + new_offset(ticket_size)\
             + new_offset(tmd_size) + new_offset(meta_size) + new_offset(content_size)
@@ -76,17 +75,17 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
         meta_offset = content_offset + new_offset(content_size)
 
         # load tmd
-        self.f.seek(tmd_offset)
+        cia_fp.seek(tmd_offset)
         tmd = TitleMetadataReader.load(self.f)
         self.title_id = tmd.title_id
 
         # read title id, encrypted titlekey and common key index
-        self.f.seek(ticket_offset + 0x1DC)
-        tik_title_id = self.f.read(8)
-        self.f.seek(ticket_offset + 0x1BF)
-        enc_titlekey = self.f.read(0x10)
-        self.f.seek(ticket_offset + 0x1F1)
-        common_key_index = ord(self.f.read(1))
+        cia_fp.seek(ticket_offset + 0x1DC)
+        tik_title_id = cia_fp.read(8)
+        cia_fp.seek(ticket_offset + 0x1BF)
+        enc_titlekey = cia_fp.read(0x10)
+        cia_fp.seek(ticket_offset + 0x1F1)
+        common_key_index = ord(cia_fp.read(1))
 
         # decrypt titlekey
         self.crypto.set_keyslot('y', 0x3D, self.crypto.get_common_key(common_key_index))
@@ -126,6 +125,8 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
                 self.dirs[dirname] = content_fuse
             except KeyError as e:
                 print("Failed to mount {}: {}: {}".format(filename, type(e).__name__, e))
+
+        self.f = cia_fp
 
     def flush(self, path, fh):
         return self.f.flush()

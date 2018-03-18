@@ -34,8 +34,6 @@ class ExeFSMount(LoggingMixIn, Operations):
         self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
                        'st_atime': int(g_stat.st_atime)}
 
-        self.f = exefs_fp
-
         self.exefs_reader = ExeFSReader.load(exefs_fp)
         self.files = {'/' + x.name.replace('.', '', 1) + '.bin': x for x in self.exefs_reader.entries.values()}
         self.exefs_size = sum(x.size for x in self.exefs_reader.entries.values())
@@ -50,6 +48,8 @@ class ExeFSMount(LoggingMixIn, Operations):
                 print(' done!')
             except CodeDecompressionError as e:
                 print('\nFailed to decompress .code: {}: {}'.format(type(e).__name__, e))
+
+        self.f = exefs_fp
 
     def getattr(self, path, fh=None):
         uid, gid, pid = fuse_get_context()

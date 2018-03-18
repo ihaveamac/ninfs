@@ -55,8 +55,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
         self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
                        'st_atime': int(g_stat.st_atime)}
 
-        self.f = ncch_fp
-        ncch_header = self.f.read(0x200)
+        ncch_header = ncch_fp.read(0x200)
         self.ncch_reader = ncch.NCCHReader.from_header(ncch_header)
 
         if not self.ncch_reader.flags.no_crypto:
@@ -101,8 +100,8 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                                         'keyslot': 0x2C, 'keyslot_extra': self.ncch_reader.extra_keyslot,
                                         'iv': (self.ncch_reader.partition_id << 64 | (0x02 << 56))}
             if not self.ncch_reader.flags.no_crypto:
-                self.f.seek(exefs_region.offset)
-                exefs_header = self.crypto.aes_ctr(0x2C, self.files['/exefs.bin']['iv'], self.f.read(0xA0))
+                ncch_fp.seek(exefs_region.offset)
+                exefs_header = self.crypto.aes_ctr(0x2C, self.files['/exefs.bin']['iv'], ncch_fp.read(0xA0))
                 exefs_normal_ranges = [(0, 0x200)]
                 for name, offset, size in iter_unpack('<8sII', exefs_header):
                     uname = name.decode('utf-8').strip('\0')
@@ -139,6 +138,8 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                 self._romfs_mounted = True
             except Exception as e:
                 print("Failed to mount RomFS: {}: {}".format(type(e).__name__, e))
+
+        self.f = ncch_fp
 
     def flush(self, path, fh):
         return self.f.flush()
