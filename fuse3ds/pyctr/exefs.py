@@ -108,7 +108,7 @@ class ExeFSReader:
         self.entries = {}  # type: Dict[str, ExeFSEntry]
         for x in entries:
             if x.offset % 0x200:
-                print('Warning: {0.name} has an offset not aligned to 0x200 {0.offset}.\n'
+                print('Warning: {0.name} has an offset not aligned to 0x200 ({0.offset:#x}).\n'
                       'This ExeFS will not work on console.'.format(x))
             self.entries[x.name] = x
 

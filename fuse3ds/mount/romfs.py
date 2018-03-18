@@ -39,7 +39,7 @@ class RomFSMount(LoggingMixIn, Operations):
         romfs_fp.seek(0)
         self.f = romfs_fp
 
-        self.romfs_reader = RomFSReader.load(romfs_fp, case_insensitive=False)
+        self.romfs_reader = RomFSReader.load(romfs_fp, case_insensitive=True)
 
     def getattr(self, path, fh=None):
         uid, gid, pid = fuse_get_context()

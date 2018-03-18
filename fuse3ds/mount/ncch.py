@@ -13,6 +13,7 @@ from math import ceil
 from stat import S_IFDIR, S_IFREG
 from struct import iter_unpack
 from sys import exit
+from typing import BinaryIO
 
 from pyctr import crypto, ncch, util
 
@@ -45,7 +46,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
     _exefs_mounted = False
     _romfs_mounted = False
 
-    def __init__(self, ncch_fp, dev, g_stat, seeddb=None):
+    def __init__(self, ncch_fp: BinaryIO, dev: bool, g_stat: os.stat_result, seeddb: str = None):
         self.crypto = crypto.CTRCrypto(is_dev=dev)
 
         self.crypto.setup_keys_from_boot9()
@@ -255,6 +256,17 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                 data += new_data
 
             data = data[before:size + before]
+
+        else:
+            from pprint import pformat
+            print('--------------------------------------------------',
+                  'Warning: unknown file type (this should not happen!)',
+                  'Please file an issue or contact the developer with the details below.',
+                  '  https://github.com/ihaveamac/fuse-3ds/issues',
+                  '--------------------------------------------------',
+                  '{!r}: {!r}'.format(path, pformat(fi)), sep='\n')
+
+            data = b'g' * size
 
         return data
 

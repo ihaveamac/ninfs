@@ -174,7 +174,6 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
             #   application requires just a few bytes.
             # thanks Stary2001
             before = offset % 16
-            after = (offset + size) % 16
             if size % 16 != 0:
                 size = size + 16 - size % 16
             if offset - before == 0:
@@ -188,6 +187,17 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
             self.f.seek(real_offset - before)
             # adding 0x10 to the size fixes some kind of decryption bug
             data = self.crypto.aes_cbc_decrypt(0x40, iv, self.f.read(size + 0x10))[before:real_size + before]
+
+        else:
+            from pprint import pformat
+            print('--------------------------------------------------',
+                  'Warning: unknown file type (this should not happen!)',
+                  'Please file an issue or contact the developer with the details below.',
+                  '  https://github.com/ihaveamac/fuse-3ds/issues',
+                  '--------------------------------------------------',
+                  '{!r}: {!r}'.format(path, pformat(fi)), sep='\n')
+
+            data = b'g' * size
 
         return data
 

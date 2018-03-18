@@ -10,6 +10,7 @@ from argparse import ArgumentParser
 from errno import ENOENT
 from stat import S_IFDIR, S_IFREG
 from sys import exit
+from typing import BinaryIO
 
 from pyctr import util
 
@@ -29,7 +30,7 @@ except Exception as e:
 class CTRCartImageMount(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, cci_fp, dev, g_stat, seeddb=None):
+    def __init__(self, cci_fp: BinaryIO, dev: bool, g_stat: os.stat_result, seeddb: str = None):
         # get status change, modify, and file access times
         self.g_stat = {'st_ctime': int(g_stat.st_ctime),
                        'st_mtime': int(g_stat.st_mtime),

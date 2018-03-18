@@ -30,7 +30,7 @@ except Exception as e:
 class ExeFSMount(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, exefs_fp: BinaryIO, g_stat: os.stat_result, decompress_code=False):
+    def __init__(self, exefs_fp: BinaryIO, g_stat: os.stat_result, decompress_code: bool = False):
         self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
                        'st_atime': int(g_stat.st_atime)}
 

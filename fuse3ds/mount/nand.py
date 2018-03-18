@@ -12,7 +12,7 @@ from hashlib import sha1, sha256
 from stat import S_IFDIR, S_IFREG
 from struct import unpack, pack
 from sys import exit
-from typing import BinaryIO
+from typing import BinaryIO, AnyStr
 
 from pyctr.crypto import CTRCrypto
 from pyctr.exefs import ExeFSReader
@@ -49,7 +49,8 @@ class NANDImageMount(LoggingMixIn, Operations):
 
     _essentials_mounted = False
 
-    def __init__(self, nand_fp: BinaryIO, dev: bool, g_stat: os.stat_result, readonly=False, otp=None, cid=None):
+    def __init__(self, nand_fp: BinaryIO, dev: bool, g_stat: os.stat_result, readonly: bool = False, otp: bytes = None,
+                 cid: AnyStr = None):
         self.crypto = CTRCrypto(is_dev=dev)
 
         try:
@@ -319,8 +320,6 @@ class NANDImageMount(LoggingMixIn, Operations):
         lpath = path.lower()
         if lpath.startswith('/essential/'):
             return self.exefs_fuse.read(_common.remove_first_dir(path), size, offset, fh)
-        if lpath == '/essential.exefs':
-            print('READ:', hex(size), hex(offset))
         fi = self.files[lpath]
         real_offset = fi['offset'] + offset
         if fi['type'] == 'raw':
@@ -337,10 +336,21 @@ class NANDImageMount(LoggingMixIn, Operations):
             iv = (self.ctr if fi['keyslot']> 0x03 else self.ctr_twl) + (real_offset >> 4)
             data = self.crypto.aes_ctr(fi['keyslot'], iv, data)[before:len(data) - after]
 
-        elif fi['type'] == 'keysect' or fi['type'] == 'twlmbr' or fi['type'] == 'info':
+        elif fi['type'] in {'keysect', 'twlmbr', 'info'}:
             # being lazy here since twlmbr starts at a weird offset. i'll do
             #   it properly some day. maybe.
             data = fi['content'][offset:offset + size]
+
+        else:
+            from pprint import pformat
+            print('--------------------------------------------------',
+                  'Warning: unknown file type (this should not happen!)',
+                  'Please file an issue or contact the developer with the details below.',
+                  '  https://github.com/ihaveamac/fuse-3ds/issues',
+                  '--------------------------------------------------',
+                  '{!r}: {!r}'.format(path, pformat(fi)), sep='\n')
+
+            data = b'g' * size
 
         return data
 
@@ -419,6 +429,7 @@ def main():
     nand_stat = os.stat(a.nand)
 
     with open(a.nand, 'r{}b'.format('' if a.ro else '+')) as f:
+        # noinspection PyTypeChecker
         mount = NANDImageMount(nand_fp=f, dev=a.dev, g_stat=nand_stat, readonly=a.ro, otp=a.otp, cid=a.cid)
         if _common.macos or _common.windows:
             # assuming / is the path separator since macos. but if windows gets support for this,

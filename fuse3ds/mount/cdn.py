@@ -45,7 +45,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
     def rp(self, path):
         return os.path.join(self.cdn_dir, path)
 
-    def __init__(self, cdn_dir, dev, dec_key=None, seeddb=None):
+    def __init__(self, cdn_dir: str, dev: bool, dec_key: bytes = None, seeddb: str = None):
         self.cdn_dir = cdn_dir
 
         self.crypto = CTRCrypto(is_dev=dev)
@@ -187,6 +187,17 @@ class CDNContentsMount(LoggingMixIn, Operations):
                 f.seek(real_offset - before)
                 # adding 0x10 to the size fixes some kind of decryption bug
                 data = self.crypto.aes_cbc_decrypt(0x40, iv, f.read(size + 0x10))[before:real_size + before]
+
+            else:
+                from pprint import pformat
+                print('--------------------------------------------------',
+                      'Warning: unknown file type (this should not happen!)',
+                      'Please file an issue or contact the developer with the details below.',
+                      '  https://github.com/ihaveamac/fuse-3ds/issues',
+                      '--------------------------------------------------',
+                      '{!r}: {!r}'.format(path, pformat(fi)), sep='\n')
+
+                data = b'g' * size
 
             return data
 

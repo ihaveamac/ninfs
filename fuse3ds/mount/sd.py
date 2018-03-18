@@ -47,7 +47,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         hash_p2 = util.readbe(path_hash[16:32])
         return hash_p1 ^ hash_p2
 
-    def __init__(self, sd_dir, movable, dev, readonly=False):
+    def __init__(self, sd_dir: str, movable: str, dev: bool, readonly: bool = False):
         self.fds = {}
         self.crypto = crypto.CTRCrypto(is_dev=dev)
 
