@@ -21,10 +21,10 @@ try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ModuleNotFoundError:
     exit("fuse module not found, please install fusepy to mount images "
-             "(`{} install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_common.pip_command))
+         "(`{} install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_common.pip_command))
 except Exception as e:
     exit("Failed to import the fuse module:\n"
-             "{}: {}".format(type(e).__name__, e))
+         "{}: {}".format(type(e).__name__, e))
 
 
 class ExeFSMount(LoggingMixIn, Operations):
@@ -125,4 +125,6 @@ def main():
 
 
 if __name__ == '__main__':
+    print('Note: You should be calling this script as "mount_{0}" or "{1} -mfuse3ds {0}" '
+          'instead of calling it directly.'.format('exefs', _common.pip_command))
     main()

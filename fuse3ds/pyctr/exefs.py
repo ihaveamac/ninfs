@@ -2,13 +2,18 @@ from typing import BinaryIO, NamedTuple, Iterable, Dict
 
 from .util import readle
 
-__all__ = ['EMPTY_ENTRY', 'ExeFSError', 'CodeDecompressionError', 'decompress_code', 'ExeFSEntry', 'ExeFSReader']
+__all__ = ['EMPTY_ENTRY', 'ExeFSError', 'InvalidExeFSError', 'CodeDecompressionError', 'decompress_code', 'ExeFSEntry',
+           'ExeFSReader']
 
 EMPTY_ENTRY = b'\0' * 0x10
 
 
 class ExeFSError(Exception):
     """Generic exception for ExeFS operations."""
+
+
+class InvalidExeFSError(ExeFSError):
+    """Invalid ExeFS header."""
 
 
 class CodeDecompressionError(ExeFSError):
@@ -126,18 +131,20 @@ class ExeFSReader:
         """Load an ExeFS from a file-like object."""
         header = fp.read(0x200)
 
-        # should I catch UnicodeDecodeError here?
         entries = []
         # exefs entry number, exefs hash number
-        for en, hn in zip(range(0, 0xA0, 0x10), range(0x1E0, 0xA0, -0x20)):
-            entry_raw = header[en:en + 0x10]
-            entry_hash = header[hn:hn + 0x20]
-            if entry_raw == EMPTY_ENTRY:
-                continue
-            entries.append(ExeFSEntry(name=entry_raw[0:8].rstrip(b'\0').decode('ascii'),
-                                      offset=readle(entry_raw[8:12]),
-                                      size=readle(entry_raw[12:16]),
-                                      hash=entry_hash))
+        try:
+            for en, hn in zip(range(0, 0xA0, 0x10), range(0x1E0, 0xA0, -0x20)):
+                entry_raw = header[en:en + 0x10]
+                entry_hash = header[hn:hn + 0x20]
+                if entry_raw == EMPTY_ENTRY:
+                    continue
+                entries.append(ExeFSEntry(name=entry_raw[0:8].rstrip(b'\0').decode('ascii'),
+                                          offset=readle(entry_raw[8:12]),
+                                          size=readle(entry_raw[12:16]),
+                                          hash=entry_hash))
+        except UnicodeDecodeError:
+            raise InvalidExeFSError('Failed to convert name, probably not a valid ExeFS')
 
         return cls(entries)
 

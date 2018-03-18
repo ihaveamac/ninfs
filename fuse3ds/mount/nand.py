@@ -15,7 +15,7 @@ from sys import exit
 from typing import BinaryIO, AnyStr
 
 from pyctr.crypto import CTRCrypto
-from pyctr.exefs import ExeFSReader
+from pyctr.exefs import ExeFSReader, InvalidExeFSError
 from pyctr.util import readbe, readle, roundup
 
 from . import _common
@@ -25,10 +25,10 @@ try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ModuleNotFoundError:
     exit("fuse module not found, please install fusepy to mount images "
-             "(`{} install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_common.pip_command))
+         "(`{} install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_common.pip_command))
 except Exception as e:
     exit("Failed to import the fuse module:\n"
-             "{}: {}".format(type(e).__name__, e))
+         "{}: {}".format(type(e).__name__, e))
 
 try:
     from Cryptodome.Cipher import AES
@@ -38,7 +38,7 @@ except ModuleNotFoundError:
              "(`{} install pycryptodomex`).".format(_common.pip_command))
 except Exception as e:
     exit("Failed to import the Cryptodome module:\n"
-             "{}: {}".format(type(e).__name__, e))
+         "{}: {}".format(type(e).__name__, e))
 
 # ncsd image doesn't have the actual size
 nand_size = {0x200000: 0x3AF00000, 0x280000: 0x4D800000}
@@ -69,7 +69,7 @@ class NANDImageMount(LoggingMixIn, Operations):
         # check for essential.exefs
         nand_fp.seek(0x200)
         try:
-            exefs = ExeFSReader.load(self.f)
+            exefs = ExeFSReader.load(nand_fp)
         except InvalidExeFSError:
             exefs = None
         if otp or cid:
@@ -449,4 +449,6 @@ def main():
 
 
 if __name__ == '__main__':
+    print('Note: You should be calling this script as "mount_{0}" or "{1} -mfuse3ds {0}" '
+          'instead of calling it directly.'.format('nand', _common.pip_command))
     main()

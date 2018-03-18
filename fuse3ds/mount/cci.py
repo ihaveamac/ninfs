@@ -21,10 +21,10 @@ try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ModuleNotFoundError:
     exit("fuse module not found, please install fusepy to mount images "
-             "(`{} install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_common.pip_command))
+         "(`{} install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_common.pip_command))
 except Exception as e:
     exit("Failed to import the fuse module:\n"
-             "{}: {}".format(type(e).__name__, e))
+         "{}: {}".format(type(e).__name__, e))
 
 
 class CTRCartImageMount(LoggingMixIn, Operations):
@@ -56,7 +56,7 @@ class CTRCartImageMount(LoggingMixIn, Operations):
         ncsd_partitions = [[util.readle(ncsd_part_raw[i:i + 4]) * 0x200,
                             util.readle(ncsd_part_raw[i + 4:i + 8]) * 0x200] for i in range(0, 0x40, 0x8)]
 
-        ncsd_part_names = ['game', 'manual', 'dlp', 'unk', 'unk', 'unk', 'update_n3ds', 'update_o3ds']
+        ncsd_part_names = ('game', 'manual', 'dlp', 'unk', 'unk', 'unk', 'update_n3ds', 'update_o3ds')
 
         self.dirs = {}
         for idx, part in enumerate(ncsd_partitions):
@@ -67,6 +67,7 @@ class CTRCartImageMount(LoggingMixIn, Operations):
                 dirname = '/content{}.{}'.format(idx, ncsd_part_names[idx])
                 try:
                     content_vfp = _common.VirtualFileWrapper(self, filename, part[1])
+                    # noinspection PyTypeChecker
                     content_fuse = NCCHContainerMount(content_vfp, dev, g_stat=g_stat, seeddb=seeddb)
                     self.dirs[dirname] = content_fuse
                 except Exception as e:
@@ -146,4 +147,6 @@ def main():
 
 
 if __name__ == '__main__':
+    print('Note: You should be calling this script as "mount_{0}" or "{1} -mfuse3ds {0}" '
+          'instead of calling it directly.'.format('cci', _common.pip_command))
     main()
