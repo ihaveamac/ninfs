@@ -94,6 +94,8 @@ class NCCHContainerMount(LoggingMixIn, Operations):
         if logo_region.offset:
             self.files['/logo.bin'] = {'size': logo_region.size, 'offset': logo_region.offset, 'enctype': 'none'}
 
+        self.f = ncch_fp
+
         exefs_region = self.ncch_reader.exefs_region
         if exefs_region.offset:
             self.files['/exefs.bin'] = {'size': exefs_region.size, 'offset': exefs_region.offset, 'enctype': 'exefs',
@@ -138,8 +140,6 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                 self._romfs_mounted = True
             except Exception as e:
                 print("Failed to mount RomFS: {}: {}".format(type(e).__name__, e))
-
-        self.f = ncch_fp
 
     def flush(self, path, fh):
         return self.f.flush()

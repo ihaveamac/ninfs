@@ -71,6 +71,7 @@ class NANDImageMount(LoggingMixIn, Operations):
         try:
             exefs = ExeFSReader.load(nand_fp)
         except InvalidExeFSError:
+            raise
             exefs = None
         if otp or cid:
             if otp:
@@ -159,17 +160,6 @@ class NANDImageMount(LoggingMixIn, Operations):
         self.files = {'/nand_hdr.bin': {'size': 0x200, 'offset': 0, 'keyslot': 0xFF, 'type': 'raw'},
                       '/nand.bin': {'size': raw_nand_size, 'offset': 0, 'keyslot': 0xFF, 'type': 'raw'},
                       '/nand_minsize.bin': {'size': self.real_nand_size, 'offset': 0, 'keyslot': 0xFF, 'type': 'raw'}}
-
-        if exefs is not None:
-            exefs_size = sum(roundup(x.size, 0x200) for x in exefs.entries.values()) + 0x200
-            self.files['/essential.exefs'] = {'size': exefs_size, 'offset': 0x200, 'keyslot': 0xFF, 'type': 'raw'}
-            try:
-                exefs_vfp = _common.VirtualFileWrapper(self, '/essential.exefs', exefs_size)
-                # noinspection PyTypeChecker
-                self.exefs_fuse = ExeFSMount(exefs_vfp, g_stat=g_stat)
-                self._essentials_mounted = True
-            except Exception as e:
-                print("Failed to mount essential.exefs: {}: {}".format(type(e).__name__, e))
 
         nand_fp.seek(0x12C00)
         keysect_enc = nand_fp.read(0x200)
@@ -278,12 +268,23 @@ class NANDImageMount(LoggingMixIn, Operations):
         # GM9 bonus drive
         if raw_nand_size != self.real_nand_size:
             nand_fp.seek(self.real_nand_size)
-            bonus_drive_header = self.f.read(0x200)
+            bonus_drive_header = nand_fp.read(0x200)
             if bonus_drive_header[0x1FE:0x200] == b'\x55\xAA':
                 self.files['/bonus.img'] = {'size': raw_nand_size - self.real_nand_size, 'offset': self.real_nand_size,
                                             'keyslot': 0xFF, 'type': 'raw'}
 
         self.f = nand_fp
+
+        if exefs is not None:
+            exefs_size = sum(roundup(x.size, 0x200) for x in exefs.entries.values()) + 0x200
+            self.files['/essential.exefs'] = {'size': exefs_size, 'offset': 0x200, 'keyslot': 0xFF, 'type': 'raw'}
+            try:
+                exefs_vfp = _common.VirtualFileWrapper(self, '/essential.exefs', exefs_size)
+                # noinspection PyTypeChecker
+                self.exefs_fuse = ExeFSMount(exefs_vfp, g_stat=g_stat)
+                self._essentials_mounted = True
+            except Exception as e:
+                print("Failed to mount essential.exefs: {}: {}".format(type(e).__name__, e))
 
     def flush(self, path, fh):
         return self.f.flush()

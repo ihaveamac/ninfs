@@ -108,6 +108,8 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
 
         self.dirs = {}
 
+        self.f = cia_fp
+
         # read chunks to generate virtual files
         current_offset = content_offset
         for chunk in tmd.chunk_records:
@@ -125,8 +127,6 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
                 self.dirs[dirname] = content_fuse
             except KeyError as e:
                 print("Failed to mount {}: {}: {}".format(filename, type(e).__name__, e))
-
-        self.f = cia_fp
 
     def flush(self, path, fh):
         return self.f.flush()

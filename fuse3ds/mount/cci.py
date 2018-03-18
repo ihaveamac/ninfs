@@ -58,6 +58,8 @@ class CTRCartImageMount(LoggingMixIn, Operations):
 
         ncsd_part_names = ('game', 'manual', 'dlp', 'unk', 'unk', 'unk', 'update_n3ds', 'update_o3ds')
 
+        self.f = cci_fp
+
         self.dirs = {}
         for idx, part in enumerate(ncsd_partitions):
             if part[0]:
@@ -72,8 +74,6 @@ class CTRCartImageMount(LoggingMixIn, Operations):
                     self.dirs[dirname] = content_fuse
                 except Exception as e:
                     print("Failed to mount {}: {}: {}".format(filename, type(e).__name__, e))
-
-        self.f = cci_fp
 
     def flush(self, path, fh):
         return self.f.flush()
