@@ -22,6 +22,26 @@ def exit_print_types():
     exit(1)
 
 def mount(mount_type: str) -> int:
+    # noinspection PyProtectedMember
+    from mount._common import windows
+    if windows:
+        from ctypes import windll
+        if windll.shell32.IsUserAnAdmin():
+            print('- Note: This should *not* be run as an administrator.',
+                  '- The mount will not be normally accessible.',
+                  '- This should be run from a non-administrator command prompt or PowerShell prompt.', sep='\n')
+    else:
+        try:
+            from os import getuid
+            if getuid() == 0:  # 0 == root on macos and linux
+                print('- Note: This should *not* be run as root.',
+                      '- The mount will not be normally accessible by other users.',
+                      '- This should be run from a non-root terminal.',
+                      '- If you want root to be able to access the mount,',
+                      '-   you can add `-o allow_root` to the arguments.',
+                      sep='\n')
+        except (AttributeError, ImportError):
+            pass
     if mount_type not in mount_types:
         exit_print_types()
 

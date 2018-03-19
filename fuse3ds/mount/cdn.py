@@ -120,6 +120,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
             dirname = '/{:04x}.{}'.format(chunk.cindex, chunk.id)
             try:
                 content_vfp = _common.VirtualFileWrapper(self, filename, chunk.size)
+                # noinspection PyTypeChecker
                 content_fuse = NCCHContainerMount(content_vfp, dev=dev, g_stat=cdn_stat, seeddb=seeddb)
                 self.dirs[dirname] = content_fuse
             except Exception as e:
