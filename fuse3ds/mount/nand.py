@@ -49,8 +49,8 @@ class NANDImageMount(LoggingMixIn, Operations):
 
     _essentials_mounted = False
 
-    def __init__(self, nand_fp: BinaryIO, dev: bool, g_stat: os.stat_result, readonly: bool = False, otp: bytes = None,
-                 cid: AnyStr = None):
+    def __init__(self, nand_fp: BinaryIO, g_stat: os.stat_result, dev: bool = False, readonly: bool = False,
+                 otp: bytes = None, cid: AnyStr = None):
         self.crypto = CTRCrypto(is_dev=dev)
 
         try:
@@ -433,17 +433,16 @@ def main():
         # noinspection PyTypeChecker
         mount = NANDImageMount(nand_fp=f, dev=a.dev, g_stat=nand_stat, readonly=a.ro, otp=a.otp, cid=a.cid)
         if _common.macos or _common.windows:
+            opts['fstypename'] = 'NAND'
             # assuming / is the path separator since macos. but if windows gets support for this,
             #   it will have to be done differently.
-            path_to_show = os.path.realpath(a.nand).rsplit('/', maxsplit=2)
             if _common.macos:
+                path_to_show = os.path.realpath(a.nand).rsplit('/', maxsplit=2)
                 opts['volname'] = "Nintendo 3DS NAND ({}/{})".format(path_to_show[-2], path_to_show[-1])
             elif _common.windows:
                 # volume label can only be up to 32 chars
                 # TODO: maybe I should show the path here, if i can shorten it properly
                 opts['volname'] = "Nintendo 3DS NAND"
-        if _common.macos or _common.windows:
-            opts['fstypename'] = 'NAND'
         fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do, ro=a.ro, nothreads=True,
                     fsname=os.path.realpath(a.nand).replace(',', '_'), **opts)
 

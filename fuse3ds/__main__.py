@@ -13,6 +13,7 @@ except ImportError:
         __version__ = '<unset>'
 
 mount_types = ('cci', 'cdn', 'cia', 'exefs', 'nand', 'ncch', 'romfs', 'sd')
+mount_aliases = {'3ds': 'cci', 'cxi': 'ncch', 'cfa': 'ncch', 'app': 'ncch'}
 
 print('fuse-3ds {} - https://github.com/ihaveamac/fuse-3ds'.format(__version__))
 
@@ -42,10 +43,10 @@ def mount(mount_type: str) -> int:
                       sep='\n')
         except (AttributeError, ImportError):
             pass
-    if mount_type not in mount_types:
+    if mount_type not in mount_types and mount_type not in mount_aliases:
         exit_print_types()
 
-    module = import_module('mount.' + mount_type)
+    module = import_module('mount.' + mount_aliases.get(mount_type, mount_type))
     return module.main()
 
 def main():

@@ -4,16 +4,15 @@
 Mounts raw CDN contents, creating a virtual filesystem of decrypted contents (if encrypted).
 """
 
-from argparse import ArgumentParser
-from errno import ENOENT
 import logging
 import os
+from argparse import ArgumentParser
+from errno import ENOENT
 from stat import S_IFDIR, S_IFREG
 from sys import exit
 
 from pyctr.crypto import CTRCrypto
 from pyctr.tmd import TitleMetadataReader, CHUNK_RECORD_SIZE
-from pyctr.util import readbe
 
 from . import _common
 from .ncch import NCCHContainerMount
@@ -45,7 +44,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
     def rp(self, path):
         return os.path.join(self.cdn_dir, path)
 
-    def __init__(self, cdn_dir: str, dev: bool, dec_key: bytes = None, seeddb: str = None):
+    def __init__(self, cdn_dir: str, dec_key: bytes = None, dev: bool = False, seeddb: str = None):
         self.cdn_dir = cdn_dir
 
         self.crypto = CTRCrypto(is_dev=dev)
@@ -213,7 +212,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
 def main():
     parser = ArgumentParser(description="Mount Nintendo 3DS CDN contents.",
                             parents=(_common.default_argp, _common.dev_argp, _common.seeddb_argp,
-                                              _common.main_positional_args('cdn_dir', "directory with CDN contents")))
+                                     _common.main_positional_args('cdn_dir', "directory with CDN contents")))
     parser.add_argument('--dec-key', help="decrypted titlekey")
 
     a = parser.parse_args()

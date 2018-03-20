@@ -50,7 +50,7 @@ def new_offset(x: int) -> int:
 class CTRImportableArchiveMount(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, cia_fp: BinaryIO, dev: bool, g_stat: os.stat_result, seeddb: bool = None):
+    def __init__(self, cia_fp: BinaryIO, g_stat: os.stat_result, dev: bool = False, seeddb: bool = None):
         self.crypto = CTRCrypto(is_dev=dev)
 
         self.crypto.setup_keys_from_boot9()

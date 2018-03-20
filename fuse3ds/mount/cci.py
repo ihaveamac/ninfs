@@ -30,7 +30,7 @@ except Exception as e:
 class CTRCartImageMount(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, cci_fp: BinaryIO, dev: bool, g_stat: os.stat_result, seeddb: str = None):
+    def __init__(self, cci_fp: BinaryIO, g_stat: os.stat_result, dev: bool = False, seeddb: str = None):
         # get status change, modify, and file access times
         self.g_stat = {'st_ctime': int(g_stat.st_ctime),
                        'st_mtime': int(g_stat.st_mtime),

@@ -46,7 +46,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
     _exefs_mounted = False
     _romfs_mounted = False
 
-    def __init__(self, ncch_fp: BinaryIO, dev: bool, g_stat: os.stat_result, seeddb: str = None):
+    def __init__(self, ncch_fp: BinaryIO, g_stat: os.stat_result, dev: bool = False, seeddb: str = None):
         self.crypto = crypto.CTRCrypto(is_dev=dev)
 
         self.crypto.setup_keys_from_boot9()
