@@ -76,7 +76,7 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
 
         # load tmd
         cia_fp.seek(tmd_offset)
-        tmd = TitleMetadataReader.load(self.f)
+        tmd = TitleMetadataReader.load(cia_fp)
         self.title_id = tmd.title_id
 
         # read title id, encrypted titlekey and common key index
