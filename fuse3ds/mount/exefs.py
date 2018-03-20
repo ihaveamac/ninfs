@@ -34,9 +34,11 @@ class ExeFSMount(LoggingMixIn, Operations):
         self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
                        'st_atime': int(g_stat.st_atime)}
 
-        self.exefs_reader = ExeFSReader.load(exefs_fp)
-        self.files = {'/' + x.name.replace('.', '', 1) + '.bin': x for x in self.exefs_reader.entries.values()}
-        self.exefs_size = sum(x.size for x in self.exefs_reader.entries.values())
+        self.reader = ExeFSReader.load(exefs_fp)
+        self.files = {'/' + x.name.replace('.', '', 1) + '.bin': x for x in self.reader.entries.values()}
+        self.exefs_size = sum(x.size for x in self.reader.entries.values())
+
+        self.f = exefs_fp
 
         if decompress_code and '/code.bin' in self.files:
             print('ExeFS: Decompressing .code...', end='', flush=True)
@@ -48,8 +50,6 @@ class ExeFSMount(LoggingMixIn, Operations):
                 print(' done!')
             except CodeDecompressionError as e:
                 print('\nFailed to decompress .code: {}: {}'.format(type(e).__name__, e))
-
-        self.f = exefs_fp
 
     def getattr(self, path, fh=None):
         uid, gid, pid = fuse_get_context()
@@ -90,7 +90,7 @@ class ExeFSMount(LoggingMixIn, Operations):
 
     def statfs(self, path):
         return {'f_bsize': 4096, 'f_blocks': self.exefs_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
-                'f_files': len(self.exefs_reader)}
+                'f_files': len(self.reader)}
 
 
 def main():

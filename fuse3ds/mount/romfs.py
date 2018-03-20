@@ -37,14 +37,14 @@ class RomFSMount(LoggingMixIn, Operations):
         romfs_fp.seek(0, 2)
         self.romfs_size = romfs_fp.tell()
         romfs_fp.seek(0)
-        self.romfs_reader = RomFSReader.load(romfs_fp, case_insensitive=True)
+        self.reader = RomFSReader.load(romfs_fp, case_insensitive=True)
 
         self.f = romfs_fp
 
     def getattr(self, path, fh=None):
         uid, gid, pid = fuse_get_context()
         try:
-            item = self.romfs_reader.get_info_from_path(path)
+            item = self.reader.get_info_from_path(path)
         except RomFSFileNotFoundError:
             raise FuseOSError(ENOENT)
         if item.type == 'dir':
@@ -62,7 +62,7 @@ class RomFSMount(LoggingMixIn, Operations):
 
     def readdir(self, path, fh):
         try:
-            item = self.romfs_reader.get_info_from_path(path)
+            item = self.reader.get_info_from_path(path)
         except RomFSFileNotFoundError:
             raise FuseOSError(ENOENT)
         yield from ('.', '..')
@@ -70,7 +70,7 @@ class RomFSMount(LoggingMixIn, Operations):
 
     def read(self, path, size, offset, fh):
         try:
-            item = self.romfs_reader.get_info_from_path(path)
+            item = self.reader.get_info_from_path(path)
         except RomFSFileNotFoundError:
             raise FuseOSError(ENOENT)
         real_offset = item.offset + offset
@@ -79,12 +79,12 @@ class RomFSMount(LoggingMixIn, Operations):
             return b''
         if offset + size > item.size:
             size = item.size - offset
-        self.f.seek(self.romfs_reader.data_offset + real_offset)
+        self.f.seek(self.reader.data_offset + real_offset)
         return self.f.read(size)
 
     def statfs(self, path):
         try:
-            item = self.romfs_reader.get_info_from_path(path)
+            item = self.reader.get_info_from_path(path)
         except RomFSFileNotFoundError:
             raise FuseOSError(ENOENT)
         return {'f_bsize': 4096, 'f_blocks': self.romfs_size // 4096, 'f_bavail': 0, 'f_bfree': 0,

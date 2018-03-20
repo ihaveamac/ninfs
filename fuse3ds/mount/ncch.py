@@ -56,52 +56,52 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                        'st_atime': int(g_stat.st_atime)}
 
         ncch_header = ncch_fp.read(0x200)
-        self.ncch_reader = ncch.NCCHReader.from_header(ncch_header)
+        self.reader = ncch.NCCHReader.from_header(ncch_header)
 
-        if not self.ncch_reader.flags.no_crypto:
+        if not self.reader.flags.no_crypto:
             # I should figure out what happens if fixed-key crypto is
             #   used along with seed. even though this will never
             #   happen in practice, I would still like to see what
             #   happens if it happens.
-            if self.ncch_reader.flags.fixed_crypto_key:
-                normal_key = ncch.fixed_system_key if self.ncch_reader.program_id & (0x10 << 32) else 0x0
+            if self.reader.flags.fixed_crypto_key:
+                normal_key = ncch.fixed_system_key if self.reader.program_id & (0x10 << 32) else 0x0
                 self.crypto.set_normal_key(0x2C, normal_key.to_bytes(0x10, 'big'))
             else:
-                if self.ncch_reader.flags.uses_seed:
+                if self.reader.flags.uses_seed:
                     seeddb_path = ncch.check_seeddb_file(seeddb)
                     with open(seeddb_path, 'rb') as f:
-                        seed = ncch.get_seed(f, self.ncch_reader.program_id)
+                        seed = ncch.get_seed(f, self.reader.program_id)
 
-                    self.ncch_reader.setup_seed(seed)
+                    self.reader.setup_seed(seed)
 
-                self.crypto.set_keyslot('y', 0x2C, util.readbe(self.ncch_reader.get_key_y(original=True)))
-                self.crypto.set_keyslot('y', self.ncch_reader.extra_keyslot,
-                                        util.readbe(self.ncch_reader.get_key_y()))
+                self.crypto.set_keyslot('y', 0x2C, util.readbe(self.reader.get_key_y(original=True)))
+                self.crypto.set_keyslot('y', self.reader.extra_keyslot,
+                                        util.readbe(self.reader.get_key_y()))
 
-        decrypted_filename = '/decrypted.' + ('cxi' if self.ncch_reader.flags.executable else 'cfa')
-        self.files = {decrypted_filename: {'size': self.ncch_reader.content_size, 'offset': 0, 'enctype': 'fulldec'},
+        decrypted_filename = '/decrypted.' + ('cxi' if self.reader.flags.executable else 'cfa')
+        self.files = {decrypted_filename: {'size': self.reader.content_size, 'offset': 0, 'enctype': 'fulldec'},
                       '/ncch.bin': {'size': 0x200, 'offset': 0, 'enctype': 'none'}}
 
-        if self.ncch_reader.check_for_extheader():
+        if self.reader.check_for_extheader():
             self.files['/extheader.bin'] = {'size': 0x800, 'offset': 0x200, 'enctype': 'normal',
-                                            'keyslot': 0x2C, 'iv': (self.ncch_reader.partition_id << 64 | (0x01 << 56))}
+                                            'keyslot': 0x2C, 'iv': (self.reader.partition_id << 64 | (0x01 << 56))}
 
-        plain_region = self.ncch_reader.plain_region
+        plain_region = self.reader.plain_region
         if plain_region.offset:
             self.files['/plain.bin'] = {'size': plain_region.size, 'offset': plain_region.offset, 'enctype': 'none'}
 
-        logo_region = self.ncch_reader.logo_region
+        logo_region = self.reader.logo_region
         if logo_region.offset:
             self.files['/logo.bin'] = {'size': logo_region.size, 'offset': logo_region.offset, 'enctype': 'none'}
 
         self.f = ncch_fp
 
-        exefs_region = self.ncch_reader.exefs_region
+        exefs_region = self.reader.exefs_region
         if exefs_region.offset:
             self.files['/exefs.bin'] = {'size': exefs_region.size, 'offset': exefs_region.offset, 'enctype': 'exefs',
-                                        'keyslot': 0x2C, 'keyslot_extra': self.ncch_reader.extra_keyslot,
-                                        'iv': (self.ncch_reader.partition_id << 64 | (0x02 << 56))}
-            if not self.ncch_reader.flags.no_crypto:
+                                        'keyslot': 0x2C, 'keyslot_extra': self.reader.extra_keyslot,
+                                        'iv': (self.reader.partition_id << 64 | (0x02 << 56))}
+            if not self.reader.flags.no_crypto:
                 ncch_fp.seek(exefs_region.offset)
                 exefs_header = self.crypto.aes_ctr(0x2C, self.files['/exefs.bin']['iv'], ncch_fp.read(0xA0))
                 exefs_normal_ranges = [(0, 0x200)]
@@ -114,7 +114,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
             try:
                 # get code compression bit
                 decompress = False
-                if self.ncch_reader.check_for_extheader():
+                if self.reader.check_for_extheader():
                     exh_flag = self.read('/extheader.bin', 1, 0xD, 0)
                     decompress = exh_flag[0] & 1
                 exefs_vfp = _common.VirtualFileWrapper(self, '/exefs.bin', exefs_region.size)
@@ -125,12 +125,12 @@ class NCCHContainerMount(LoggingMixIn, Operations):
             except Exception as e:
                 print("Failed to mount ExeFS: {}: {}".format(type(e).__name__, e))
 
-        if not self.ncch_reader.flags.no_romfs:
-            romfs_region = self.ncch_reader.romfs_region
+        if not self.reader.flags.no_romfs:
+            romfs_region = self.reader.romfs_region
             if romfs_region.offset:
                 self.files['/romfs.bin'] = {'size': romfs_region.size, 'offset': romfs_region.offset,
-                                            'enctype': 'normal', 'keyslot': self.ncch_reader.extra_keyslot,
-                                            'iv': (self.ncch_reader.partition_id << 64 | (0x03 << 56))}
+                                            'enctype': 'normal', 'keyslot': self.reader.extra_keyslot,
+                                            'iv': (self.reader.partition_id << 64 | (0x03 << 56))}
 
             try:
                 romfs_vfp = _common.VirtualFileWrapper(self, '/romfs.bin', romfs_region.size)
@@ -184,7 +184,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
             return self.romfs_fuse.read(_common.remove_first_dir(path), size, offset, fh)
         fi = self.files[lpath]
         real_offset = fi['offset'] + offset
-        if fi['enctype'] == 'none' or self.ncch_reader.flags.no_crypto:
+        if fi['enctype'] == 'none' or self.reader.flags.no_crypto:
             # if no encryption, just read and return
             self.f.seek(real_offset)
             data = self.f.read(size)
@@ -277,7 +277,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
         if path.startswith('/romfs/'):
             return self.romfs_fuse.statfs(_common.remove_first_dir(path))
         else:
-            return {'f_bsize': 4096, 'f_blocks': self.ncch_reader.content_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
+            return {'f_bsize': 4096, 'f_blocks': self.reader.content_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
                     'f_files': len(self.files)}
 
 
@@ -299,10 +299,10 @@ def main():
         if _common.macos or _common.windows:
             opts['fstypename'] = 'NCCH'
             if _common.macos:
-                opts['volname'] = "NCCH Container ({0.product_code}; {0.program_id:016X})".format(mount.ncch_reader)
+                opts['volname'] = "NCCH Container ({0.product_code}; {0.program_id:016X})".format(mount.reader)
             elif _common.windows:
                 # volume label can only be up to 32 chars
-                opts['volname'] = "NCCH ({0.product_code})".format(mount.ncch_reader)
+                opts['volname'] = "NCCH ({0.product_code})".format(mount.reader)
         fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do, ro=True, nothreads=True,
                     fsname=os.path.realpath(a.ncch).replace(',', '_'), **opts)
 

@@ -149,9 +149,10 @@ class CDNContentsMount(LoggingMixIn, Operations):
         first_dir = _common.get_first_dir(path)
         if first_dir in self.dirs:
             yield from self.dirs[first_dir].readdir(_common.remove_first_dir(path), fh)
-        yield from ('.', '..')
-        yield from (x[1:] for x in self.files)
-        yield from (x[1:] for x in self.dirs)
+        else:
+            yield from ('.', '..')
+            yield from (x[1:] for x in self.files)
+            yield from (x[1:] for x in self.dirs)
 
     def read(self, path, size, offset, fh):
         first_dir = _common.get_first_dir(path)

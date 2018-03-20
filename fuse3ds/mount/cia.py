@@ -13,7 +13,7 @@ from errno import ENOENT
 from stat import S_IFDIR, S_IFREG
 from struct import unpack
 from sys import exit
-from typing import BinaryIO
+from typing import BinaryIO, Dict
 
 from pyctr.crypto import CTRCrypto
 from pyctr.tmd import TitleMetadataReader, CHUNK_RECORD_SIZE
@@ -106,7 +106,7 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
             if meta_size == 0x3AC0:
                 self.files['/icon.bin'] = {'size': 0x36C0, 'offset': meta_offset + 0x400, 'type': 'raw'}
 
-        self.dirs = {}
+        self.dirs = {}  # type: Dict[str, NCCHContainerMount]
 
         self.f = cia_fp
 
@@ -152,9 +152,10 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
         first_dir = _common.get_first_dir(path)
         if first_dir in self.dirs:
             yield from self.dirs[first_dir].readdir(_common.remove_first_dir(path), fh)
-        yield from ('.', '..')
-        yield from (x[1:] for x in self.files)
-        yield from (x[1:] for x in self.dirs)
+        else:
+            yield from ('.', '..')
+            yield from (x[1:] for x in self.files)
+            yield from (x[1:] for x in self.dirs)
 
     def read(self, path, size, offset, fh):
         first_dir = _common.get_first_dir(path)
