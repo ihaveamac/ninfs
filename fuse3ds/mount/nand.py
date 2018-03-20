@@ -71,7 +71,6 @@ class NANDImageMount(LoggingMixIn, Operations):
         try:
             exefs = ExeFSReader.load(nand_fp)
         except InvalidExeFSError:
-            raise
             exefs = None
         if otp or cid:
             if otp:
