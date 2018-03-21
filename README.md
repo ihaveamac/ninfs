@@ -40,7 +40,7 @@ The main way to run a mount script after installing is using "`mount_<type>`" (e
 
 If it doesn't work, the other way is to use `<python-cmd> -mfuse3ds <type>` (e.g. Windows: `py -3 -mfuse3ds cci game.3ds mountpoint`, \*nix: `python3 -mfuse3ds cci game.3ds mountpoint`).
 
-Windows users can use a drive letter like `F:` as a mountpoint.
+Windows users can use a drive letter like `F:` as a mountpoint, or use `*` and a drive letter will be automatically chosen.
 
 ### Examples
 * Mount a 3DS game card dump:  
