@@ -94,10 +94,9 @@ class ExeFSMount(LoggingMixIn, Operations):
                 'f_files': len(self.reader)}
 
 
-def main():
-    parser = ArgumentParser(description='Mount Nintendo 3DS Executable Filesystem (ExeFS) files.',
-                            parents=(_common.default_argp,
-                                              _common.main_positional_args('exefs', 'ExeFS file')))
+def main(prog: str = None):
+    parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS Executable Filesystem (ExeFS) files.',
+                            parents=(_common.default_argp, _common.main_positional_args('exefs', 'ExeFS file')))
     parser.add_argument('--decompress-code', help='decompress the .code section', action='store_true')
 
     a = parser.parse_args()

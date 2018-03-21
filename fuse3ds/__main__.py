@@ -22,7 +22,7 @@ def exit_print_types():
     print(' ', ', '.join(mount_types))
     exit(1)
 
-def mount(mount_type: str) -> int:
+def mount(mount_type: str, return_doc: bool = False) -> int:
     # noinspection PyProtectedMember
     from mount._common import windows
     if windows:
@@ -47,7 +47,13 @@ def mount(mount_type: str) -> int:
         exit_print_types()
 
     module = import_module('mount.' + mount_aliases.get(mount_type, mount_type))
-    return module.main()
+    if return_doc:
+        return module.__doc__
+
+    prog = None
+    if __name__ != '__main__':
+        prog = 'mount_' + mount_aliases.get(mount_type, mount_type)
+    return module.main(prog=prog)
 
 def main():
     path.append(dirname(realpath(__file__)))

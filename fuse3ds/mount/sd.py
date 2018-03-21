@@ -232,11 +232,11 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         return f.write(out_data)
 
 
-def main():
-    parser = ArgumentParser(description='Mount Nintendo 3DS SD card contents.',
+def main(prog: str = None):
+    parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS SD card contents.',
                             parents=(_common.default_argp, _common.readonly_argp, _common.dev_argp,
-                                              _common.main_positional_args(
-                                                  'sd_dir', "path to folder with SD contents (on SD: /Nintendo 3DS)")))
+                                     _common.main_positional_args(
+                                         'sd_dir',"path to folder with SD contents (on SD: /Nintendo 3DS)")))
     parser.add_argument('--movable', metavar='MOVABLESED', help='path to movable.sed', required=True)
 
     a = parser.parse_args()

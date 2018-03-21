@@ -41,7 +41,7 @@ seeddb_argp.add_argument('--seeddb', help="path to seeddb.bin")
 def main_positional_args(name: str, help: str) -> ArgumentParser:
     parser = ArgumentParser(add_help=False)
     parser.add_argument(name, help=help)
-    parser.add_argument('mount_point', help='mount_point')
+    parser.add_argument('mount_point', help='mount point')
     return parser
 
 

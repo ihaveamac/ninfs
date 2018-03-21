@@ -211,10 +211,10 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
                 'f_files': len(self.files)}
 
 
-def main():
-    parser = ArgumentParser(description="Mount Nintendo 3DS CTR Importable Archive files.",
+def main(prog: str = None):
+    parser = ArgumentParser(prog=prog, description="Mount Nintendo 3DS CTR Importable Archive files.",
                             parents=(_common.default_argp, _common.dev_argp, _common.seeddb_argp,
-                                              _common.main_positional_args('cia', "CIA file")))
+                                     _common.main_positional_args('cia', "CIA file")))
 
     a = parser.parse_args()
     opts = dict(_common.parse_fuse_opts(a.o))

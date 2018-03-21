@@ -281,10 +281,10 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                     'f_files': len(self.files)}
 
 
-def main():
-    parser = ArgumentParser(description="Mount Nintendo 3DS NCCH containers.",
+def main(prog: str = None):
+    parser = ArgumentParser(prog=prog, description="Mount Nintendo 3DS NCCH containers.",
                             parents=(_common.default_argp, _common.dev_argp, _common.seeddb_argp,
-                                              _common.main_positional_args('ncch', "NCCH file")))
+                                     _common.main_positional_args('ncch', "NCCH file")))
 
     a = parser.parse_args()
     opts = dict(_common.parse_fuse_opts(a.o))

@@ -91,10 +91,9 @@ class RomFSMount(LoggingMixIn, Operations):
                 'f_files': len(item.contents)}
 
 
-def main():
-    parser = ArgumentParser(description='Mount Nintendo 3DS Read-only Filesystem (RomFS) files.',
-                            parents=(_common.default_argp,
-                                              _common.main_positional_args('romfs', 'RomFS file')))
+def main(prog: str = None):
+    parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS Read-only Filesystem (RomFS) files.',
+                            parents=(_common.default_argp, _common.main_positional_args('romfs', 'RomFS file')))
 
     a = parser.parse_args()
     opts = dict(_common.parse_fuse_opts(a.o))

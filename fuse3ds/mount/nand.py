@@ -413,10 +413,10 @@ class NANDImageMount(LoggingMixIn, Operations):
         return real_len
 
 
-def main():
-    parser = ArgumentParser(description='Mount Nintendo 3DS NAND images.',
+def main(prog: str = None):
+    parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS NAND images.',
                             parents=(_common.default_argp, _common.readonly_argp, _common.dev_argp,
-                                              _common.main_positional_args('nand', "NAND image")))
+                            _common.main_positional_args('nand', "NAND image")))
     parser.add_argument('--otp', help='path to otp (enc/dec); not needed if NAND image has essentials backup from '
                                       'GodMode9')
     parser.add_argument('--cid', help='NAND CID; not needed if NAND image has essentials backup from GodMode9')
