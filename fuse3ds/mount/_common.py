@@ -1,6 +1,6 @@
 import inspect
 import sys
-from argparse import ArgumentParser
+from argparse import ArgumentParser, SUPPRESS
 from typing import Generator, Tuple, Union
 
 from fuse import Operations
@@ -8,7 +8,7 @@ from fuse import Operations
 windows = sys.platform in {'win32', 'cygwin'}
 macos = sys.platform == 'darwin'
 
-pip_command = 'py -3 -mpip' if windows else 'python3 -mpip'
+python_cmd = 'py -3' if windows else 'python3'
 
 # this is a temporary (hopefully) thing to check for the fusepy version on windows, since a newer commit on
 # a fork of it is currently required for windows.
@@ -24,8 +24,9 @@ if windows:
     del fuse_file_info, ctypes
 
 default_argp = ArgumentParser(add_help=False)
-default_argp.add_argument('--fg', '-f', help='run in foreground', action='store_true')
-default_argp.add_argument('--do', help='debug output (python logging module)', action='store_true')
+default_argp.add_argument('-f', '--fg', help='run in foreground', action='store_true')
+default_argp.add_argument('-d', help='debug output (fuse/winfsp log)', action='store_true')
+default_argp.add_argument('--do', help=SUPPRESS, action='store_true')  # debugging using python logging
 default_argp.add_argument('-o', metavar='OPTIONS', help='mount options')
 
 readonly_argp = ArgumentParser(add_help=False)
@@ -129,4 +130,4 @@ class VirtualFileWrapper:
 
     @raise_if_closed
     def seekable(self) -> bool:
-        return False
+        return True

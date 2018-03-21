@@ -21,7 +21,7 @@ try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ModuleNotFoundError:
     exit("fuse module not found, please install fusepy to mount images "
-         "(`{} install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_common.pip_command))
+         "(`{} -mpip install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_common.python_cmd))
 except Exception as e:
     exit("Failed to import the fuse module:\n"
          "{}: {}".format(type(e).__name__, e))
@@ -31,7 +31,7 @@ try:
     from Cryptodome.Util import Counter
 except ModuleNotFoundError:
     exit("Cryptodome module not found, please install pycryptodomex for encryption support "
-             "(`{} install pycryptodomex`).".format(_common.pip_command))
+             "(`{} install pycryptodomex`).".format(_common.python_cmd))
 except Exception as e:
     exit("Failed to import the Cryptodome module:\n"
          "{}: {}".format(type(e).__name__, e))
@@ -44,7 +44,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
     def rp(self, path):
         return os.path.join(self.cdn_dir, path)
 
-    def __init__(self, cdn_dir: str, dec_key: bytes = None, dev: bool = False, seeddb: str = None):
+    def __init__(self, cdn_dir: str, dec_key: str = None, dev: bool = False, seeddb: str = None):
         self.cdn_dir = cdn_dir
 
         self.crypto = CTRCrypto(is_dev=dev)
@@ -59,7 +59,8 @@ class CDNContentsMount(LoggingMixIn, Operations):
             tmd = TitleMetadataReader.from_file(self.rp('tmd'))
         except FileNotFoundError:
             exit('tmd not found.')
-        
+
+        # noinspection PyUnboundLocalVariable
         self.title_id = tmd.title_id
 
         if not os.path.isfile(self.rp('cetk')):
@@ -226,11 +227,11 @@ def main():
     if _common.macos or _common.windows:
         opts['fstypename'] = 'CDN'
         opts['volname'] = "CDN Contents ({})".format(mount.title_id.upper())
-    fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do, ro=True, nothreads=True,
+    fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
                 fsname=os.path.realpath(a.cdn_dir).replace(',', '_'), **opts)
 
 
 if __name__ == '__main__':
     print('Note: You should be calling this script as "mount_{0}" or "{1} -mfuse3ds {0}" '
-          'instead of calling it directly.'.format('cdn', _common.pip_command))
+          'instead of calling it directly.'.format('cdn', _common.python_cmd))
     main()

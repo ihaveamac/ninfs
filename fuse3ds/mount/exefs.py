@@ -21,7 +21,7 @@ try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ModuleNotFoundError:
     exit("fuse module not found, please install fusepy to mount images "
-         "(`{} install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_common.pip_command))
+         "(`{} -mpip install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_common.python_cmd))
 except Exception as e:
     exit("Failed to import the fuse module:\n"
          "{}: {}".format(type(e).__name__, e))
@@ -45,8 +45,9 @@ class ExeFSMount(LoggingMixIn, Operations):
             try:
                 item = self.files['/code.bin']
                 self.code_dec = _decompress_code(self.read('/code.bin', item.size, item.offset, 0))
-                self.files['/code-dec.bin'] = ExeFSEntry(name='code-dec', offset=-1, size=len(self.code_dec),
-                                                         hash=sha256(self.code_dec).digest())
+                self.files['/code-decompressed.bin'] = ExeFSEntry(name='code-decompressed', offset=-1,
+                                                                  size=len(self.code_dec),
+                                                                  hash=sha256(self.code_dec).digest())
                 print(' done!')
             except CodeDecompressionError as e:
                 print('\nFailed to decompress .code: {}: {}'.format(type(e).__name__, e))
@@ -77,7 +78,7 @@ class ExeFSMount(LoggingMixIn, Operations):
         except KeyError:
             raise FuseOSError(ENOENT)
         if item.offset == -1:
-            # special case for code-dec
+            # special case for code-decompressed
             return self.code_dec[offset:offset + size]
 
         real_offset = 0x200 + item.offset + offset
@@ -120,11 +121,11 @@ def main():
                 # volume label can only be up to 32 chars
                 # TODO: maybe I should show the path here, if i can shorten it properly
                 opts['volname'] = "Nintendo 3DS ExeFS"
-        fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do, ro=True, nothreads=True,
+        fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
                     fsname=os.path.realpath(a.exefs).replace(',', '_'), **opts)
 
 
 if __name__ == '__main__':
     print('Note: You should be calling this script as "mount_{0}" or "{1} -mfuse3ds {0}" '
-          'instead of calling it directly.'.format('exefs', _common.pip_command))
+          'instead of calling it directly.'.format('exefs', _common.python_cmd))
     main()
