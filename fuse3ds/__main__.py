@@ -25,6 +25,8 @@ def exit_print_types():
 def mount(mount_type: str, return_doc: bool = False) -> int:
     # noinspection PyProtectedMember
     from mount._common import windows
+    from pyctr.crypto import BootromNotFoundError
+
     if windows:
         from ctypes import windll
         if windll.shell32.IsUserAnAdmin():
@@ -53,7 +55,14 @@ def mount(mount_type: str, return_doc: bool = False) -> int:
     prog = None
     if __name__ != '__main__':
         prog = 'mount_' + mount_aliases.get(mount_type, mount_type)
-    return module.main(prog=prog)
+    try:
+        return module.main(prog=prog)
+    except BootromNotFoundError as e:
+        print('Bootrom could not be found.',
+              'Please read the README of the repository for more details.',
+              'Paths checked:',
+              *(' - {}'.format(x) for x in e.args[0]), sep='\n')
+        return 1
 
 def main():
     path.append(dirname(realpath(__file__)))

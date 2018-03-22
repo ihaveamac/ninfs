@@ -51,7 +51,7 @@ Windows users can use a drive letter like `F:` as a mountpoint, or use `*` and a
   `mount_cdn --dec-key 3E3E6769742E696F2F76416A65423C3C cdn_directory mountpoint`
 * Mount a CIA:  
   `mount_cia game.cia mountpoint`
-* Mount an ExeFS:
+* Mount an ExeFS:  
   `mount_exefs exefs.bin mountpoint`
 * Mount a NAND backup with `essential.exefs` embedded:    
   `mount_nand nand.bin mountpoint`
@@ -65,7 +65,7 @@ Windows users can use a drive letter like `F:` as a mountpoint, or use `*` and a
   `mount_romfs romfs.bin mountpoint`
 * Mount a `Nintendo 3DS` directory from an SD card:  
   `mount_sd --movable movable.sed "/path/to/Nintendo 3DS" mountpoint`
-* Mount an entire `title` directory (like one from a NAND backup, or in an SD card mount):
+* Mount an entire `title` directory (like one from a NAND backup, or in an SD card mount):  
   `mount_titledir title mountpoint`
 
 ## Useful tools
