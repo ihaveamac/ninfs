@@ -46,7 +46,8 @@ class NCCHContainerMount(LoggingMixIn, Operations):
     _exefs_mounted = False
     _romfs_mounted = False
 
-    def __init__(self, ncch_fp: BinaryIO, g_stat: os.stat_result, dev: bool = False, seeddb: str = None):
+    def __init__(self, ncch_fp: BinaryIO, g_stat: os.stat_result, decompress_code: bool = True, dev: bool = False,
+                 seeddb: str = None):
         self.crypto = crypto.CTRCrypto(is_dev=dev)
 
         self.crypto.setup_keys_from_boot9()
@@ -100,21 +101,21 @@ class NCCHContainerMount(LoggingMixIn, Operations):
         if exefs_region.offset:
             self.files['/exefs.bin'] = {'size': exefs_region.size, 'offset': exefs_region.offset, 'enctype': 'exefs',
                                         'keyslot': 0x2C, 'keyslot_extra': self.reader.extra_keyslot,
-                                        'iv': (self.reader.partition_id << 64 | (0x02 << 56))}
+                                        'iv': (self.reader.partition_id << 64 | (0x02 << 56)),
+                                        'keyslot_normal_range': [(0, 0x200)]}
             if not self.reader.flags.no_crypto:
                 ncch_fp.seek(exefs_region.offset)
                 exefs_header = self.crypto.aes_ctr(0x2C, self.files['/exefs.bin']['iv'], ncch_fp.read(0xA0))
-                exefs_normal_ranges = [(0, 0x200)]
                 for name, offset, size in iter_unpack('<8sII', exefs_header):
                     uname = name.decode('utf-8').strip('\0')
-                    if uname in ('icon', 'banner'):
-                        exefs_normal_ranges.append((offset + 0x200, offset + 0x200 + util.roundup(size, 0x200)))
-                        self.files['/exefs.bin']['keyslot_normal_range'] = exefs_normal_ranges
+                    if uname in {'icon', 'banner'}:
+                        self.files['/exefs.bin']['keyslot_normal_range'].append(
+                            (offset + 0x200, offset + 0x200 + util.roundup(size, 0x200)))
 
             try:
                 # get code compression bit
                 decompress = False
-                if self.reader.check_for_extheader():
+                if decompress_code and self.reader.check_for_extheader():
                     exh_flag = self.read('/extheader.bin', 1, 0xD, 0)
                     decompress = exh_flag[0] & 1
                 exefs_vfp = _common.VirtualFileWrapper(self, '/exefs.bin', exefs_region.size)

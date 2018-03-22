@@ -75,9 +75,6 @@ class CTRCartImageMount(LoggingMixIn, Operations):
                 except Exception as e:
                     print("Failed to mount {}: {}: {}".format(filename, type(e).__name__, e))
 
-    def flush(self, path, fh):
-        return self.f.flush()
-
     def getattr(self, path, fh=None):
         first_dir = _common.get_first_dir(path)
         if first_dir in self.dirs:

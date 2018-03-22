@@ -89,7 +89,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
             self.crypto.set_normal_key(0x40, titlekey)
 
         # create virtual files
-        self.files = {'/ticket.bin': {'size': 0x350, 'offset': 0, 'type': 'raw', 'real_filepath': self.rp('cetk')},
+        self.files = {'/ticket.bin': {'size': 0x350, 'type': 'raw', 'real_filepath': self.rp('cetk')},
                       '/tmd.bin': {'size': 0xB04 + tmd.content_count * CHUNK_RECORD_SIZE, 'offset': 0, 'type': 'raw',
                                    'real_filepath': self.rp('tmd')},
                       '/tmdchunks.bin': {'size': tmd.content_count * CHUNK_RECORD_SIZE, 'offset': 0xB04, 'type': 'raw',
@@ -105,7 +105,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
             elif os.path.isfile(self.rp(chunk.id.upper())):
                 real_filename = chunk.id.upper()
             else:
-                print("Content {}:{} not found, will not be included.".format(chunk.cindex, chunk.id))
+                print("Content {0.cindex:04}:{0.id} not found, will not be included.".format(chunk))
                 continue
             filesize = os.path.getsize(self.rp(real_filename))
             if chunk.size != filesize:
@@ -113,7 +113,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
             self.cdn_content_size += chunk.size
             file_ext = 'nds' if chunk.cindex == 0 and int(self.title_id, 16) >> 44 == 0x48 else 'ncch'
             filename = '/{:04x}.{}.{}'.format(chunk.cindex, chunk.id, file_ext)
-            self.files[filename] = {'size': chunk.size, 'offset': 0, 'index': chunk.cindex.to_bytes(2, 'big'),
+            self.files[filename] = {'size': chunk.size, 'index': chunk.cindex.to_bytes(2, 'big'),
                                     'type': 'enc' if chunk.type.encrypted else 'raw',
                                     'real_filepath': self.rp(real_filename)}
 
@@ -160,12 +160,11 @@ class CDNContentsMount(LoggingMixIn, Operations):
         if first_dir in self.dirs:
             return self.dirs[first_dir].read(_common.remove_first_dir(path), size, offset, fh)
         fi = self.files[path.lower()]
-        real_offset = fi['offset'] + offset
         real_size = size
         with open(fi['real_filepath'], 'rb') as f:
             if fi['type'] == 'raw':
                 # if raw, just read and return
-                f.seek(real_offset)
+                f.seek(offset)
                 data = f.read(size)
 
             elif fi['type'] == 'enc':
@@ -183,10 +182,10 @@ class CDNContentsMount(LoggingMixIn, Operations):
                     iv = fi['index'] + (b'\0' * 14)
                 else:
                     # use the previous block if reading anywhere else
-                    f.seek(real_offset - before - 0x10)
+                    f.seek(offset - before - 0x10)
                     iv = f.read(0x10)
                 # read to block size
-                f.seek(real_offset - before)
+                f.seek(offset - before)
                 # adding 0x10 to the size fixes some kind of decryption bug
                 data = self.crypto.aes_cbc_decrypt(0x40, iv, f.read(size + 0x10))[before:real_size + before]
 

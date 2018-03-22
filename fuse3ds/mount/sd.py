@@ -247,7 +247,7 @@ def main(prog: str = None):
 
     mount = SDFilesystemMount(sd_dir=a.sd_dir, movable=a.movable, dev=a.dev, readonly=a.ro)
     if _common.macos or _common.windows:
-        opts['fstypename'] = 'SDCARD'
+        opts['fstypename'] = 'SDCard'
         if _common.macos:
             opts['volname'] = "Nintendo 3DS SD Card ({})".format(mount.root_dir)
         else:

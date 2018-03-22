@@ -65,6 +65,8 @@ Windows users can use a drive letter like `F:` as a mountpoint, or use `*` and a
   `mount_romfs romfs.bin mountpoint`
 * Mount a `Nintendo 3DS` directory from an SD card:  
   `mount_sd --movable movable.sed "/path/to/Nintendo 3DS" mountpoint`
+* Mount an entire `title` directory (like one from a NAND backup, or in an SD card mount):
+  `mount_titledir title mountpoint`
 
 ## Useful tools
 * wwylele's [3ds-save-tool](https://github.com/wwylele/3ds-save-tool) can be used to extract game saves and extra data (DISA and DIFF, respectively).
@@ -329,6 +331,32 @@ optional arguments:
   -r, --ro              mount read-only
   --dev                 use dev keys
   --movable MOVABLESED  path to movable.sed
+```
+
+### mount_titledir
+Mounts a "title" directory, creating a virtual system of all the installed titles inside it.
+
+```
+usage: mount_titledir [-h] [-f] [-d] [-o OPTIONS] [--dev] [--seeddb SEEDDB]
+                      [--mount-all] [--decompress-code]
+                      title_dir mount_point
+
+Mount Nintendo 3DS NCCH files from installed NAND/SD titles.
+
+positional arguments:
+  title_dir          title directory
+  mount_point        mount point
+
+optional arguments:
+  -h, --help         show this help message and exit
+  -f, --fg           run in foreground
+  -d                 debug output (fuse/winfsp log)
+  -o OPTIONS         mount options
+  --dev              use dev keys
+  --seeddb SEEDDB    path to seeddb.bin
+  --mount-all        mount all contents, not just the first
+  --decompress-code  decompress code of all mounted titles (can be slow with
+                     lots of titles!)
 ```
 
 # License/Credits
