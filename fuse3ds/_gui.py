@@ -136,6 +136,7 @@ def change(*_):
 # TODO: disable Mount for certain types if boot9 is not found
 # TODO: SeedDB stuff
 # TODO: display exceptions in a dialog if any appears
+# TODO: check 32 bit python on 64-bit windows
 
 with app.frame(CCI, row=1, colspan=3):
     app.addLabel(CCI + 'label1', 'File', row=0, column=0)

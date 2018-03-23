@@ -128,8 +128,10 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         return os.link(source, target)
 
     listxattr = None
-    mkdir = os.mkdir
-    # mknod = os.mknod
+    def mkdir(self, path, *args, **kwargs):
+        if self.readonly:
+            raise FuseOSError(EROFS)
+        os.mkdir(path, *args, **kwargs)
 
     def mknod(self, path, *args, **kwargs):
         if self.readonly:
@@ -176,7 +178,10 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         # renaming's too difficult. just copy the file to the name you want if you really need it.
         raise FuseOSError(EROFS if self.readonly else EPERM)
 
-    rmdir = os.rmdir
+    def rmdir(self, path, *args, **kwargs):
+        if self.readonly:
+            raise FuseOSError(EROFS)
+        os.rmdir(path, *args, **kwargs)
 
     def statfs(self, path):
         if _c.windows:
@@ -215,8 +220,15 @@ class SDFilesystemMount(LoggingMixIn, Operations):
             f = self.fds[fh]
             f.truncate(length)
 
-    unlink = os.unlink
-    utimens = os.utime
+    def unlink(self, path, *args, **kwargs):
+        if self.readonly:
+            raise FuseOSError(EROFS)
+        os.unlink(path)
+
+    def utimens(self, path, *args, **kwargs):
+        if self.readonly:
+            raise FuseOSError(EROFS)
+        os.utimens(path, *args, **kwargs)
 
     def write(self, path, data, offset, fh):
         if self.readonly:
