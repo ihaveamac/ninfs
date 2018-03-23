@@ -10,7 +10,7 @@ if sys.hexversion < 0x030502f0:
 with open('README.md', 'r', encoding='utf-8') as f:
     readme = f.read()
 
-install_requires = ['pycryptodomex']
+install_requires = ['pycryptodomex', 'appJar']
 # this should be removed once windows support is in the original fusepy.
 if sys.platform not in {'win32', 'cygwin'}:
     install_requires.append('fusepy')

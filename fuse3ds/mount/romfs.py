@@ -9,18 +9,18 @@ import os
 from argparse import ArgumentParser
 from errno import ENOENT
 from stat import S_IFDIR, S_IFREG
-from sys import exit
+from sys import exit, argv
 from typing import BinaryIO
 
 from pyctr.romfs import RomFSReader, RomFSFileNotFoundError
 
-from . import _common
+from . import _common as _c
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ModuleNotFoundError:
     exit("fuse module not found, please install fusepy to mount images "
-         "(`{} -mpip install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_common.python_cmd))
+         "(`{} -mpip install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_c.python_cmd))
 except Exception as e:
     exit("Failed to import the fuse module:\n"
          "{}: {}".format(type(e).__name__, e))
@@ -40,6 +40,11 @@ class RomFSMount(LoggingMixIn, Operations):
         self.reader = RomFSReader.load(romfs_fp, case_insensitive=True)
 
         self.f = romfs_fp
+
+    def __del__(self, *args):
+        self.f.close()
+
+    destroy = __del__
 
     def getattr(self, path, fh=None):
         uid, gid, pid = fuse_get_context()
@@ -91,12 +96,14 @@ class RomFSMount(LoggingMixIn, Operations):
                 'f_files': len(item.contents)}
 
 
-def main(prog: str = None):
+def main(prog: str = None, args: list = None):
+    if args is None:
+        args = argv[1:]
     parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS Read-only Filesystem (RomFS) files.',
-                            parents=(_common.default_argp, _common.main_positional_args('romfs', 'RomFS file')))
+                            parents=(_c.default_argp, _c.main_positional_args('romfs', 'RomFS file')))
 
-    a = parser.parse_args()
-    opts = dict(_common.parse_fuse_opts(a.o))
+    a = parser.parse_args(args)
+    opts = dict(_c.parse_fuse_opts(a.o))
 
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
@@ -106,14 +113,14 @@ def main(prog: str = None):
 
     with open(a.romfs, 'rb') as f:
         mount = RomFSMount(romfs_fp=f, g_stat=romfs_stat)
-        if _common.macos or _common.windows:
+        if _c.macos or _c.windows:
             opts['fstypename'] = 'RomFS'
             # assuming / is the path separator since macos. but if windows gets support for this,
             #   it will have to be done differently.
             path_to_show = os.path.realpath(a.romfs).rsplit('/', maxsplit=2)
-            if _common.macos:
+            if _c.macos:
                 opts['volname'] = "Nintendo 3DS RomFS ({}/{})".format(path_to_show[-2], path_to_show[-1])
-            elif _common.windows:
+            elif _c.windows:
                 # volume label can only be up to 32 chars
                 # TODO: maybe I should show the path here, if i can shorten it properly
                 opts['volname'] = "Nintendo 3DS RomFS"
@@ -123,5 +130,5 @@ def main(prog: str = None):
 
 if __name__ == '__main__':
     print('Note: You should be calling this script as "mount_{0}" or "{1} -mfuse3ds {0}" '
-          'instead of calling it directly.'.format('romfs', _common.python_cmd))
+          'instead of calling it directly.'.format('romfs', _c.python_cmd))
     main()

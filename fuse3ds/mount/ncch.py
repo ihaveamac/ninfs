@@ -12,12 +12,12 @@ from errno import ENOENT
 from math import ceil
 from stat import S_IFDIR, S_IFREG
 from struct import iter_unpack
-from sys import exit
+from sys import exit, argv
 from typing import BinaryIO
 
 from pyctr import crypto, ncch, util
 
-from . import _common
+from . import _common as _c
 from .exefs import ExeFSMount
 from .romfs import RomFSMount
 
@@ -25,7 +25,7 @@ try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ModuleNotFoundError:
     exit("fuse module not found, please install fusepy to mount images "
-         "(`{} -mpip install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_common.python_cmd))
+         "(`{} -mpip install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_c.python_cmd))
 except Exception as e:
     exit("Failed to import the fuse module:\n"
          "{}: {}".format(type(e).__name__, e))
@@ -35,7 +35,7 @@ try:
     from Cryptodome.Util import Counter
 except ModuleNotFoundError:
     exit("Cryptodome module not found, please install pycryptodomex for encryption support "
-             "(`{} install pycryptodomex`).".format(_common.python_cmd))
+         "(`{} install pycryptodomex`).".format(_c.python_cmd))
 except Exception as e:
     exit("Failed to import the Cryptodome module:\n"
          "{}: {}".format(type(e).__name__, e))
@@ -118,7 +118,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                 if decompress_code and self.reader.check_for_extheader():
                     exh_flag = self.read('/extheader.bin', 1, 0xD, 0)
                     decompress = exh_flag[0] & 1
-                exefs_vfp = _common.VirtualFileWrapper(self, '/exefs.bin', exefs_region.size)
+                exefs_vfp = _c.VirtualFileWrapper(self, '/exefs.bin', exefs_region.size)
                 # noinspection PyTypeChecker
                 exefs_fuse = ExeFSMount(exefs_vfp, g_stat, decompress_code=decompress)
                 self.exefs_fuse = exefs_fuse
@@ -134,7 +134,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                                             'iv': (self.reader.partition_id << 64 | (0x03 << 56))}
 
             try:
-                romfs_vfp = _common.VirtualFileWrapper(self, '/romfs.bin', romfs_region.size)
+                romfs_vfp = _c.VirtualFileWrapper(self, '/romfs.bin', romfs_region.size)
                 # noinspection PyTypeChecker
                 romfs_fuse = RomFSMount(romfs_vfp, g_stat)
                 self.romfs_fuse = romfs_fuse
@@ -142,15 +142,20 @@ class NCCHContainerMount(LoggingMixIn, Operations):
             except Exception as e:
                 print("Failed to mount RomFS: {}: {}".format(type(e).__name__, e))
 
+    def __del__(self, *args):
+        self.f.close()
+
+    destroy = __del__
+
     def flush(self, path, fh):
         return self.f.flush()
 
     def getattr(self, path, fh=None):
         lpath = path.lower()
         if lpath.startswith('/exefs/'):
-            return self.exefs_fuse.getattr(_common.remove_first_dir(path), fh)
+            return self.exefs_fuse.getattr(_c.remove_first_dir(path), fh)
         elif lpath.startswith('/romfs/'):
-            return self.romfs_fuse.getattr(_common.remove_first_dir(path), fh)
+            return self.romfs_fuse.getattr(_c.remove_first_dir(path), fh)
         uid, gid, pid = fuse_get_context()
         if lpath == '/' or lpath == '/romfs' or lpath == '/exefs':
             st = {'st_mode': (S_IFDIR | 0o555), 'st_nlink': 2}
@@ -166,9 +171,9 @@ class NCCHContainerMount(LoggingMixIn, Operations):
 
     def readdir(self, path, fh):
         if path.startswith('/exefs'):
-            yield from self.exefs_fuse.readdir(_common.remove_first_dir(path), fh)
+            yield from self.exefs_fuse.readdir(_c.remove_first_dir(path), fh)
         elif path.startswith('/romfs'):
-            yield from self.romfs_fuse.readdir(_common.remove_first_dir(path), fh)
+            yield from self.romfs_fuse.readdir(_c.remove_first_dir(path), fh)
         elif path == '/':
             yield from ('.', '..')
             yield from (x[1:] for x in self.files)
@@ -180,9 +185,9 @@ class NCCHContainerMount(LoggingMixIn, Operations):
     def read(self, path, size, offset, fh):
         lpath = path.lower()
         if lpath.startswith('/exefs/'):
-            return self.exefs_fuse.read(_common.remove_first_dir(path), size, offset, fh)
+            return self.exefs_fuse.read(_c.remove_first_dir(path), size, offset, fh)
         elif lpath.startswith('/romfs/'):
-            return self.romfs_fuse.read(_common.remove_first_dir(path), size, offset, fh)
+            return self.romfs_fuse.read(_c.remove_first_dir(path), size, offset, fh)
         fi = self.files[lpath]
         real_offset = fi['offset'] + offset
         if fi['enctype'] == 'none' or self.reader.flags.no_crypto:
@@ -274,21 +279,23 @@ class NCCHContainerMount(LoggingMixIn, Operations):
 
     def statfs(self, path):
         if path.startswith('/exefs/'):
-            return self.exefs_fuse.statfs(_common.remove_first_dir(path))
+            return self.exefs_fuse.statfs(_c.remove_first_dir(path))
         if path.startswith('/romfs/'):
-            return self.romfs_fuse.statfs(_common.remove_first_dir(path))
+            return self.romfs_fuse.statfs(_c.remove_first_dir(path))
         else:
             return {'f_bsize': 4096, 'f_blocks': self.reader.content_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
                     'f_files': len(self.files)}
 
 
-def main(prog: str = None):
+def main(prog: str = None, args: list = None):
+    if args is None:
+        args = argv[1:]
     parser = ArgumentParser(prog=prog, description="Mount Nintendo 3DS NCCH containers.",
-                            parents=(_common.default_argp, _common.dev_argp, _common.seeddb_argp,
-                                     _common.main_positional_args('ncch', "NCCH file")))
+                            parents=(_c.default_argp, _c.dev_argp, _c.seeddb_argp,
+                                     _c.main_positional_args('ncch', "NCCH file")))
 
-    a = parser.parse_args()
-    opts = dict(_common.parse_fuse_opts(a.o))
+    a = parser.parse_args(args)
+    opts = dict(_c.parse_fuse_opts(a.o))
 
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
@@ -297,11 +304,11 @@ def main(prog: str = None):
 
     with open(a.ncch, 'rb') as f:
         mount = NCCHContainerMount(ncch_fp=f, dev=a.dev, g_stat=ncch_stat, seeddb=a.seeddb)
-        if _common.macos or _common.windows:
+        if _c.macos or _c.windows:
             opts['fstypename'] = 'NCCH'
-            if _common.macos:
+            if _c.macos:
                 opts['volname'] = "NCCH Container ({0.product_code}; {0.program_id:016X})".format(mount.reader)
-            elif _common.windows:
+            elif _c.windows:
                 # volume label can only be up to 32 chars
                 opts['volname'] = "NCCH ({0.product_code})".format(mount.reader)
         fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
@@ -310,5 +317,5 @@ def main(prog: str = None):
 
 if __name__ == '__main__':
     print('Note: You should be calling this script as "mount_{0}" or "{1} -mfuse3ds {0}" '
-          'instead of calling it directly.'.format('ncch', _common.python_cmd))
+          'instead of calling it directly.'.format('ncch', _c.python_cmd))
     main()

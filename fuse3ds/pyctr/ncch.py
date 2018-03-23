@@ -24,7 +24,7 @@ def check_seeddb_file(path=None) -> Union[str, bool]:
     if path:
         paths = (path,)
     else:
-        paths = ('seeddb.bin', util.config_dir + '/seeddb.bin')
+        paths = ('seeddb.bin', util.config_dirs[0] + '/seeddb.bin', util.config_dirs[1] + '/seeddb.bin')
     for fn in paths:
         if isfile(fn):
             return fn

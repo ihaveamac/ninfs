@@ -9,19 +9,19 @@ import os
 from argparse import ArgumentParser
 from errno import ENOENT
 from stat import S_IFDIR, S_IFREG
-from sys import exit
+from sys import exit, argv
 
 from pyctr.crypto import CTRCrypto
 from pyctr.tmd import TitleMetadataReader, CHUNK_RECORD_SIZE
 
-from . import _common
+from . import _common as _c
 from .ncch import NCCHContainerMount
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ModuleNotFoundError:
     exit("fuse module not found, please install fusepy to mount images "
-         "(`{} -mpip install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_common.python_cmd))
+         "(`{} -mpip install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_c.python_cmd))
 except Exception as e:
     exit("Failed to import the fuse module:\n"
          "{}: {}".format(type(e).__name__, e))
@@ -31,7 +31,7 @@ try:
     from Cryptodome.Util import Counter
 except ModuleNotFoundError:
     exit("Cryptodome module not found, please install pycryptodomex for encryption support "
-             "(`{} install pycryptodomex`).".format(_common.python_cmd))
+         "(`{} install pycryptodomex`).".format(_c.python_cmd))
 except Exception as e:
     exit("Failed to import the Cryptodome module:\n"
          "{}: {}".format(type(e).__name__, e))
@@ -119,7 +119,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
 
             dirname = '/{:04x}.{}'.format(chunk.cindex, chunk.id)
             try:
-                content_vfp = _common.VirtualFileWrapper(self, filename, chunk.size)
+                content_vfp = _c.VirtualFileWrapper(self, filename, chunk.size)
                 # noinspection PyTypeChecker
                 content_fuse = NCCHContainerMount(content_vfp, dev=dev, g_stat=cdn_stat, seeddb=seeddb)
                 self.dirs[dirname] = content_fuse
@@ -127,9 +127,9 @@ class CDNContentsMount(LoggingMixIn, Operations):
                 print("Failed to mount {}: {}: {}".format(filename, type(e).__name__, e))
 
     def getattr(self, path, fh=None):
-        first_dir = _common.get_first_dir(path)
+        first_dir = _c.get_first_dir(path)
         if first_dir in self.dirs:
-            return self.dirs[first_dir].getattr(_common.remove_first_dir(path), fh)
+            return self.dirs[first_dir].getattr(_c.remove_first_dir(path), fh)
         uid, gid, pid = fuse_get_context()
         if path == '/' or path in self.dirs:
             st = {'st_mode': (S_IFDIR | 0o555), 'st_nlink': 2}
@@ -147,18 +147,18 @@ class CDNContentsMount(LoggingMixIn, Operations):
         return self.fd
 
     def readdir(self, path, fh):
-        first_dir = _common.get_first_dir(path)
+        first_dir = _c.get_first_dir(path)
         if first_dir in self.dirs:
-            yield from self.dirs[first_dir].readdir(_common.remove_first_dir(path), fh)
+            yield from self.dirs[first_dir].readdir(_c.remove_first_dir(path), fh)
         else:
             yield from ('.', '..')
             yield from (x[1:] for x in self.files)
             yield from (x[1:] for x in self.dirs)
 
     def read(self, path, size, offset, fh):
-        first_dir = _common.get_first_dir(path)
+        first_dir = _c.get_first_dir(path)
         if first_dir in self.dirs:
-            return self.dirs[first_dir].read(_common.remove_first_dir(path), size, offset, fh)
+            return self.dirs[first_dir].read(_c.remove_first_dir(path), size, offset, fh)
         fi = self.files[path.lower()]
         real_size = size
         with open(fi['real_filepath'], 'rb') as f:
@@ -203,27 +203,29 @@ class CDNContentsMount(LoggingMixIn, Operations):
             return data
 
     def statfs(self, path):
-        first_dir = _common.get_first_dir(path)
+        first_dir = _c.get_first_dir(path)
         if first_dir in self.dirs:
-            return self.dirs[first_dir].read(_common.remove_first_dir(path))
+            return self.dirs[first_dir].read(_c.remove_first_dir(path))
         return {'f_bsize': 4096, 'f_blocks': self.cdn_content_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
                 'f_files': len(self.files)}
 
 
-def main(prog: str = None):
+def main(prog: str = None, args: list = None):
+    if args is None:
+        args = argv[1:]
     parser = ArgumentParser(prog=prog, description="Mount Nintendo 3DS CDN contents.",
-                            parents=(_common.default_argp, _common.dev_argp, _common.seeddb_argp,
-                                     _common.main_positional_args('cdn_dir', "directory with CDN contents")))
+                            parents=(_c.default_argp, _c.dev_argp, _c.seeddb_argp,
+                                     _c.main_positional_args('cdn_dir', "directory with CDN contents")))
     parser.add_argument('--dec-key', help="decrypted titlekey")
 
-    a = parser.parse_args()
-    opts = dict(_common.parse_fuse_opts(a.o))
+    a = parser.parse_args(args)
+    opts = dict(_c.parse_fuse_opts(a.o))
 
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
 
     mount = CDNContentsMount(cdn_dir=a.cdn_dir, dev=a.dev, dec_key=a.dec_key, seeddb=a.seeddb)
-    if _common.macos or _common.windows:
+    if _c.macos or _c.windows:
         opts['fstypename'] = 'CDN'
         opts['volname'] = "CDN Contents ({})".format(mount.title_id.upper())
     fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
@@ -232,5 +234,5 @@ def main(prog: str = None):
 
 if __name__ == '__main__':
     print('Note: You should be calling this script as "mount_{0}" or "{1} -mfuse3ds {0}" '
-          'instead of calling it directly.'.format('cdn', _common.python_cmd))
+          'instead of calling it directly.'.format('cdn', _c.python_cmd))
     main()

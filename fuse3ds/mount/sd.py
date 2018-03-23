@@ -11,20 +11,20 @@ from ctypes import c_wchar_p, pointer, c_ulonglong
 from errno import EPERM, EACCES, EROFS, EBADF
 from hashlib import sha256
 from struct import unpack
-from sys import exit
+from sys import exit, argv
 
 from pyctr import crypto, util
 
-from . import _common
+from . import _common as _c
 
-if _common.windows:
+if _c.windows:
     from ctypes import windll, wintypes
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ModuleNotFoundError:
     exit("fuse module not found, please install fusepy to mount images "
-         "(`{} -mpip install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_common.python_cmd))
+         "(`{} -mpip install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_c.python_cmd))
 except Exception as e:
     exit("Failed to import the fuse module:\n"
          "{}: {}".format(type(e).__name__, e))
@@ -34,7 +34,7 @@ try:
     from Cryptodome.Util import Counter
 except ModuleNotFoundError:
     exit("Cryptodome module not found, please install pycryptodomex for encryption support "
-             "(`{} install pycryptodomex`).".format(_common.python_cmd))
+         "(`{} install pycryptodomex`).".format(_c.python_cmd))
 except Exception as e:
     exit("Failed to import the Cryptodome module:\n"
          "{}: {}".format(type(e).__name__, e))
@@ -78,9 +78,11 @@ class SDFilesystemMount(LoggingMixIn, Operations):
     def __call__(self, op, path, *args):
         return super().__call__(op, self.root + path, *args)
 
-    def destroy(self, path):
+    def __del__(self, *args):
         for f in self.fds.values():
             f.close()
+
+    destroy = __del__
 
     def access(self, path, mode):
         if not os.access(path, mode):
@@ -89,7 +91,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
     chmod = os.chmod
 
     def chown(self, path, *args, **kwargs):
-        if not _common.windows:
+        if not _c.windows:
             os.chown(path, *args, **kwargs)
 
     def create(self, path, mode, **kwargs):
@@ -132,7 +134,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
     def mknod(self, path, *args, **kwargs):
         if self.readonly:
             raise FuseOSError(EROFS)
-        if not _common.windows:
+        if not _c.windows:
             os.mknod(path, *args, **kwargs)
 
     # open = os.open
@@ -158,7 +160,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
     def readdir(self, path, fh):
         yield from ('.', '..')
         ld = os.listdir(path)
-        if _common.windows:
+        if _c.windows:
             # I should figure out how to mark hidden files, if possible
             yield from (d for d in ld if not d.startswith('.'))
         else:
@@ -177,7 +179,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
     rmdir = os.rmdir
 
     def statfs(self, path):
-        if _common.windows:
+        if _c.windows:
             lpSectorsPerCluster = c_ulonglong(0)
             lpBytesPerSector = c_ulonglong(0)
             lpNumberOfFreeClusters = c_ulonglong(0)
@@ -232,23 +234,25 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         return f.write(out_data)
 
 
-def main(prog: str = None):
+def main(prog: str = None, args: list = None):
+    if args is None:
+        args = argv[1:]
     parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS SD card contents.',
-                            parents=(_common.default_argp, _common.readonly_argp, _common.dev_argp,
-                                     _common.main_positional_args(
+                            parents=(_c.default_argp, _c.readonly_argp, _c.dev_argp,
+                                     _c.main_positional_args(
                                          'sd_dir',"path to folder with SD contents (on SD: /Nintendo 3DS)")))
     parser.add_argument('--movable', metavar='MOVABLESED', help='path to movable.sed', required=True)
 
-    a = parser.parse_args()
-    opts = dict(_common.parse_fuse_opts(a.o))
+    a = parser.parse_args(args)
+    opts = dict(_c.parse_fuse_opts(a.o))
 
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
 
     mount = SDFilesystemMount(sd_dir=a.sd_dir, movable=a.movable, dev=a.dev, readonly=a.ro)
-    if _common.macos or _common.windows:
+    if _c.macos or _c.windows:
         opts['fstypename'] = 'SDCard'
-        if _common.macos:
+        if _c.macos:
             opts['volname'] = "Nintendo 3DS SD Card ({})".format(mount.root_dir)
         else:
             # windows
@@ -260,5 +264,5 @@ def main(prog: str = None):
 
 if __name__ == '__main__':
     print('Note: You should be calling this script as "mount_{0}" or "{1} -mfuse3ds {0}" '
-          'instead of calling it directly.'.format('sd', _common.python_cmd))
+          'instead of calling it directly.'.format('sd', _c.python_cmd))
     main()

@@ -10,18 +10,18 @@ from argparse import ArgumentParser
 from errno import ENOENT
 from hashlib import sha256
 from stat import S_IFDIR, S_IFREG
-from sys import exit
+from sys import exit, argv
 from typing import BinaryIO
 
 from pyctr.exefs import ExeFSReader, ExeFSEntry, CodeDecompressionError, decompress_code as _decompress_code
 
-from . import _common
+from . import _common as _c
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ModuleNotFoundError:
     exit("fuse module not found, please install fusepy to mount images "
-         "(`{} -mpip install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_common.python_cmd))
+         "(`{} -mpip install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_c.python_cmd))
 except Exception as e:
     exit("Failed to import the fuse module:\n"
          "{}: {}".format(type(e).__name__, e))
@@ -51,6 +51,11 @@ class ExeFSMount(LoggingMixIn, Operations):
                 print(' done!')
             except CodeDecompressionError as e:
                 print('\nFailed to decompress .code: {}: {}'.format(type(e).__name__, e))
+
+    def __del__(self, *args):
+        self.f.close()
+
+    destroy = __del__
 
     def getattr(self, path, fh=None):
         uid, gid, pid = fuse_get_context()
@@ -94,13 +99,15 @@ class ExeFSMount(LoggingMixIn, Operations):
                 'f_files': len(self.reader)}
 
 
-def main(prog: str = None):
+def main(prog: str = None, args: list = None):
+    if args is None:
+        args = argv[1:]
     parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS Executable Filesystem (ExeFS) files.',
-                            parents=(_common.default_argp, _common.main_positional_args('exefs', 'ExeFS file')))
+                            parents=(_c.default_argp, _c.main_positional_args('exefs', 'ExeFS file')))
     parser.add_argument('--decompress-code', help='decompress the .code section', action='store_true')
 
-    a = parser.parse_args()
-    opts = dict(_common.parse_fuse_opts(a.o))
+    a = parser.parse_args(args)
+    opts = dict(_c.parse_fuse_opts(a.o))
 
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
@@ -109,14 +116,14 @@ def main(prog: str = None):
 
     with open(a.exefs, 'rb') as f:
         mount = ExeFSMount(exefs_fp=f, g_stat=exefs_stat, decompress_code=a.decompress_code)
-        if _common.macos or _common.windows:
+        if _c.macos or _c.windows:
             opts['fstypename'] = 'ExeFS'
             # assuming / is the path separator since macos. but if windows gets support for this,
             #   it will have to be done differently.
             path_to_show = os.path.realpath(a.exefs).rsplit('/', maxsplit=2)
-            if _common.macos:
+            if _c.macos:
                 opts['volname'] = "Nintendo 3DS ExeFS ({}/{})".format(path_to_show[-2], path_to_show[-1])
-            elif _common.windows:
+            elif _c.windows:
                 # volume label can only be up to 32 chars
                 # TODO: maybe I should show the path here, if i can shorten it properly
                 opts['volname'] = "Nintendo 3DS ExeFS"
@@ -126,5 +133,5 @@ def main(prog: str = None):
 
 if __name__ == '__main__':
     print('Note: You should be calling this script as "mount_{0}" or "{1} -mfuse3ds {0}" '
-          'instead of calling it directly.'.format('exefs', _common.python_cmd))
+          'instead of calling it directly.'.format('exefs', _c.python_cmd))
     main()

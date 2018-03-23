@@ -1,7 +1,7 @@
 import math
 import os
 
-__all__ = ['readle', 'readbe', 'roundup', 'config_dir']
+__all__ = ['readle', 'readbe', 'roundup', 'config_dirs']
 
 
 def readle(b: bytes) -> int:
@@ -19,4 +19,5 @@ def roundup(offset: int, alignment: int) -> int:
     return int(math.ceil(offset / alignment) * alignment)
 
 
-config_dir = os.path.expanduser('~') + '/.3ds'
+_home = os.path.expanduser('~')
+config_dirs = (os.path.join(_home, '.3ds'), os.path.join(_home, '3ds'))

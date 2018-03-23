@@ -11,21 +11,21 @@ from errno import EPERM, ENOENT, EROFS
 from hashlib import sha1, sha256
 from stat import S_IFDIR, S_IFREG
 from struct import unpack, pack
-from sys import exit
+from sys import exit, argv
 from typing import BinaryIO, AnyStr
 
 from pyctr.crypto import CTRCrypto
 from pyctr.exefs import ExeFSReader, InvalidExeFSError
 from pyctr.util import readbe, readle, roundup
 
-from . import _common
+from . import _common as _c
 from .exefs import ExeFSMount
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except ModuleNotFoundError:
     exit("fuse module not found, please install fusepy to mount images "
-         "(`{} -mpip install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_common.python_cmd))
+         "(`{} -mpip install https://github.com/billziss-gh/fusepy/archive/windows.zip`).".format(_c.python_cmd))
 except Exception as e:
     exit("Failed to import the fuse module:\n"
          "{}: {}".format(type(e).__name__, e))
@@ -35,7 +35,7 @@ try:
     from Cryptodome.Util import Counter
 except ModuleNotFoundError:
     exit("Cryptodome module not found, please install pycryptodomex for encryption support "
-             "(`{} install pycryptodomex`).".format(_common.python_cmd))
+         "(`{} install pycryptodomex`).".format(_c.python_cmd))
 except Exception as e:
     exit("Failed to import the Cryptodome module:\n"
          "{}: {}".format(type(e).__name__, e))
@@ -278,12 +278,17 @@ class NANDImageMount(LoggingMixIn, Operations):
             exefs_size = sum(roundup(x.size, 0x200) for x in exefs.entries.values()) + 0x200
             self.files['/essential.exefs'] = {'size': exefs_size, 'offset': 0x200, 'keyslot': 0xFF, 'type': 'raw'}
             try:
-                exefs_vfp = _common.VirtualFileWrapper(self, '/essential.exefs', exefs_size)
+                exefs_vfp = _c.VirtualFileWrapper(self, '/essential.exefs', exefs_size)
                 # noinspection PyTypeChecker
                 self.exefs_fuse = ExeFSMount(exefs_vfp, g_stat=g_stat)
                 self._essentials_mounted = True
             except Exception as e:
                 print("Failed to mount essential.exefs: {}: {}".format(type(e).__name__, e))
+
+    def __del__(self, *args):
+        self.f.close()
+
+    destroy = __del__
 
     def flush(self, path, fh):
         return self.f.flush()
@@ -291,7 +296,7 @@ class NANDImageMount(LoggingMixIn, Operations):
     def getattr(self, path, fh=None):
         lpath = path.lower()
         if lpath.startswith('/essential/'):
-            return self.exefs_fuse.getattr(_common.remove_first_dir(path), fh)
+            return self.exefs_fuse.getattr(_c.remove_first_dir(path), fh)
         else:
             uid, gid, pid = fuse_get_context()
             if path in {'/', '/essential'}:
@@ -310,7 +315,7 @@ class NANDImageMount(LoggingMixIn, Operations):
     def readdir(self, path, fh):
         lpath = path.lower()
         if lpath.startswith('/essential'):
-            yield from self.exefs_fuse.readdir(_common.remove_first_dir(path), fh)
+            yield from self.exefs_fuse.readdir(_c.remove_first_dir(path), fh)
         elif lpath == '/':
             yield from ('.', '..')
             yield from (x[1:] for x in self.files)
@@ -320,7 +325,7 @@ class NANDImageMount(LoggingMixIn, Operations):
     def read(self, path, size, offset, fh):
         lpath = path.lower()
         if lpath.startswith('/essential/'):
-            return self.exefs_fuse.read(_common.remove_first_dir(path), size, offset, fh)
+            return self.exefs_fuse.read(_c.remove_first_dir(path), size, offset, fh)
         fi = self.files[lpath]
         real_offset = fi['offset'] + offset
         if fi['type'] == 'raw':
@@ -357,7 +362,7 @@ class NANDImageMount(LoggingMixIn, Operations):
 
     def statfs(self, path):
         if path.startswith('/essential/'):
-            return self.exefs_fuse.statfs(_common.remove_first_dir(path))
+            return self.exefs_fuse.statfs(_c.remove_first_dir(path))
         return {'f_bsize': 4096, 'f_blocks': self.real_nand_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
                 'f_files': len(self.files)}
 
@@ -413,16 +418,18 @@ class NANDImageMount(LoggingMixIn, Operations):
         return real_len
 
 
-def main(prog: str = None):
+def main(prog: str = None, args: list = None):
+    if args is None:
+        args = argv[1:]
     parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS NAND images.',
-                            parents=(_common.default_argp, _common.readonly_argp, _common.dev_argp,
-                            _common.main_positional_args('nand', "NAND image")))
+                            parents=(_c.default_argp, _c.readonly_argp, _c.dev_argp,
+                                     _c.main_positional_args('nand', "NAND image")))
     parser.add_argument('--otp', help='path to otp (enc/dec); not needed if NAND image has essentials backup from '
                                       'GodMode9')
     parser.add_argument('--cid', help='NAND CID; not needed if NAND image has essentials backup from GodMode9')
 
-    a = parser.parse_args()
-    opts = dict(_common.parse_fuse_opts(a.o))
+    a = parser.parse_args(args)
+    opts = dict(_c.parse_fuse_opts(a.o))
 
     if a.do:
         logging.basicConfig(level=logging.DEBUG)
@@ -432,14 +439,14 @@ def main(prog: str = None):
     with open(a.nand, 'r{}b'.format('' if a.ro else '+')) as f:
         # noinspection PyTypeChecker
         mount = NANDImageMount(nand_fp=f, dev=a.dev, g_stat=nand_stat, readonly=a.ro, otp=a.otp, cid=a.cid)
-        if _common.macos or _common.windows:
+        if _c.macos or _c.windows:
             opts['fstypename'] = 'NAND'
             # assuming / is the path separator since macos. but if windows gets support for this,
             #   it will have to be done differently.
-            if _common.macos:
+            if _c.macos:
                 path_to_show = os.path.realpath(a.nand).rsplit('/', maxsplit=2)
                 opts['volname'] = "Nintendo 3DS NAND ({}/{})".format(path_to_show[-2], path_to_show[-1])
-            elif _common.windows:
+            elif _c.windows:
                 # volume label can only be up to 32 chars
                 # TODO: maybe I should show the path here, if i can shorten it properly
                 opts['volname'] = "Nintendo 3DS NAND"
@@ -449,5 +456,5 @@ def main(prog: str = None):
 
 if __name__ == '__main__':
     print('Note: You should be calling this script as "mount_{0}" or "{1} -mfuse3ds {0}" '
-          'instead of calling it directly.'.format('nand', _common.python_cmd))
+          'instead of calling it directly.'.format('nand', _c.python_cmd))
     main()

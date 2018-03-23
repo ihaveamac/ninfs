@@ -4,18 +4,8 @@ from importlib import import_module
 from sys import exit, argv, path
 from os.path import basename, dirname, realpath
 
-try:
-    from . import __version__
-except ImportError:
-    try:
-        from __init__ import __version__
-    except ImportError:
-        __version__ = '<unset>'
-
 mount_types = ('cci', 'cdn', 'cia', 'exefs', 'nand', 'ncch', 'romfs', 'sd', 'titledir')
 mount_aliases = {'3ds': 'cci', 'cxi': 'ncch', 'cfa': 'ncch', 'app': 'ncch'}
-
-print('fuse-3ds {} - https://github.com/ihaveamac/fuse-3ds'.format(__version__))
 
 def exit_print_types():
     print('Please provide a mount type as the first argument.')
@@ -23,6 +13,13 @@ def exit_print_types():
     exit(1)
 
 def mount(mount_type: str, return_doc: bool = False) -> int:
+    if mount_type == 'gui':
+        import _gui
+        return _gui.main()
+
+    from . import __version__
+    print('fuse-3ds {} - https://github.com/ihaveamac/fuse-3ds'.format(__version__))
+
     # noinspection PyProtectedMember
     from mount._common import windows
     from pyctr.crypto import BootromNotFoundError

@@ -19,7 +19,7 @@ class KeyslotMissingError(CryptoError):
 
 # wonder if I'm doing this right...
 class BootromNotFoundError(CryptoError):
-    """ARM9 bootROM was not found."""
+    """ARM9 bootROM was not found. Main argument is a tuple of checked paths."""
 
 
 base_key_x = {
@@ -195,7 +195,9 @@ class CTRCrypto:
         if path:
             paths = (path,)
         else:
-            paths = ('boot9.bin', 'boot9_prot.bin', util.config_dir + '/boot9.bin', util.config_dir + '/boot9_prot.bin')
+            paths = ('boot9.bin', 'boot9_prot.bin',
+                     util.config_dirs[0] + '/boot9.bin', util.config_dirs[0] + '/boot9_prot.bin',
+                     util.config_dirs[1] + '/boot9.bin', util.config_dirs[1] + '/boot9_prot.bin')
         for p in paths:
             if isfile(p):
                 keyblob_offset = 0x5860
@@ -241,7 +243,7 @@ class CTRCrypto:
                 return
 
         # if keys are not set...
-        raise BootromNotFoundError("not found at paths: {}".format(paths))
+        raise BootromNotFoundError(paths)
 
     def setup_keys_from_otp(self, path: str):
         """Set up console-unique keys from an OTP dump."""
