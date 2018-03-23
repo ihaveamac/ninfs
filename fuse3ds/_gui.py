@@ -6,10 +6,23 @@ import subprocess
 import webbrowser
 from sys import executable, platform
 from os import kill
+from os.path import isfile
 
 from appJar import gui
 
 from __init__ import __version__
+from pyctr.util import config_dirs
+
+b9_paths = ('boot9.bin', 'boot9_prot.bin',
+            config_dirs[0] + '/boot9.bin', config_dirs[0] + '/boot9_prot.bin',
+            config_dirs[1] + '/boot9.bin', config_dirs[1] + '/boot9_prot.bin')
+
+for p in b9_paths:
+    if isfile(p):
+        b9_found = True
+        break
+else:
+    b9_found = False
 
 # types
 CCI = 'CTR Cart Image (".3ds", ".cci")'
@@ -47,13 +60,13 @@ if windows:
 process = None  # type: Popen
 curr_mountpoint = None  # type: str
 
-app = gui('fuse-3ds ' + __version__, (380, 265), showIcon=False, useTtk=False)
+app = gui('fuse-3ds ' + __version__, (380, 265))
 
 
 def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = ()):
     global process, curr_mountpoint
     if process is None or process.returncode is not None:
-        args = [executable, '-mfuse3ds', module_type, item, mountpoint, *extra_args]
+        args = [executable, '-mfuse3ds', module_type, '-f', item, mountpoint, *extra_args]
         curr_mountpoint = mountpoint
         print('Running:', args)
         opts = {}
@@ -104,15 +117,14 @@ def press(button: str):
         run_mount(mount_types[mount_type], item, mountpoint, extra_args)
         app.enableButton('Unmount')
     elif button == 'Unmount':
+        app.disableButton('Unmount')
         stop_mount()
         app.enableButton('Mount')
-        app.disableButton('Unmount')
     elif button == 'GitHub repository':
-        # webbrowser.open('https://github.com/ihaveamac/fuse-3ds')
-        print(process.returncode)
+        webbrowser.open('https://github.com/ihaveamac/fuse-3ds')
 
 
-def change(*args):
+def change(*_):
     mount_type = app.getOptionBox('TYPE')
     for t in mount_types:
         if t == mount_type:
@@ -177,7 +189,7 @@ app.hideFrame(SD)
 
 with app.frame(TITLEDIR, row=1, colspan=3):
     app.addLabel(TITLEDIR + 'label1', 'Directory', row=0, column=0)
-    app.addFileEntry(TITLEDIR + 'item', row=0, column=1)
+    app.addDirectoryEntry(TITLEDIR + 'item', row=0, column=1)
 app.hideFrame(TITLEDIR)
 
 app.setSticky('new')

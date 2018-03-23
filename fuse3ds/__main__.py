@@ -1,16 +1,24 @@
 #!/usr/bin/env python3
 
 from importlib import import_module
-from sys import exit, argv, path
+from sys import exit, argv, path, platform
 from os.path import basename, dirname, realpath
+
+windows = platform in {'win32', 'cygwin'}
+
+python_cmd = 'py -3' if windows else 'python3'
 
 mount_types = ('cci', 'cdn', 'cia', 'exefs', 'nand', 'ncch', 'romfs', 'sd', 'titledir')
 mount_aliases = {'3ds': 'cci', 'cxi': 'ncch', 'cfa': 'ncch', 'app': 'ncch'}
 
+
 def exit_print_types():
     print('Please provide a mount type as the first argument.')
     print(' ', ', '.join(mount_types))
+    print()
+    print('Want to use a GUI? Use "gui" as the type! (e.g. {} -mfuse3ds gui)'.format(python_cmd))
     exit(1)
+
 
 def mount(mount_type: str, return_doc: bool = False) -> int:
     if mount_type == 'gui':
@@ -21,7 +29,6 @@ def mount(mount_type: str, return_doc: bool = False) -> int:
     print('fuse-3ds {} - https://github.com/ihaveamac/fuse-3ds'.format(__version__))
 
     # noinspection PyProtectedMember
-    from mount._common import windows
     from pyctr.crypto import BootromNotFoundError
 
     if windows:
@@ -61,14 +68,22 @@ def mount(mount_type: str, return_doc: bool = False) -> int:
               *(' - {}'.format(x) for x in e.args[0]), sep='\n')
         return 1
 
+
 def main():
     path.append(dirname(realpath(__file__)))
     exit(mount(basename(argv[0])[6:].lower()))
 
+
+def gui():
+    path.append(dirname(realpath(__file__)))
+    import _gui
+    return _gui.main()
+
+
 if __name__ == '__main__':
+    # path fun times
+    path.append(dirname(realpath(__file__)))
     if len(argv) < 2:
         exit_print_types()
 
-    # path fun times
-    path.append(dirname(realpath(__file__)))
     exit(mount(argv.pop(1).lower()))

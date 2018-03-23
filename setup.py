@@ -33,7 +33,10 @@ setup(
         'Programming Language :: Python :: 3.6',
     ],
     install_requires=install_requires,
-    entry_points={'console_scripts': ['mount_cci = fuse3ds.__main__:main',
+    entry_points={'console_scripts': ['fuse3ds = fuse3ds.__main__:gui',
+                                      # not putting in gui_scripts since the cmd window
+                                      # is needed on windows atm.
+                                      'mount_cci = fuse3ds.__main__:main',
                                       'mount_cdn = fuse3ds.__main__:main',
                                       'mount_cia = fuse3ds.__main__:main',
                                       'mount_exefs = fuse3ds.__main__:main',
