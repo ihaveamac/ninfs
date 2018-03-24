@@ -131,13 +131,14 @@ def press(button: str):
                     rmdir(mountpoint)
                 except FileNotFoundError:
                     pass
-                except OSError as e:
-                    if e.winerror == 145:  # "The directory is not empty"
+                except Exception as e:
+                    if isinstance(e, OSError) and e.winerror == 145:  # "The directory is not empty"
                         app.showSubWindow('mounterror-dir-win')
-                        app.enableButton('Mount')
-                        return
                     else:
-                        raise
+                        print_exception(type(e), e, e.__traceback__)
+                        app.showSubWindow('mounterror')
+                    app.enableButton('Mount')
+                    return
         else:
             mountpoint = app.getEntry('mountpoint')
 
