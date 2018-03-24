@@ -25,7 +25,7 @@ def mount(mount_type: str, return_doc: bool = False) -> int:
         import _gui
         return _gui.main()
 
-    from . import __version__
+    from __init__ import __version__
     print('fuse-3ds {} - https://github.com/ihaveamac/fuse-3ds'.format(__version__))
 
     # noinspection PyProtectedMember
@@ -67,6 +67,9 @@ def mount(mount_type: str, return_doc: bool = False) -> int:
               'Paths checked:',
               *(' - {}'.format(x) for x in e.args[0]), sep='\n')
         return 1
+    except RuntimeError as e:
+        if e.args == (1,):
+            pass  # assuming failed to mount and the reason would be displayed in the terminal
 
 
 def main():

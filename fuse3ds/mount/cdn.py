@@ -10,6 +10,7 @@ from argparse import ArgumentParser
 from errno import ENOENT
 from stat import S_IFDIR, S_IFREG
 from sys import exit, argv
+from typing import Dict
 
 from pyctr.crypto import CTRCrypto
 from pyctr.tmd import TitleMetadataReader, CHUNK_RECORD_SIZE
@@ -50,18 +51,22 @@ class CDNContentsMount(LoggingMixIn, Operations):
         self.crypto = CTRCrypto(is_dev=dev)
         self.crypto.setup_keys_from_boot9()
 
+        self.cdn_content_size = 0
+        self.dev = dev
+        self.seeddb = seeddb
+
         # get status change, modify, and file access times
         cdn_stat = os.stat(cdn_dir)
         self.g_stat = {'st_ctime': int(cdn_stat.st_ctime), 'st_mtime': int(cdn_stat.st_mtime),
                        'st_atime': int(cdn_stat.st_atime)}
 
         try:
-            tmd = TitleMetadataReader.from_file(self.rp('tmd'))
+            self.tmd = TitleMetadataReader.from_file(self.rp('tmd'))
         except FileNotFoundError:
             exit('tmd not found.')
 
         # noinspection PyUnboundLocalVariable
-        self.title_id = tmd.title_id
+        self.title_id = self.tmd.title_id
 
         if not os.path.isfile(self.rp('cetk')):
             if not dec_key:
@@ -90,16 +95,16 @@ class CDNContentsMount(LoggingMixIn, Operations):
 
         # create virtual files
         self.files = {'/ticket.bin': {'size': 0x350, 'type': 'raw', 'real_filepath': self.rp('cetk')},
-                      '/tmd.bin': {'size': 0xB04 + tmd.content_count * CHUNK_RECORD_SIZE, 'offset': 0, 'type': 'raw',
+                      '/tmd.bin': {'size': 0xB04 + self.tmd.content_count * CHUNK_RECORD_SIZE, 'offset': 0, 'type': 'raw',
                                    'real_filepath': self.rp('tmd')},
-                      '/tmdchunks.bin': {'size': tmd.content_count * CHUNK_RECORD_SIZE, 'offset': 0xB04, 'type': 'raw',
+                      '/tmdchunks.bin': {'size': self.tmd.content_count * CHUNK_RECORD_SIZE, 'offset': 0xB04, 'type': 'raw',
                                          'real_filepath': self.rp('tmd')}}
 
-        self.dirs = {}
+        self.dirs = {}  # type: Dict[str, NCCHContainerMount]
 
+    def init(self, path):
         # read contents to generate virtual files
-        self.cdn_content_size = 0
-        for chunk in tmd.chunk_records:
+        for chunk in self.tmd.chunk_records:
             if os.path.isfile(self.rp(chunk.id)):
                 real_filename = chunk.id
             elif os.path.isfile(self.rp(chunk.id.upper())):
@@ -107,8 +112,8 @@ class CDNContentsMount(LoggingMixIn, Operations):
             else:
                 print("Content {0.cindex:04}:{0.id} not found, will not be included.".format(chunk))
                 continue
-            filesize = os.path.getsize(self.rp(real_filename))
-            if chunk.size != filesize:
+            f_stat = os.stat(self.rp(real_filename))
+            if chunk.size != f_stat.st_size:
                 print("Warning: TMD Content size and filesize of", chunk.id, "are different.")
             self.cdn_content_size += chunk.size
             file_ext = 'nds' if chunk.cindex == 0 and int(self.title_id, 16) >> 44 == 0x48 else 'ncch'
@@ -121,7 +126,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
             try:
                 content_vfp = _c.VirtualFileWrapper(self, filename, chunk.size)
                 # noinspection PyTypeChecker
-                content_fuse = NCCHContainerMount(content_vfp, dev=dev, g_stat=cdn_stat, seeddb=seeddb)
+                content_fuse = NCCHContainerMount(content_vfp, dev=self.dev, g_stat=f_stat, seeddb=self.seeddb)
                 self.dirs[dirname] = content_fuse
             except Exception as e:
                 print("Failed to mount {}: {}: {}".format(filename, type(e).__name__, e))

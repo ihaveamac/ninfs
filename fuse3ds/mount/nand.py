@@ -281,12 +281,16 @@ class NANDImageMount(LoggingMixIn, Operations):
                 exefs_vfp = _c.VirtualFileWrapper(self, '/essential.exefs', exefs_size)
                 # noinspection PyTypeChecker
                 self.exefs_fuse = ExeFSMount(exefs_vfp, g_stat=g_stat)
+                self.exefs_fuse.init('/')
                 self._essentials_mounted = True
             except Exception as e:
                 print("Failed to mount essential.exefs: {}: {}".format(type(e).__name__, e))
 
     def __del__(self, *args):
-        self.f.close()
+        try:
+            self.f.close()
+        except AttributeError:
+            pass
 
     destroy = __del__
 

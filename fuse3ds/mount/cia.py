@@ -52,9 +52,12 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
 
     def __init__(self, cia_fp: BinaryIO, g_stat: os.stat_result, dev: bool = False, seeddb: bool = None):
         self.crypto = CTRCrypto(is_dev=dev)
-
         self.crypto.setup_keys_from_boot9()
 
+        self.dev = dev
+        self.seeddb = seeddb
+
+        self._g_stat = g_stat
         # get status change, modify, and file access times
         self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
                        'st_atime': int(g_stat.st_atime)}
@@ -71,13 +74,13 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
         cert_chain_offset = new_offset(archive_header_size)
         ticket_offset = cert_chain_offset + new_offset(cert_chain_size)
         tmd_offset = ticket_offset + new_offset(ticket_size)
-        content_offset = tmd_offset + new_offset(tmd_size)
-        meta_offset = content_offset + new_offset(content_size)
+        self.content_offset = tmd_offset + new_offset(tmd_size)
+        meta_offset = self.content_offset + new_offset(content_size)
 
         # load tmd
         cia_fp.seek(tmd_offset)
-        tmd = TitleMetadataReader.load(cia_fp)
-        self.title_id = tmd.title_id
+        self.tmd = TitleMetadataReader.load(cia_fp)
+        self.title_id = self.tmd.title_id
 
         # read title id, encrypted titlekey and common key index
         cia_fp.seek(ticket_offset + 0x1DC)
@@ -97,7 +100,7 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
                       '/cert.bin': {'size': cert_chain_size, 'offset': cert_chain_offset, 'type': 'raw'},
                       '/ticket.bin': {'size': ticket_size, 'offset': ticket_offset, 'type': 'raw'},
                       '/tmd.bin': {'size': tmd_size, 'offset': tmd_offset, 'type': 'raw'},
-                      '/tmdchunks.bin': {'size': tmd.content_count * CHUNK_RECORD_SIZE,
+                      '/tmdchunks.bin': {'size': self.tmd.content_count * CHUNK_RECORD_SIZE,
                                          'offset': tmd_offset + 0xB04, 'type': 'raw'}}
         if meta_size:
             self.files['/meta.bin'] = {'size': meta_size, 'offset': meta_offset, 'type': 'raw'}
@@ -110,9 +113,18 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
 
         self.f = cia_fp
 
+    def __del__(self, *args):
+        try:
+            self.f.close()
+        except AttributeError:
+            pass
+
+    destroy = __del__
+
+    def init(self, path):
         # read chunks to generate virtual files
-        current_offset = content_offset
-        for chunk in tmd.chunk_records:
+        current_offset = self.content_offset
+        for chunk in self.tmd.chunk_records:
             file_ext = 'nds' if chunk.cindex == b'\0\0' and readbe(self.title_id) >> 44 == 0x48 else 'ncch'
             filename = '/{:04x}.{}.{}'.format(chunk.cindex, chunk.id, file_ext)
             self.files[filename] = {'size': chunk.size, 'offset': current_offset,
@@ -123,15 +135,12 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
             dirname = '/{:04x}.{}'.format(chunk.cindex, chunk.id)
             try:
                 content_vfp = _c.VirtualFileWrapper(self, filename, chunk.size)
-                content_fuse = NCCHContainerMount(content_vfp, dev=dev, g_stat=g_stat, seeddb=seeddb)
+                # noinspection PyTypeChecker
+                content_fuse = NCCHContainerMount(content_vfp, dev=self.dev, g_stat=self._g_stat, seeddb=self.seeddb)
+                content_fuse.init(path)
                 self.dirs[dirname] = content_fuse
             except KeyError as e:
                 print("Failed to mount {}: {}: {}".format(filename, type(e).__name__, e))
-
-    def __del__(self, *args):
-        self.f.close()
-
-    destroy = __del__
 
     def flush(self, path, fh):
         return self.f.flush()

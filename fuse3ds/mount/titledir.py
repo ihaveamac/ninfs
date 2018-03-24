@@ -11,6 +11,7 @@ from errno import ENOENT
 from glob import glob
 from stat import S_IFDIR
 from sys import exit, argv
+from typing import Dict
 
 from pyctr.tmd import TitleMetadataReader, CHUNK_RECORD_SIZE
 
@@ -34,14 +35,22 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
                  seeddb: str = None):
         self.titles_dir = titles_dir
         self.files = {}
-        self.dirs = {}
+        self.dirs = {}  # type: Dict[str, NCCHContainerMount]
+
+        self.mount_all = mount_all
+        self.dev = dev
+        self.seeddb = seeddb
+        self.total_size = 0
+
+        self.decompress_code = decompress_code
 
         titles_stat = os.stat(titles_dir)
         self.g_stat = {'st_ctime': int(titles_stat.st_ctime), 'st_mtime': int(titles_stat.st_mtime),
                        'st_atime': int(titles_stat.st_atime)}
 
+    def init(self, path):
         print('Searching for all tmds...')
-        tmds = glob(os.path.join(titles_dir, '**/{}.tmd'.format('[0-9a-f]' * 8)), recursive=True)
+        tmds = glob(os.path.join(self.titles_dir, '**/{}.tmd'.format('[0-9a-f]' * 8)), recursive=True)
         tmd_count = len(tmds)
         for idx, tmd_path in enumerate(tmds, 1):
             print('Checking... {:>3} / {:>3} / {}'.format(idx, tmd_count, tmd_path), flush=True)
@@ -74,14 +83,15 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
                 try:
                     content_vfp = _c.VirtualFileWrapper(self, filename, chunk.size)
                     # noinspection PyTypeChecker
-                    content_fuse = NCCHContainerMount(content_vfp, decompress_code=decompress_code, dev=dev,
-                                                      g_stat=f_stat, seeddb=seeddb)
+                    content_fuse = NCCHContainerMount(content_vfp, decompress_code=self.decompress_code, dev=self.dev,
+                                                      g_stat=f_stat, seeddb=self.seeddb)
                     self.dirs[dirname] = content_fuse
+                    content_fuse.init(path)
                     self.total_size += chunk.size
                 except Exception as e:
                     print("Failed to mount {}: {}: {}".format(real_filename, type(e).__name__, e))
 
-                if mount_all is False:
+                if self.mount_all is False:
                     break
 
         print('Done!')

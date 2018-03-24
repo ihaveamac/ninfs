@@ -4,9 +4,11 @@
 import signal
 import subprocess
 import webbrowser
-from sys import executable, platform
+from sys import exit, executable, platform, version_info, maxsize
 from os import kill
-from os.path import isfile
+from os.path import isfile, isdir
+from time import sleep
+from traceback import print_exception
 
 from appJar import gui
 
@@ -38,12 +40,15 @@ TITLEDIR = 'Titles directory ("title" from NAND or SD)'
 mount_types = {CCI: 'cci', CDN: 'cdn', CIA: 'cia', EXEFS: 'exefs', NAND: 'nand', NCCH: 'ncch', ROMFS: 'romfs', SD: 'sd',
                TITLEDIR: 'titledir'}
 
+types_list = (CCI, CDN, CIA, EXEFS, NAND, NCCH, ROMFS, SD, TITLEDIR)
+
 windows = platform == 'win32'  # only for native windows, not cygwin
 if windows:
-    # https://stackoverflow.com/questions/827371/is-there-a-way-to-list-all-the-available-drive-letters-in-python
-    from string import ascii_uppercase
+    from os import startfile
     from ctypes import windll
+    from string import ascii_uppercase
 
+    # https://stackoverflow.com/questions/827371/is-there-a-way-to-list-all-the-available-drive-letters-in-python
     def get_unused_drives():
         drives = []
         bitmask = windll.kernel32.GetLogicalDrives()
@@ -57,7 +62,7 @@ if windows:
     def update_drives():
         app.changeOptionBox('mountpoint', (x + ':' for x in get_unused_drives()))
 
-process = None  # type: Popen
+process = None  # type: subprocess.Popen
 curr_mountpoint = None  # type: str
 
 app = gui('fuse-3ds ' + __version__, (380, 265))
@@ -73,11 +78,12 @@ def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = (
         if windows:
             opts['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
         process = subprocess.Popen(args, **opts)
+        process.wait(3)
 
 
 def stop_mount():
     global process
-    if process is not None and process.returncode is None:
+    if process is not None and process.poll() is None:
         print('Stopping')
         if windows:
             kill(process.pid, signal.CTRL_BREAK_EVENT)
@@ -87,7 +93,6 @@ def stop_mount():
                 subprocess.check_call(['diskutil', 'unmount', curr_mountpoint])
             else:
                 # assuming linux or bsd, which have fusermount
-                # TODO: test this
                 subprocess.check_call(['fusermount', '-u', curr_mountpoint])
 
 
@@ -114,14 +119,46 @@ def press(button: str):
             if not aw:
                 extra_args.append('-r')
         mountpoint = app.getOptionBox('mountpoint') if windows else app.getEntry('mountpoint')
-        run_mount(mount_types[mount_type], item, mountpoint, extra_args)
-        app.enableButton('Unmount')
+        try:
+            run_mount(mount_types[mount_type], item, mountpoint, extra_args)
+        except subprocess.TimeoutExpired:
+            # worked! maybe! if it didn't exit after 3 seconds!
+            app.enableButton('Unmount')
+            if windows:
+                while not isdir(mountpoint):  # this must be changed if i allow dir mounting on windows
+                    sleep(1)
+                try:
+                    subprocess.check_call(['explorer', mountpoint])
+                except subprocess.CalledProcessError:
+                    # not using startfile since i've been getting fatal errors (PyEval_RestoreThread) on windows
+                    #   for some reason
+                    pass
+            return
+        except Exception as e:
+            print_exception(type(e), e, e.__traceback__)
+        # if it didn't work...
+        app.showSubWindow('mounterror')
+        app.enableButton('Mount')
+
     elif button == 'Unmount':
         app.disableButton('Unmount')
-        stop_mount()
-        app.enableButton('Mount')
+        # noinspection PyBroadException
+        try:
+            stop_mount()
+            app.enableButton('Mount')
+        except Exception as e:
+            print_exception(type(e), e, e.__traceback__)
+            app.showSubWindow('unmounterror')
+            app.enableButton('Unmount')
     elif button == 'GitHub repository':
         webbrowser.open('https://github.com/ihaveamac/fuse-3ds')
+
+
+def kill_process(_):
+    process.kill()
+    app.hideSubWindow('unmounterror')
+    app.enableButton('Mount')
+    app.disableButton('Unmount')
 
 
 def change(*_):
@@ -135,8 +172,7 @@ def change(*_):
 
 # TODO: disable Mount for certain types if boot9 is not found
 # TODO: SeedDB stuff
-# TODO: display exceptions in a dialog if any appears
-# TODO: check 32 bit python on 64-bit windows
+# TODO: maybe check if the mount was unmounted outside of the unmount button
 
 with app.frame(CCI, row=1, colspan=3):
     app.addLabel(CCI + 'label1', 'File', row=0, column=0)
@@ -194,7 +230,7 @@ with app.frame(TITLEDIR, row=1, colspan=3):
 app.hideFrame(TITLEDIR)
 
 app.setSticky('new')
-app.addOptionBox('TYPE', mount_types, row=0, colspan=3)
+app.addOptionBox('TYPE', types_list, row=0, colspan=3)
 app.setOptionBoxChangeFunction('TYPE', change)
 
 app.setSticky('sew')
@@ -207,10 +243,37 @@ else:
     app.addLabel('mountlabel', 'Mount point', row=2, column=0)
     app.addDirectoryEntry('mountpoint', row=2, column=1)
 
-app.addButtons(['Mount', 'Unmount', 'GitHub repository'], press, row=3, colspan=3)
-app.disableButton('Unmount')
+with app.frame('FOOTER', row=3, colspan=3):
+    app.addButtons(['Mount', 'Unmount', 'GitHub repository'], press, colspan=3)
+    app.disableButton('Unmount')
+    app.addHorizontalSeparator()
+    app.addLabel('footer', 'fuse-3ds {0} running on Python {1[0]}.{1[1]}.{1[2]} {2} on {3}'.format(
+        __version__, version_info, '64-bit' if maxsize > 0xFFFFFFFF else '32-bit', platform), colspan=3)
 
+# app.addStatusbar()
+# app.setStatusbar('Waiting')
 app.setFont(10)
+app.setResizable(False)
+
+# failed to mount subwindow
+with app.subWindow('mounterror', 'fuse-3ds Error', modal=True, blocking=True):
+    app.addLabel('mounterror-label', 'Failed to mount. Please check the output.')
+    app.addNamedButton('OK', 'mounterror-ok', lambda _: app.hideSubWindow('mounterror'))
+    app.setResizable(False)
+
+# failed to unmount subwindow
+with app.subWindow('unmounterror', 'fuse-3ds Error', modal=True, blocking=True):
+    def unmount_ok(_):
+        app.hideSubWindow('unmounterror')
+        app.enableButton('Unmount')
+
+    app.addLabel('unmounterror-label', 'Failed to unmount. Please check the output.\n\n'
+                                       'You can kill the process if it is not responding.\n'
+                                       'This should be used as a last resort.'
+                                       'The process should be unmounted normally.', colspan=2)
+    app.addNamedButton('OK', 'unmounterror-ok', unmount_ok)
+    app.addNamedButton('Kill process', 'unmounterror-kill', kill_process, row='previous', column=1)
+    app.setResizable(False)
 
 
 def main():

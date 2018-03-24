@@ -143,9 +143,18 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                 print("Failed to mount RomFS: {}: {}".format(type(e).__name__, e))
 
     def __del__(self, *args):
-        self.f.close()
+        try:
+            self.f.close()
+        except AttributeError:
+            pass
 
     destroy = __del__
+
+    def init(self, path):
+        if self._exefs_mounted:
+            self.exefs_fuse.init(path)
+        if self._romfs_mounted:
+            self.romfs_fuse.init(path)
 
     def flush(self, path, fh):
         return self.f.flush()

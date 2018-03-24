@@ -10,7 +10,7 @@ from argparse import ArgumentParser
 from errno import ENOENT
 from stat import S_IFDIR, S_IFREG
 from sys import exit, argv
-from typing import BinaryIO
+from typing import BinaryIO, Dict
 
 from pyctr import util
 
@@ -31,6 +31,9 @@ class CTRCartImageMount(LoggingMixIn, Operations):
     fd = 0
 
     def __init__(self, cci_fp: BinaryIO, g_stat: os.stat_result, dev: bool = False, seeddb: str = None):
+        self.dev = dev
+        self.seeddb = seeddb
+        self._g_stat = g_stat
         # get status change, modify, and file access times
         self.g_stat = {'st_ctime': int(g_stat.st_ctime),
                        'st_mtime': int(g_stat.st_mtime),
@@ -38,29 +41,39 @@ class CTRCartImageMount(LoggingMixIn, Operations):
 
         # open cci and get section sizes
         cci_fp.seek(0x100)
-        ncsd_header = cci_fp.read(0x100)
-        if ncsd_header[0:4] != b'NCSD':
+        self.ncsd_header = cci_fp.read(0x100)
+        if self.ncsd_header[0:4] != b'NCSD':
             exit('NCSD magic not found, is this a real CCI?')
-        self.media_id = ncsd_header[0x8:0x10]
+        self.media_id = self.ncsd_header[0x8:0x10]
         if self.media_id == b'\0' * 8:
             exit('Media ID is all-zero, is this a CCI?')
 
-        self.cci_size = util.readle(ncsd_header[4:8]) * 0x200
+        self.cci_size = util.readle(self.ncsd_header[4:8]) * 0x200
 
         # create initial virtual files
         self.files = {'/ncsd.bin': {'size': 0x200, 'offset': 0},
                       '/cardinfo.bin': {'size': 0x1000, 'offset': 0x200},
                       '/devinfo.bin': {'size': 0x300, 'offset': 0x1200}}
 
-        ncsd_part_raw = ncsd_header[0x20:0x60]
+        self.f = cci_fp
+
+        self.dirs = {}  # type: Dict[str, NCCHContainerMount]
+
+    def __del__(self, *args):
+        try:
+            self.f.close()
+        except AttributeError:
+            pass
+
+    destroy = __del__
+
+    def init(self, path):
+        ncsd_part_raw = self.ncsd_header[0x20:0x60]
         ncsd_partitions = [[util.readle(ncsd_part_raw[i:i + 4]) * 0x200,
                             util.readle(ncsd_part_raw[i + 4:i + 8]) * 0x200] for i in range(0, 0x40, 0x8)]
 
         ncsd_part_names = ('game', 'manual', 'dlp', 'unk', 'unk', 'unk', 'update_n3ds', 'update_o3ds')
 
-        self.f = cci_fp
-
-        self.dirs = {}
         for idx, part in enumerate(ncsd_partitions):
             if part[0]:
                 filename = '/content{}.{}.ncch'.format(idx, ncsd_part_names[idx])
@@ -70,15 +83,12 @@ class CTRCartImageMount(LoggingMixIn, Operations):
                 try:
                     content_vfp = _c.VirtualFileWrapper(self, filename, part[1])
                     # noinspection PyTypeChecker
-                    content_fuse = NCCHContainerMount(content_vfp, g_stat=g_stat, dev=dev, seeddb=seeddb)
+                    content_fuse = NCCHContainerMount(content_vfp, g_stat=self._g_stat, dev=self.dev,
+                                                      seeddb=self.seeddb)
+                    content_fuse.init(path)
                     self.dirs[dirname] = content_fuse
                 except Exception as e:
                     print("Failed to mount {}: {}: {}".format(filename, type(e).__name__, e))
-
-    def __del__(self, *args):
-        self.f.close()
-
-    destroy = __del__
 
     def getattr(self, path, fh=None):
         first_dir = _c.get_first_dir(path)

@@ -37,10 +37,22 @@ class ExeFSMount(LoggingMixIn, Operations):
         self.reader = ExeFSReader.load(exefs_fp)
         self.files = {'/' + x.name.replace('.', '', 1) + '.bin': x for x in self.reader.entries.values()}
         self.exefs_size = sum(x.size for x in self.reader.entries.values())
+        self.code_dec = b''
+        self.decompress_code = decompress_code
 
         self.f = exefs_fp
 
-        if decompress_code and '/code.bin' in self.files:
+    def __del__(self, *args):
+        try:
+            self.f.close()
+        except AttributeError:
+            pass
+
+    destroy = __del__
+
+    # TODO: maybe do this in a way that allows for multiprocessing (titledir)
+    def init(self, path):
+        if self.decompress_code and '/code.bin' in self.files:
             print('ExeFS: Decompressing .code...', end='', flush=True)
             try:
                 item = self.files['/code.bin']
@@ -51,11 +63,6 @@ class ExeFSMount(LoggingMixIn, Operations):
                 print(' done!')
             except CodeDecompressionError as e:
                 print('\nFailed to decompress .code: {}: {}'.format(type(e).__name__, e))
-
-    def __del__(self, *args):
-        self.f.close()
-
-    destroy = __del__
 
     def getattr(self, path, fh=None):
         uid, gid, pid = fuse_get_context()

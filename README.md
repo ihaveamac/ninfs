@@ -23,7 +23,7 @@ SeedDB is checked at `seeddb.bin` in current working directory, `~/.3ds/seeddb.b
 Python 3.5.2+ and fusepy are required.
 
 ### Windows
-* Install the latest version of [Python 3](https://www.python.org/downloads/). Make sure you use the x86-64 version on 64-bit Windows.
+* Install the latest version of [Python 3](https://www.python.org/downloads/). The x86-64 version is preferred on 64-bit Windows.
 * Install the latest version of [WinFsp](http://www.secfs.net/winfsp/download/).
 * Install fuse-3ds with `py -3 -m pip install --upgrade https://github.com/ihaveamac/fuse-3ds/archive/master.zip https://github.com/billziss-gh/fusepy/archive/windows.zip`.
 
@@ -33,7 +33,7 @@ Python 3.5.2+ and fusepy are required.
 * Install fuse-3ds with `python3 -m pip install --upgrade https://github.com/ihaveamac/fuse-3ds/archive/master.zip`.
 
 ### Linux
-* Most modern distributions should have Python 3.5 or later pre-installed, or included in its repositories. If not, you can use an extra repository (e.g. [deadsnakes's PPA](https://launchpad.net/%7Edeadsnakes/+archive/ubuntu/ppa) for Ubuntu), build from source, or use a tool like [pyenv](https://github.com/pyenv/pyenv).
+* Most modern distributions should have Python 3.5.2 or later pre-installed, or included in its repositories. If not, you can use an extra repository (e.g. [deadsnakes's PPA](https://launchpad.net/%7Edeadsnakes/+archive/ubuntu/ppa) for Ubuntu), build from source, or use a tool like [pyenv](https://github.com/pyenv/pyenv).
 * Most distributions should have fuse enabled/installed by default. Use your package manager if it isn't.
 * Install fuse-3ds with `python3 -m pip install --upgrade --user https://github.com/ihaveamac/fuse-3ds/archive/master.zip`.
   * `--user` is not needed if you are using a virtual environment.

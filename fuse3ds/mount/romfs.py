@@ -37,14 +37,20 @@ class RomFSMount(LoggingMixIn, Operations):
         romfs_fp.seek(0, 2)
         self.romfs_size = romfs_fp.tell()
         romfs_fp.seek(0)
-        self.reader = RomFSReader.load(romfs_fp, case_insensitive=True)
+        self.reader = None  # type: RomFSReader
 
         self.f = romfs_fp
 
     def __del__(self, *args):
-        self.f.close()
+        try:
+            self.f.close()
+        except AttributeError:
+            pass
 
     destroy = __del__
+
+    def init(self, path):
+        self.reader = RomFSReader.load(self.f, case_insensitive=True)
 
     def getattr(self, path, fh=None):
         uid, gid, pid = fuse_get_context()
