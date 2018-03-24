@@ -19,12 +19,21 @@ b9_paths = ('boot9.bin', 'boot9_prot.bin',
             config_dirs[0] + '/boot9.bin', config_dirs[0] + '/boot9_prot.bin',
             config_dirs[1] + '/boot9.bin', config_dirs[1] + '/boot9_prot.bin')
 
+seeddb_paths = ('seeddb.bin', config_dirs[0] + '/seeddb.bin', config_dirs[1] + '/seeddb.bin')
+
 for p in b9_paths:
     if isfile(p):
         b9_found = True
         break
 else:
     b9_found = False
+
+for p in seeddb_paths:
+    if isfile(p):
+        seeddb_found = True
+        break
+else:
+    seeddb_found = False
 
 # types
 CCI = 'CTR Cart Image (".3ds", ".cci")'
@@ -78,8 +87,7 @@ _used_pyinstaller = False
 process = None  # type: subprocess.Popen
 curr_mountpoint = None  # type: str
 
-app = gui('fuse-3ds ' + init.__version__, (380, (335 if not b9_found else 265)), showIcon=False)
-
+app = gui('fuse-3ds ' + init.__version__, showIcon=False)
 
 def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = ()):
     global process, curr_mountpoint
@@ -165,7 +173,7 @@ def press(button: str):
             # worked! maybe! if it didn't exit after 3 seconds!
             app.enableButton('Unmount')
             if windows:
-                while not isdir(mountpoint):  # this must be changed if i allow dir mounting on windows
+                while not isdir(mountpoint):
                     sleep(1)
                 try:
                     subprocess.check_call(['explorer', mountpoint.replace('/', '\\')])
@@ -315,6 +323,12 @@ with app.frame('FOOTER', row=3, colspan=3):
                               'Types that require encryption have been disabled.')
         app.setLabelBg('no-b9', '#ff9999')
         app.disableButton('Mount')
+    if not seeddb_found:
+        app.addHorizontalSeparator()
+        app.addLabel('no-seeddb', 'SeedDB was not found.\n'
+                              'Please see the GitHub README for details.\n'
+                              'Titles that require seeds may fail.')
+        app.setLabelBg('no-seeddb', '#ffff99')
     app.addHorizontalSeparator()
     app.addLabel('footer', 'fuse-3ds {0} running on Python {1[0]}.{1[1]}.{1[2]} {2} on {3}'.format(
         init.__version__, version_info, '64-bit' if maxsize > 0xFFFFFFFF else '32-bit', platform), colspan=3)

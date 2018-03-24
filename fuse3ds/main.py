@@ -11,6 +11,9 @@ python_cmd = 'py -3' if windows else 'python3'
 mount_types = ('cci', 'cdn', 'cia', 'exefs', 'nand', 'ncch', 'romfs', 'sd', 'titledir')
 mount_aliases = {'3ds': 'cci', 'cxi': 'ncch', 'cfa': 'ncch', 'app': 'ncch'}
 
+from __init__ import __version__
+print('fuse-3ds {} - https://github.com/ihaveamac/fuse-3ds'.format(__version__))
+
 
 def exit_print_types():
     print('Please provide a mount type as the first argument.')
@@ -24,9 +27,6 @@ def mount(mount_type: str, return_doc: bool = False) -> int:
     if mount_type in {'gui', 'gui_i_want_to_be_an_admin_pls'}:
         import _gui
         return _gui.main(_allow_admin=mount_type == 'gui_i_want_to_be_an_admin_pls')
-
-    from __init__ import __version__
-    print('fuse-3ds {} - https://github.com/ihaveamac/fuse-3ds'.format(__version__))
 
     # noinspection PyProtectedMember
     from pyctr.crypto import BootromNotFoundError
