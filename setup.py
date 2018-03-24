@@ -17,7 +17,7 @@ if sys.platform not in {'win32', 'cygwin'}:
 
 setup(
     name='fuse-3ds',
-    version='1.0b1',
+    version='1.0b2.dev0',
     packages=['fuse3ds', 'fuse3ds.pyctr', 'fuse3ds.mount'],
     url='https://github.com/ihaveamac/fuse-3ds',
     license='MIT',
@@ -33,7 +33,7 @@ setup(
         'Programming Language :: Python :: 3.6',
     ],
     install_requires=install_requires,
-    entry_points={'console_scripts': ['fuse3ds = fuse3ds.__main__:gui',
+    entry_points={'console_scripts': ['fuse3ds = fuse3ds.main:gui',
                                       # not putting in gui_scripts since the cmd window
                                       # is needed on windows atm.
                                       'mount_cci = fuse3ds.main:main',
