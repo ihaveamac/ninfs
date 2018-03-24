@@ -34,9 +34,6 @@ class RomFSMount(LoggingMixIn, Operations):
         self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
                        'st_atime': int(g_stat.st_atime)}
 
-        romfs_fp.seek(0, 2)
-        self.romfs_size = romfs_fp.tell()
-        romfs_fp.seek(0)
         self.reader = None  # type: RomFSReader
 
         self.f = romfs_fp
@@ -98,7 +95,7 @@ class RomFSMount(LoggingMixIn, Operations):
             item = self.reader.get_info_from_path(path)
         except RomFSFileNotFoundError:
             raise FuseOSError(ENOENT)
-        return {'f_bsize': 4096, 'f_blocks': self.romfs_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
+        return {'f_bsize': 4096, 'f_blocks': self.reader.total_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
                 'f_files': len(item.contents)}
 
 
@@ -115,7 +112,6 @@ def main(prog: str = None, args: list = None):
         logging.basicConfig(level=logging.DEBUG)
 
     romfs_stat = os.stat(a.romfs)
-    romfs_size = romfs_stat.st_size
 
     with open(a.romfs, 'rb') as f:
         mount = RomFSMount(romfs_fp=f, g_stat=romfs_stat)

@@ -85,8 +85,8 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
                     # noinspection PyTypeChecker
                     content_fuse = NCCHContainerMount(content_vfp, decompress_code=self.decompress_code, dev=self.dev,
                                                       g_stat=f_stat, seeddb=self.seeddb)
-                    self.dirs[dirname] = content_fuse
                     content_fuse.init(path)
+                    self.dirs[dirname] = content_fuse
                     self.total_size += chunk.size
                 except Exception as e:
                     print("Failed to mount {}: {}: {}".format(real_filename, type(e).__name__, e))

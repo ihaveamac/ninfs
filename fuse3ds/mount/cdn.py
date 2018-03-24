@@ -127,6 +127,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
                 content_vfp = _c.VirtualFileWrapper(self, filename, chunk.size)
                 # noinspection PyTypeChecker
                 content_fuse = NCCHContainerMount(content_vfp, dev=self.dev, g_stat=f_stat, seeddb=self.seeddb)
+                content_fuse.init(path)
                 self.dirs[dirname] = content_fuse
             except Exception as e:
                 print("Failed to mount {}: {}: {}".format(filename, type(e).__name__, e))

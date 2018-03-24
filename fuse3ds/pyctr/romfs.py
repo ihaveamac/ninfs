@@ -49,6 +49,7 @@ class RomFSReader:
         self.filemeta_region = filemeta
         self.filedata_offset = filedata_offset
         self.case_insensitive = case_insensitive
+        self.total_size = 0
 
     def get_info_from_path(self, path: str) -> Union[RomFSDirectoryEntry, RomFSFileEntry]:
         """Get a directory or file entry"""
@@ -189,6 +190,7 @@ class RomFSReader:
                     out['contents'][child_file_name_meta] = {'name': child_file_name, 'type': 'file',
                                                              'offset': child_file_offset, 'size': child_file_size}
 
+                    self.total_size += child_file_size
                     if next_sibling_file == 0xFFFFFFFF:
                         break
                     filemeta_io.seek(next_sibling_file)

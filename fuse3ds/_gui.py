@@ -70,7 +70,7 @@ app = gui('fuse-3ds ' + __version__, (380, 265))
 
 def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = ()):
     global process, curr_mountpoint
-    if process is None or process.returncode is not None:
+    if process is None or process.poll() is not None:
         args = [executable, '-mfuse3ds', module_type, '-f', item, mountpoint, *extra_args]
         curr_mountpoint = mountpoint
         print('Running:', args)
