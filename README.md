@@ -23,6 +23,11 @@ SeedDB is checked at `seeddb.bin` in current working directory, `~/.3ds/seeddb.b
 Python 3.5.2+ and fusepy are required.
 
 ### Windows
+A GUI is available for use. If you download the exe from the [latest release](https://github.com/ihaveamac/fuse-3ds/releases) and run it, a window will appear allowing you.
+
+Python does not have to be installed, but [WinFsp](http://www.secfs.net/winfsp/download/) is still required.
+
+#### Install with existing Python
 * Install the latest version of [Python 3](https://www.python.org/downloads/). The x86-64 version is preferred on 64-bit Windows.
 * Install the latest version of [WinFsp](http://www.secfs.net/winfsp/download/).
 * Install fuse-3ds with `py -3 -m pip install --upgrade https://github.com/ihaveamac/fuse-3ds/archive/master.zip https://github.com/billziss-gh/fusepy/archive/windows.zip`.
@@ -39,6 +44,10 @@ Python 3.5.2+ and fusepy are required.
   * `--user` is not needed if you are using a virtual environment.
 
 ## Usage
+### Graphical user interface
+A GUI can be used by specifying the type to be `gui` (e.g. Windows: `py -3 -mfuse3ds gui`, \*nix: `python3 -mfuse3ds gui`).
+
+### Command line
 The main way to run a mount script after installing is using "`mount_<type>`" (e.g. `mount_cci game.3ds mountpoint`).
 
 If it doesn't work, the other way is to use `<python-cmd> -mfuse3ds <type>` (e.g. Windows: `py -3 -mfuse3ds cci game.3ds mountpoint`, \*nix: `python3 -mfuse3ds cci game.3ds mountpoint`).
