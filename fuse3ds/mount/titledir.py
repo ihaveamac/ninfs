@@ -96,6 +96,7 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
 
         print('Done!')
 
+    @_c.ensure_lower_path
     def getattr(self, path, fh=None):
         first_dir = _c.get_first_dir(path)
         if first_dir in self.dirs:
@@ -114,6 +115,7 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
         self.fd += 1
         return self.fd
 
+    @_c.ensure_lower_path
     def readdir(self, path, fh):
         first_dir = _c.get_first_dir(path)
         if first_dir in self.dirs:
@@ -123,16 +125,18 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
             yield from (x[1:] for x in self.dirs)
             # we do not show self.files, that's just used for internal handling
 
+    @_c.ensure_lower_path
     def read(self, path, size, offset, fh):
         first_dir = _c.get_first_dir(path)
         if first_dir in self.dirs:
             return self.dirs[first_dir].read(_c.remove_first_dir(path), size, offset, fh)
         # file handling only to support the above.
-        fi = self.files[path.lower()]
+        fi = self.files[path]
         with open(fi['real_filepath'], 'rb') as f:
             f.seek(offset)
             return f.read(size)
 
+    @_c.ensure_lower_path
     def statfs(self, path):
         first_dir = _c.get_first_dir(path)
         if first_dir in self.dirs:

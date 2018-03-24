@@ -4,15 +4,15 @@
 import signal
 import subprocess
 import webbrowser
-from sys import exit, executable, platform, version_info, maxsize
-from os import kill
+from sys import argv, exit, executable, platform, version_info, maxsize
+from os import kill, rmdir
 from os.path import isfile, isdir
 from time import sleep
 from traceback import print_exception
 
 from appJar import gui
 
-from __init__ import __version__
+import __init__ as init
 from pyctr.util import config_dirs
 
 b9_paths = ('boot9.bin', 'boot9_prot.bin',
@@ -74,16 +74,21 @@ if windows:
     def update_drives():
         app.changeOptionBox('mountpoint', (x + ':' for x in get_unused_drives()))
 
+_used_pyinstaller = False
 process = None  # type: subprocess.Popen
 curr_mountpoint = None  # type: str
 
-app = gui('fuse-3ds ' + __version__, (380, 265))
+app = gui('fuse-3ds ' + init.__version__, (380, (335 if not b9_found else 265)), showIcon=False)
 
 
 def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = ()):
     global process, curr_mountpoint
     if process is None or process.poll() is not None:
-        args = [executable, '-mfuse3ds', module_type, '-f', item, mountpoint, *extra_args]
+        args = [executable]
+        if not _used_pyinstaller:
+            args.append('-mfuse3ds')
+        args.extend((module_type, '-f', item, mountpoint))
+        args.extend(extra_args)
         curr_mountpoint = mountpoint
         print('Running:', args)
         opts = {}
@@ -114,6 +119,28 @@ def press(button: str):
         mount_type = app.getOptionBox('TYPE')
         app.disableButton('Mount')
         item = app.getEntry(mount_type + 'item')
+
+        if windows:
+            if app.getRadioButton('mountpoint-choice') == 'Drive letter':
+                mountpoint = app.getOptionBox('mountpoint')
+            else:
+                mountpoint = app.getEntry('mountpoint')
+                try:
+                    # winfsp won't work on an existing directory
+                    # so we try to use rmdir, which will delete it, only if it's empty
+                    rmdir(mountpoint)
+                except FileNotFoundError:
+                    pass
+                except OSError as e:
+                    if e.winerror == 145:  # "The directory is not empty"
+                        app.showSubWindow('mounterror-dir-win')
+                        app.enableButton('Mount')
+                        return
+                    else:
+                        raise
+        else:
+            mountpoint = app.getEntry('mountpoint')
+
         if mount_type == NAND:
             otp = app.getEntry(NAND + 'otp')
             cid = app.getEntry(NAND + 'cid')
@@ -130,7 +157,7 @@ def press(button: str):
             extra_args.extend(('--movable', movable))
             if not aw:
                 extra_args.append('-r')
-        mountpoint = app.getOptionBox('mountpoint') if windows else app.getEntry('mountpoint')
+
         try:
             run_mount(mount_types[mount_type], item, mountpoint, extra_args)
         except subprocess.TimeoutExpired:
@@ -140,7 +167,7 @@ def press(button: str):
                 while not isdir(mountpoint):  # this must be changed if i allow dir mounting on windows
                     sleep(1)
                 try:
-                    subprocess.check_call(['explorer', mountpoint])
+                    subprocess.check_call(['explorer', mountpoint.replace('/', '\\')])
                 except subprocess.CalledProcessError:
                     # not using startfile since i've been getting fatal errors (PyEval_RestoreThread) on windows
                     #   for some reason
@@ -173,16 +200,20 @@ def kill_process(_):
     app.disableButton('Unmount')
 
 
-def change(*_):
+def change_type(*_):
     mount_type = app.getOptionBox('TYPE')
     for t in mount_types:
         if t == mount_type:
             app.showFrame(t)
         else:
             app.hideFrame(t)
+    if not b9_found and mount_type in {CCI, CDN, CIA, NAND, NCCH, SD, TITLEDIR}:
+        app.disableButton('Mount')
+    else:
+        if process is None or process.poll() is not None:
+            app.enableButton('Mount')
 
 
-# TODO: disable Mount for certain types if boot9 is not found
 # TODO: SeedDB stuff
 # TODO: maybe check if the mount was unmounted outside of the unmount button
 
@@ -243,14 +274,32 @@ app.hideFrame(TITLEDIR)
 
 app.setSticky('new')
 app.addOptionBox('TYPE', types_list, row=0, colspan=3)
-app.setOptionBoxChangeFunction('TYPE', change)
+app.setOptionBoxChangeFunction('TYPE', change_type)
 
 app.setSticky('sew')
 if windows:
-    app.addLabel('mountlabel', 'Drive letter', row=2, column=0)
-    app.addOptionBox('mountpoint', ['WWWW'], row=2, column=1) # putting "WWWW" to avoid a warning
-    # noinspection PyUnboundLocalVariable
-    update_drives()
+    def rb_change(_):
+        if app.getRadioButton('mountpoint-choice') == 'Drive letter':
+            app.hideFrame('mountpoint-dir')
+            app.showFrame('mountpoint-drive')
+        else:
+            app.hideFrame('mountpoint-drive')
+            app.showFrame('mountpoint-dir')
+
+    with app.frame('win-mountpoint', row=2, colspan=3):
+        app.addLabel('mountpoint-choice-label', 'Mount type', row=0)
+        app.addRadioButton('mountpoint-choice', "Drive letter", row=0, column=1)
+        app.addRadioButton('mountpoint-choice', "Directory", row=0, column=2)
+        app.setRadioButtonChangeFunction('mountpoint-choice', rb_change)
+        with app.frame('mountpoint-drive', row=1, colspan=3):
+            app.addLabel('mountlabel1', 'Drive letter', row=0, column=0)
+            app.addOptionBox('mountpoint', ['WWWW'], row=0, column=1) # putting "WWWW" to avoid a warning
+        with app.frame('mountpoint-dir', row=1, colspan=3):
+            app.addLabel('mountlabel2', 'Mount point', row=0, column=0)
+            app.addDirectoryEntry('mountpoint', row=0, column=1)
+        app.hideFrame('mountpoint-dir')
+        # noinspection PyUnboundLocalVariable
+        update_drives()
 else:
     app.addLabel('mountlabel', 'Mount point', row=2, column=0)
     app.addDirectoryEntry('mountpoint', row=2, column=1)
@@ -258,9 +307,16 @@ else:
 with app.frame('FOOTER', row=3, colspan=3):
     app.addButtons(['Mount', 'Unmount', 'GitHub repository'], press, colspan=3)
     app.disableButton('Unmount')
+    if not b9_found:
+        app.addHorizontalSeparator()
+        app.addLabel('no-b9', 'boot9 was not found.\n'
+                              'Please see the GitHub README for details.\n'
+                              'Types that require encryption have been disabled.')
+        app.setLabelBg('no-b9', '#ff9999')
+        app.disableButton('Mount')
     app.addHorizontalSeparator()
     app.addLabel('footer', 'fuse-3ds {0} running on Python {1[0]}.{1[1]}.{1[2]} {2} on {3}'.format(
-        __version__, version_info, '64-bit' if maxsize > 0xFFFFFFFF else '32-bit', platform), colspan=3)
+        init.__version__, version_info, '64-bit' if maxsize > 0xFFFFFFFF else '32-bit', platform), colspan=3)
 
 # app.addStatusbar()
 # app.setStatusbar('Waiting')
@@ -272,6 +328,14 @@ with app.subWindow('mounterror', 'fuse-3ds Error', modal=True, blocking=True):
     app.addLabel('mounterror-label', 'Failed to mount. Please check the output.')
     app.addNamedButton('OK', 'mounterror-ok', lambda _: app.hideSubWindow('mounterror'))
     app.setResizable(False)
+
+if windows:
+    # failed to mount to directory subwindow
+    with app.subWindow('mounterror-dir-win', 'fuse-3ds Error', modal=True, blocking=True):
+        app.addLabel('mounterror-dir-label', 'Failed to mount to the given mount point.\n'
+                                             'Please make sure the directory is empty or does not exist.')
+        app.addNamedButton('OK', 'mounterror-dir-ok', lambda _: app.hideSubWindow('mounterror-dir-win'))
+        app.setResizable(False)
 
 # failed to unmount subwindow
 with app.subWindow('unmounterror', 'fuse-3ds Error', modal=True, blocking=True):
@@ -288,7 +352,20 @@ with app.subWindow('unmounterror', 'fuse-3ds Error', modal=True, blocking=True):
     app.setResizable(False)
 
 
-def main():
+def main(_pyi=False, _allow_admin=False):
+    if windows and not _allow_admin:
+        if windll.shell32.IsUserAnAdmin():
+            windll.user32.MessageBoxW(None, (
+                'This should not be run as administrator.\n'
+                'The mount point may not be accessible by your account normally,'
+                'only by the administrator.\n\n'
+                'If you are having issues with administrative tools not seeing files,'
+                'choose a directory as a mount point instead of a drive letter.'),
+                'fuse-3ds', 0x00000010)
+            exit(1)
+
+    global _used_pyinstaller
+    _used_pyinstaller = _pyi
     app.go()
     stop_mount()
     return 0

@@ -36,18 +36,18 @@ setup(
     entry_points={'console_scripts': ['fuse3ds = fuse3ds.__main__:gui',
                                       # not putting in gui_scripts since the cmd window
                                       # is needed on windows atm.
-                                      'mount_cci = fuse3ds.__main__:main',
-                                      'mount_cdn = fuse3ds.__main__:main',
-                                      'mount_cia = fuse3ds.__main__:main',
-                                      'mount_exefs = fuse3ds.__main__:main',
-                                      'mount_nand = fuse3ds.__main__:main',
-                                      'mount_ncch = fuse3ds.__main__:main',
-                                      'mount_romfs = fuse3ds.__main__:main',
-                                      'mount_sd = fuse3ds.__main__:main',
-                                      'mount_titledir = fuse3ds.__main__:main',
+                                      'mount_cci = fuse3ds.main:main',
+                                      'mount_cdn = fuse3ds.main:main',
+                                      'mount_cia = fuse3ds.main:main',
+                                      'mount_exefs = fuse3ds.main:main',
+                                      'mount_nand = fuse3ds.main:main',
+                                      'mount_ncch = fuse3ds.main:main',
+                                      'mount_romfs = fuse3ds.main:main',
+                                      'mount_sd = fuse3ds.main:main',
+                                      'mount_titledir = fuse3ds.main:main',
                                       # aliases
-                                      'mount_3ds = fuse3ds.__main__:main',
-                                      'mount_cxi = fuse3ds.__main__:main',
-                                      'mount_cfa = fuse3ds.__main__:main',
-                                      'mount_app = fuse3ds.__main__:main']}
+                                      'mount_3ds = fuse3ds.main:main',
+                                      'mount_cxi = fuse3ds.main:main',
+                                      'mount_cfa = fuse3ds.main:main',
+                                      'mount_app = fuse3ds.main:main']}
 )

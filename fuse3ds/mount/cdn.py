@@ -132,6 +132,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
             except Exception as e:
                 print("Failed to mount {}: {}: {}".format(filename, type(e).__name__, e))
 
+    @_c.ensure_lower_path
     def getattr(self, path, fh=None):
         first_dir = _c.get_first_dir(path)
         if first_dir in self.dirs:
@@ -139,8 +140,8 @@ class CDNContentsMount(LoggingMixIn, Operations):
         uid, gid, pid = fuse_get_context()
         if path == '/' or path in self.dirs:
             st = {'st_mode': (S_IFDIR | 0o555), 'st_nlink': 2}
-        elif path.lower() in self.files:
-            st = {'st_mode': (S_IFREG | 0o444), 'st_size': self.files[path.lower()]['size'], 'st_nlink': 1}
+        elif path in self.files:
+            st = {'st_mode': (S_IFREG | 0o444), 'st_size': self.files[path]['size'], 'st_nlink': 1}
         else:
             raise FuseOSError(ENOENT)
         return {**st, **self.g_stat, 'st_uid': uid, 'st_gid': gid}
@@ -152,6 +153,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
         self.fd += 1
         return self.fd
 
+    @_c.ensure_lower_path
     def readdir(self, path, fh):
         first_dir = _c.get_first_dir(path)
         if first_dir in self.dirs:
@@ -161,11 +163,12 @@ class CDNContentsMount(LoggingMixIn, Operations):
             yield from (x[1:] for x in self.files)
             yield from (x[1:] for x in self.dirs)
 
+    @_c.ensure_lower_path
     def read(self, path, size, offset, fh):
         first_dir = _c.get_first_dir(path)
         if first_dir in self.dirs:
             return self.dirs[first_dir].read(_c.remove_first_dir(path), size, offset, fh)
-        fi = self.files[path.lower()]
+        fi = self.files[path]
         real_size = size
         with open(fi['real_filepath'], 'rb') as f:
             if fi['type'] == 'raw':
@@ -208,6 +211,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
 
             return data
 
+    @_c.ensure_lower_path
     def statfs(self, path):
         first_dir = _c.get_first_dir(path)
         if first_dir in self.dirs:

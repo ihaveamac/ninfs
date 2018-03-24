@@ -297,17 +297,17 @@ class NANDImageMount(LoggingMixIn, Operations):
     def flush(self, path, fh):
         return self.f.flush()
 
+    @_c.ensure_lower_path
     def getattr(self, path, fh=None):
-        lpath = path.lower()
-        if lpath.startswith('/essential/'):
+        if path.startswith('/essential/'):
             return self.exefs_fuse.getattr(_c.remove_first_dir(path), fh)
         else:
             uid, gid, pid = fuse_get_context()
             if path in {'/', '/essential'}:
                 st = {'st_mode': (S_IFDIR | (0o555 if self.readonly else 0o777)), 'st_nlink': 2}
-            elif path.lower() in self.files:
-                st = {'st_mode': (S_IFREG | (0o444 if (self.readonly or lpath == '/_nandinfo.txt') else 0o666)),
-                      'st_size': self.files[path.lower()]['size'], 'st_nlink': 1}
+            elif path in self.files:
+                st = {'st_mode': (S_IFREG | (0o444 if (self.readonly or path == '/_nandinfo.txt') else 0o666)),
+                      'st_size': self.files[path]['size'], 'st_nlink': 1}
             else:
                 raise FuseOSError(ENOENT)
             return {**st, **self.g_stat, 'st_uid': uid, 'st_gid': gid}
@@ -316,21 +316,21 @@ class NANDImageMount(LoggingMixIn, Operations):
         self.fd += 1
         return self.fd
 
+    @_c.ensure_lower_path
     def readdir(self, path, fh):
-        lpath = path.lower()
-        if lpath.startswith('/essential'):
+        if path.startswith('/essential'):
             yield from self.exefs_fuse.readdir(_c.remove_first_dir(path), fh)
-        elif lpath == '/':
+        elif path == '/':
             yield from ('.', '..')
             yield from (x[1:] for x in self.files)
             if self._essentials_mounted:
                 yield 'essential'
 
+    @_c.ensure_lower_path
     def read(self, path, size, offset, fh):
-        lpath = path.lower()
-        if lpath.startswith('/essential/'):
+        if path.startswith('/essential/'):
             return self.exefs_fuse.read(_c.remove_first_dir(path), size, offset, fh)
-        fi = self.files[lpath]
+        fi = self.files[path]
         real_offset = fi['offset'] + offset
         if fi['type'] == 'raw':
             self.f.seek(real_offset)
@@ -364,19 +364,20 @@ class NANDImageMount(LoggingMixIn, Operations):
 
         return data
 
+    @_c.ensure_lower_path
     def statfs(self, path):
         if path.startswith('/essential/'):
             return self.exefs_fuse.statfs(_c.remove_first_dir(path))
         return {'f_bsize': 4096, 'f_blocks': self.real_nand_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
                 'f_files': len(self.files)}
 
+    @_c.ensure_lower_path
     def write(self, path, data, offset, fh):
-        lpath = path.lower()
         if self.readonly:
             raise FuseOSError(EROFS)
-        if lpath.startswith('/essential/'):
+        if path.startswith('/essential/'):
             raise FuseOSError(EPERM)
-        fi = self.files[lpath]
+        fi = self.files[path]
         if fi['type'] == 'info':
             raise FuseOSError(EPERM)
         real_offset = fi['offset'] + offset

@@ -41,8 +41,9 @@ except Exception as e:
 
 
 class SDFilesystemMount(LoggingMixIn, Operations):
+    @_c.ensure_lower_path
     def path_to_iv(self, path):
-        path_hash = sha256(path[self.root_len + 33:].lower().encode('utf-16le') + b'\0\0').digest()
+        path_hash = sha256(path[self.root_len + 33:].encode('utf-16le') + b'\0\0').digest()
         hash_p1 = util.readbe(path_hash[0:16])
         hash_p2 = util.readbe(path_hash[16:32])
         return hash_p1 ^ hash_p2

@@ -64,6 +64,7 @@ class ExeFSMount(LoggingMixIn, Operations):
             except CodeDecompressionError as e:
                 print('\nFailed to decompress .code: {}: {}'.format(type(e).__name__, e))
 
+    @_c.ensure_lower_path
     def getattr(self, path, fh=None):
         uid, gid, pid = fuse_get_context()
         if path == '/':
@@ -80,10 +81,12 @@ class ExeFSMount(LoggingMixIn, Operations):
         self.fd += 1
         return self.fd
 
+    @_c.ensure_lower_path
     def readdir(self, path, fh):
         yield from ('.', '..')
         yield from (x[1:] for x in self.files)
 
+    @_c.ensure_lower_path
     def read(self, path, size, offset, fh):
         try:
             item = self.files[path]
@@ -101,6 +104,7 @@ class ExeFSMount(LoggingMixIn, Operations):
         self.f.seek(real_offset)
         return self.f.read(size)
 
+    @_c.ensure_lower_path
     def statfs(self, path):
         return {'f_bsize': 4096, 'f_blocks': self.exefs_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
                 'f_files': len(self.reader)}

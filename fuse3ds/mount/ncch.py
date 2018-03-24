@@ -159,17 +159,17 @@ class NCCHContainerMount(LoggingMixIn, Operations):
     def flush(self, path, fh):
         return self.f.flush()
 
+    @_c.ensure_lower_path
     def getattr(self, path, fh=None):
-        lpath = path.lower()
-        if lpath.startswith('/exefs/'):
+        if path.startswith('/exefs/'):
             return self.exefs_fuse.getattr(_c.remove_first_dir(path), fh)
-        elif lpath.startswith('/romfs/'):
+        elif path.startswith('/romfs/'):
             return self.romfs_fuse.getattr(_c.remove_first_dir(path), fh)
         uid, gid, pid = fuse_get_context()
-        if lpath == '/' or lpath == '/romfs' or lpath == '/exefs':
+        if path == '/' or path == '/romfs' or path == '/exefs':
             st = {'st_mode': (S_IFDIR | 0o555), 'st_nlink': 2}
-        elif lpath in self.files:
-            st = {'st_mode': (S_IFREG | 0o444), 'st_size': self.files[path.lower()]['size'], 'st_nlink': 1}
+        elif path in self.files:
+            st = {'st_mode': (S_IFREG | 0o444), 'st_size': self.files[path]['size'], 'st_nlink': 1}
         else:
             raise FuseOSError(ENOENT)
         return {**st, **self.g_stat, 'st_uid': uid, 'st_gid': gid}
@@ -178,6 +178,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
         self.fd += 1
         return self.fd
 
+    @_c.ensure_lower_path
     def readdir(self, path, fh):
         if path.startswith('/exefs'):
             yield from self.exefs_fuse.readdir(_c.remove_first_dir(path), fh)
@@ -191,13 +192,13 @@ class NCCHContainerMount(LoggingMixIn, Operations):
             if self._romfs_mounted:
                 yield 'romfs'
 
+    @_c.ensure_lower_path
     def read(self, path, size, offset, fh):
-        lpath = path.lower()
-        if lpath.startswith('/exefs/'):
+        if path.startswith('/exefs/'):
             return self.exefs_fuse.read(_c.remove_first_dir(path), size, offset, fh)
-        elif lpath.startswith('/romfs/'):
+        elif path.startswith('/romfs/'):
             return self.romfs_fuse.read(_c.remove_first_dir(path), size, offset, fh)
-        fi = self.files[lpath]
+        fi = self.files[path]
         real_offset = fi['offset'] + offset
         if fi['enctype'] == 'none' or self.reader.flags.no_crypto:
             # if no encryption, just read and return
@@ -286,6 +287,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
 
         return data
 
+    @_c.ensure_lower_path
     def statfs(self, path):
         if path.startswith('/exefs/'):
             return self.exefs_fuse.statfs(_c.remove_first_dir(path))

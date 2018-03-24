@@ -1,6 +1,7 @@
 import inspect
 import sys
 from argparse import ArgumentParser, SUPPRESS
+from functools import wraps
 from typing import Generator, Tuple, Union
 
 from fuse import Operations
@@ -71,6 +72,13 @@ def get_first_dir(path: str) -> str:
         return path[:sep]
 
 
+def ensure_lower_path(method):
+    @wraps(method)
+    def wrapper(self, path, *args, **kwargs):
+        return method(self, path.lower(), *args, **kwargs)
+    return wrapper
+
+
 def raise_if_closed(func):
     def decorator(self, *args, **kwargs):
         if self.closed:
@@ -81,6 +89,7 @@ def raise_if_closed(func):
     decorator.__name__ = func.__name__
     decorator.__doc__ = func.__doc__
     return decorator
+
 
 class VirtualFileWrapper:
     """Wrapper for a FUSE Operations class for things that need a file-like object."""
