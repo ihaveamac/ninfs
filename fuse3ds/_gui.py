@@ -47,6 +47,18 @@ if windows:
     from os import startfile
     from ctypes import windll
     from string import ascii_uppercase
+    from sys import stdout
+
+    # unlikely, but this causes issues
+    if stdout is None:  # happens if pythonw is used on windows
+        res = windll.user32.MessageBoxW(None, (
+            'This is being run with the wrong Python executable.\n'
+            'This should be installed as a module, then run using the py launcher on Python 3.5.2 or later.\n\n'
+            'Click OK to open the fuse-3ds repository on GitHub.'),
+            'fuse-3ds', 0x00000010 | 0x00000001)
+        if res == 1:
+            webbrowser.open('https://github.com/ihaveamac/fuse-3ds')
+        exit(1)
 
     # https://stackoverflow.com/questions/827371/is-there-a-way-to-list-all-the-available-drive-letters-in-python
     def get_unused_drives():
