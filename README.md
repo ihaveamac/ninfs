@@ -23,7 +23,7 @@ SeedDB is checked at `seeddb.bin` in current working directory, `~/.3ds/seeddb.b
 Python 3.5.2+ and fusepy are required.
 
 ### Windows
-A GUI is available for use. If you download the exe from the [latest release](https://github.com/ihaveamac/fuse-3ds/releases) and run it, a window will appear allowing you.
+A GUI is available for use. If you download the exe from the [latest release](https://github.com/ihaveamac/fuse-3ds/releases) and run it, a window will appear allowing you to choose mount options easily.
 
 Python does not have to be installed, but [WinFsp](http://www.secfs.net/winfsp/download/) is still required.
 
@@ -372,6 +372,6 @@ optional arguments:
 ```
 
 # License/Credits
-`pyctr`, `common`, `mount_cci`, `mount_cdn`, `mount_cia`, `mount_nand`, `mount_ncch`, `mount_romfs`, `mount_sd` are under the MIT license.
+`fuse3ds` is under the MIT license.
 
 Special thanks to @Stary2001 for help with NAND crypto (especially TWL), and @d0k3 for SD crypto.
