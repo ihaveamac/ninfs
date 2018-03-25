@@ -12,10 +12,10 @@ Since it acts like a virtual filesystem, you can browse it with a file manager (
 The ARM9 bootROM is required. You can dump it using boot9strap, which can be set up by [3DS Hacks Guide](https://3ds.hacks.guide). It is checked in order of:
 * `boot9.bin` (full) in current working directory
 * `boot9_prot.bin` (protected) in current working directory
-* `~/.3ds/boot9.bin` (full)
-* `~/.3ds/boot9_prot.bin` (protected)
-* `~/3ds/boot9.bin` (full)
-* `~/3ds/boot9_prot.bin` (protected)
+* `{User home directory}/.3ds/boot9.bin` (full)
+* `{User home directory}/.3ds/boot9_prot.bin` (protected)
+* `{User home directory}/3ds/boot9.bin` (full)
+* `{User home directory}/3ds/boot9_prot.bin` (protected)
 
 CCI, CDN, CIA, and NCCH mounting will need [SeedDB](https://github.com/ihaveamac/3DS-rom-tools/wiki/SeedDB-list) for mounting NCCH containers.  
 SeedDB is checked at `seeddb.bin` in current working directory, `~/.3ds/seeddb.bin`, or  `~/3ds/seeddb.bin`. It can also be provided with the `--seeddb` argument.
