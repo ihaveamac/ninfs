@@ -52,9 +52,11 @@ mount_types = {CCI: 'cci', CDN: 'cdn', CIA: 'cia', EXEFS: 'exefs', NAND: 'nand',
 types_list = (CCI, CDN, CIA, EXEFS, NAND, NCCH, ROMFS, SD, TITLEDIR)
 
 windows = platform == 'win32'  # only for native windows, not cygwin
+macos = platform == 'darwin'
+
 if windows:
-    from os import startfile
     from ctypes import windll
+    from os import startfile
     from string import ascii_uppercase
     from sys import stdout
 
@@ -63,7 +65,8 @@ if windows:
         res = windll.user32.MessageBoxW(None, (
             'This is being run with the wrong Python executable.\n'
             'This should be installed as a module, then run using the py launcher on Python 3.5.2 or later.\n\n'
-            'Click OK to open the fuse-3ds repository on GitHub.'),
+            'Click OK to open the fuse-3ds repository on GitHub:\n'
+            'https://github.com/ihaveamac/fuse-3ds'),
             'fuse-3ds', 0x00000010 | 0x00000001)
         if res == 1:
             webbrowser.open('https://github.com/ihaveamac/fuse-3ds')
@@ -368,6 +371,39 @@ with app.subWindow('unmounterror', 'fuse-3ds Error', modal=True, blocking=True):
 
 
 def main(_pyi=False, _allow_admin=False):
+    global _used_pyinstaller
+    _used_pyinstaller = _pyi
+    try:
+        # attempt importing all the fusepy stuff used in the mount scripts
+        # if it fails, libfuse probably couldn't be found
+        from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
+    except EnvironmentError:
+        # TODO: probably check if this was really "Unable to find libfuse" (this is aliased to OSError)
+        if windows:
+            if _used_pyinstaller:  # the right fusepy has to be included if it's a pyinstaller exe
+                res = windll.user32.MessageBoxW(None, (
+                    'Failed to import fusepy. WinFsp needs to be installed.\n\n'
+                    'Click OK to open the WinFsp download page:\n'
+                    'http://www.secfs.net/winfsp/download/'),
+                    'fuse-3ds', 0x00000010 | 0x00000001)
+                if res == 1:
+                    webbrowser.open('http://www.secfs.net/winfsp/download/')
+            else:
+                res = windll.user32.MessageBoxW(None, (
+                    'Failed to import fusepy. Either WinFsp or fusepy needs to be installed.\n'
+                    'Please check the README of fuse-3ds for more details.\n\n'
+                    'Click OK to open the fuse-3ds repository on GitHub:\n'
+                    'https://github.com/ihaveamac/fuse-3ds'),
+                    'fuse-3ds', 0x00000010 | 0x00000001)
+                if res == 1:
+                    webbrowser.open('https://github.com/ihaveamac/fuse-3ds')
+        elif macos:
+            print('Failed to load fusepy. Make sure FUSE for macOS (osxfuse) is installed.\n'
+                  'https://osxfuse.github.io')
+        else:
+            print("Failed to load fusepy. libfuse probably couldn't be found.")
+        return 1
+
     if windows and not _allow_admin:
         if windll.shell32.IsUserAnAdmin():
             windll.user32.MessageBoxW(None, (
@@ -379,8 +415,6 @@ def main(_pyi=False, _allow_admin=False):
                 'fuse-3ds', 0x00000010)
             exit(1)
 
-    global _used_pyinstaller
-    _used_pyinstaller = _pyi
     app.go()
     stop_mount()
     return 0
