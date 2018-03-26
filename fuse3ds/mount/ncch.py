@@ -13,7 +13,7 @@ from math import ceil
 from stat import S_IFDIR, S_IFREG
 from struct import iter_unpack
 from sys import exit, argv
-from typing import BinaryIO
+from typing import BinaryIO, Dict
 
 from pyctr import crypto, ncch, util
 
@@ -45,20 +45,37 @@ class NCCHContainerMount(LoggingMixIn, Operations):
     fd = 0
     _exefs_mounted = False
     _romfs_mounted = False
+    romfs_fuse = None
+    exefs_fuse = None
 
     def __init__(self, ncch_fp: BinaryIO, g_stat: os.stat_result, decompress_code: bool = True, dev: bool = False,
                  seeddb: str = None):
         self.crypto = crypto.CTRCrypto(is_dev=dev)
-
         self.crypto.setup_keys_from_boot9()
 
+        self.decompress_code = decompress_code
+        self.seeddb = seeddb
+        self.files = {}  # type: Dict[str, Dict]
+
         # get status change, modify, and file access times
+        self._g_stat = g_stat
         self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
                        'st_atime': int(g_stat.st_atime)}
 
         ncch_header = ncch_fp.read(0x200)
         self.reader = ncch.NCCHReader.from_header(ncch_header)
 
+        self.f = ncch_fp
+
+    def __del__(self, *args):
+        try:
+            self.f.close()
+        except AttributeError:
+            pass
+
+    destroy = __del__
+
+    def init(self, path):
         if not self.reader.flags.no_crypto:
             # I should figure out what happens if fixed-key crypto is
             #   used along with seed. even though this will never
@@ -69,8 +86,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                 self.crypto.set_normal_key(0x2C, normal_key.to_bytes(0x10, 'big'))
             else:
                 if self.reader.flags.uses_seed:
-                    seeddb_path = ncch.check_seeddb_file(seeddb)
-                    with open(seeddb_path, 'rb') as f:
+                    with open(ncch.check_seeddb_file(self.seeddb), 'rb') as f:
                         seed = ncch.get_seed(f, self.reader.program_id)
 
                     self.reader.setup_seed(seed)
@@ -80,8 +96,9 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                                         util.readbe(self.reader.get_key_y()))
 
         decrypted_filename = '/decrypted.' + ('cxi' if self.reader.flags.executable else 'cfa')
-        self.files = {decrypted_filename: {'size': self.reader.content_size, 'offset': 0, 'enctype': 'fulldec'},
-                      '/ncch.bin': {'size': 0x200, 'offset': 0, 'enctype': 'none'}}
+
+        self.files[decrypted_filename] =  {'size': self.reader.content_size, 'offset': 0, 'enctype': 'fulldec'}
+        self.files['/ncch.bin'] = {'size': 0x200, 'offset': 0, 'enctype': 'none'}
 
         if self.reader.check_for_extheader():
             self.files['/extheader.bin'] = {'size': 0x800, 'offset': 0x200, 'enctype': 'normal',
@@ -95,8 +112,6 @@ class NCCHContainerMount(LoggingMixIn, Operations):
         if logo_region.offset:
             self.files['/logo.bin'] = {'size': logo_region.size, 'offset': logo_region.offset, 'enctype': 'none'}
 
-        self.f = ncch_fp
-
         exefs_region = self.reader.exefs_region
         if exefs_region.offset:
             self.files['/exefs.bin'] = {'size': exefs_region.size, 'offset': exefs_region.offset, 'enctype': 'exefs',
@@ -104,8 +119,8 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                                         'iv': (self.reader.partition_id << 64 | (0x02 << 56)),
                                         'keyslot_normal_range': [(0, 0x200)]}
             if not self.reader.flags.no_crypto:
-                ncch_fp.seek(exefs_region.offset)
-                exefs_header = self.crypto.aes_ctr(0x2C, self.files['/exefs.bin']['iv'], ncch_fp.read(0xA0))
+                self.f.seek(exefs_region.offset)
+                exefs_header = self.crypto.aes_ctr(0x2C, self.files['/exefs.bin']['iv'], self.f.read(0xA0))
                 for name, offset, size in iter_unpack('<8sII', exefs_header):
                     uname = name.decode('utf-8').strip('\0')
                     if uname in {'icon', 'banner'}:
@@ -115,14 +130,14 @@ class NCCHContainerMount(LoggingMixIn, Operations):
             try:
                 # get code compression bit
                 decompress = False
-                if decompress_code and self.reader.check_for_extheader():
+                if self.decompress_code and self.reader.check_for_extheader():
                     exh_flag = self.read('/extheader.bin', 1, 0xD, 0)
                     decompress = exh_flag[0] & 1
                 exefs_vfp = _c.VirtualFileWrapper(self, '/exefs.bin', exefs_region.size)
                 # noinspection PyTypeChecker
-                exefs_fuse = ExeFSMount(exefs_vfp, g_stat, decompress_code=decompress)
+                exefs_fuse = ExeFSMount(exefs_vfp, self._g_stat, decompress_code=decompress)
+                exefs_fuse.init(path)
                 self.exefs_fuse = exefs_fuse
-                self._exefs_mounted = True
             except Exception as e:
                 print("Failed to mount ExeFS: {}: {}".format(type(e).__name__, e))
 
@@ -136,25 +151,11 @@ class NCCHContainerMount(LoggingMixIn, Operations):
             try:
                 romfs_vfp = _c.VirtualFileWrapper(self, '/romfs.bin', romfs_region.size)
                 # noinspection PyTypeChecker
-                romfs_fuse = RomFSMount(romfs_vfp, g_stat)
+                romfs_fuse = RomFSMount(romfs_vfp, self._g_stat)
+                romfs_fuse.init(path)
                 self.romfs_fuse = romfs_fuse
-                self._romfs_mounted = True
             except Exception as e:
                 print("Failed to mount RomFS: {}: {}".format(type(e).__name__, e))
-
-    def __del__(self, *args):
-        try:
-            self.f.close()
-        except AttributeError:
-            pass
-
-    destroy = __del__
-
-    def init(self, path):
-        if self._exefs_mounted:
-            self.exefs_fuse.init(path)
-        if self._romfs_mounted:
-            self.romfs_fuse.init(path)
 
     def flush(self, path, fh):
         return self.f.flush()
@@ -187,9 +188,9 @@ class NCCHContainerMount(LoggingMixIn, Operations):
         elif path == '/':
             yield from ('.', '..')
             yield from (x[1:] for x in self.files)
-            if self._exefs_mounted:
+            if self.exefs_fuse is not None:
                 yield 'exefs'
-            if self._romfs_mounted:
+            if self.romfs_fuse is not None:
                 yield 'romfs'
 
     @_c.ensure_lower_path
