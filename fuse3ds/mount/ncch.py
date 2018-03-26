@@ -65,7 +65,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
             #   happen in practice, I would still like to see what
             #   happens if it happens.
             if self.reader.flags.fixed_crypto_key:
-                normal_key = ncch.fixed_system_key if self.reader.program_id & (0x10 << 32) else 0x0
+                normal_key = ncch.FIXED_SYSTEM_KEY if self.reader.program_id & (0x10 << 32) else 0x0
                 self.crypto.set_normal_key(0x2C, normal_key.to_bytes(0x10, 'big'))
             else:
                 if self.reader.flags.uses_seed:

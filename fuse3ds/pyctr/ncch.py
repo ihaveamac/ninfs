@@ -47,7 +47,7 @@ def get_seed(f: BinaryIO, program_id: int) -> bytes:
 NCCH_MEDIA_UNIT = 0x200
 extra_cryptoflags = {0x00: 0x2C, 0x01: 0x25, 0x0A: 0x18, 0x0B: 0x1B}
 
-fixed_system_key = 0x527CE630A9CA305F3696F3CDE954194B
+FIXED_SYSTEM_KEY = 0x527CE630A9CA305F3696F3CDE954194B
 
 NCCHRegion = NamedTuple('NCCHRegion', (('offset', int), ('size', int)))
 NCCHFlags = NamedTuple('NCCHFlags', (('crypto_method', int), ('executable', bool), ('fixed_crypto_key', bool),
