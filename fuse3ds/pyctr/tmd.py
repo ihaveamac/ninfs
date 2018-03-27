@@ -100,7 +100,7 @@ class TitleMetadataReader:
 
     def __init__(self, *, title_id: str, save_size: int, srl_save_size: int, title_version: TitleVersion,
                  info_records: Iterable[ContentInfoRecord], chunk_records: Iterable[ContentChunkRecord]):
-        self.title_id = title_id
+        self.title_id = title_id.lower()
         self.save_size = save_size
         self.srl_save_size = srl_save_size
         self.title_version = title_version

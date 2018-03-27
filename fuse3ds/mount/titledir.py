@@ -48,6 +48,11 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
         self.total_size = 0
 
         self.decompress_code = decompress_code
+        if decompress_code:
+            print('Note: Code decompression takes a while if there are a lot of titles.',
+                  'The mount may take some time to appear if this mount is running in the background.',
+                  'Use -f to run in the foreground to see progress.', sep='\n')
+
 
         titles_stat = os.stat(titles_dir)
         self.g_stat = {'st_ctime': int(titles_stat.st_ctime), 'st_mtime': int(titles_stat.st_mtime),
@@ -68,6 +73,8 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
             self.total_size = 0
             for chunk in tmd.chunk_records:
                 content_path = os.path.dirname(tmd_path)
+                if tmd.title_id.startswith('0004008c'):
+                    content_path = os.path.join(content_path, '00000000')
                 if os.path.isfile(os.path.join(content_path, chunk.id + '.app')):
                     real_filename = os.path.join(content_path, chunk.id + '.app')
                 elif os.path.isfile(os.path.join(content_path, chunk.id.upper() + '.APP')):
@@ -75,6 +82,8 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
                 else:
                     print("Content {0.title_id}:{1.cindex:04}:{1.id} not found, "
                           "will not be included.".format(tmd, chunk))
+                    if self.mount_all is False:
+                        break
                     continue
                 f_stat = os.stat(real_filename)
                 if chunk.size != f_stat.st_size:
