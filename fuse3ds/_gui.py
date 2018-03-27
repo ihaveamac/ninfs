@@ -6,7 +6,7 @@ import subprocess
 import webbrowser
 from sys import argv, exit, executable, platform, version_info, maxsize
 from os import kill, rmdir
-from os.path import isfile, isdir
+from os.path import isfile, isdir, dirname
 from time import sleep
 from traceback import print_exception
 
@@ -37,7 +37,7 @@ else:
 
 # types
 CCI = 'CTR Cart Image (".3ds", ".cci")'
-CDN = 'CDN contents'
+CDN = 'CDN contents (directory with "cetk", "tmd", and contents)'
 CIA = 'CTR Importable Archive (".cia")'
 EXEFS = 'Executable Filesystem (".exefs", "exefs.bin")'
 NAND = 'NAND backup ("nand.bin")'
@@ -97,7 +97,7 @@ def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = (
     if process is None or process.poll() is not None:
         args = [executable]
         if not _used_pyinstaller:
-            args.append('-mfuse3ds')
+            args.append(dirname(__file__))
         args.extend((module_type, '-f', item, mountpoint))
         args.extend(extra_args)
         curr_mountpoint = mountpoint
@@ -218,6 +218,7 @@ def kill_process(_):
 
 def change_type(*_):
     mount_type = app.getOptionBox('TYPE')
+    app.showFrame('mountpoint')
     for t in mount_types:
         if t == mount_type:
             app.showFrame(t)
@@ -230,12 +231,16 @@ def change_type(*_):
             app.enableButton('Mount')
 
 
-# TODO: SeedDB stuff
 # TODO: maybe check if the mount was unmounted outside of the unmount button
+
+with app.frame('default', row=1, colspan=3):
+    app.addLabel('d-label1', 'To get started, choose a type to mount above.', colspan=3)
+    app.addLabel('d-label2', 'If you need help, click "Help" at the top-right.', colspan=3)
 
 with app.frame(CCI, row=1, colspan=3):
     app.addLabel(CCI + 'label1', 'File', row=0, column=0)
     app.addFileEntry(CCI + 'item', row=0, column=1, colspan=2)
+app.hideFrame(CCI)
 
 with app.frame(CDN, row=1, colspan=3):
     app.addLabel(CDN + 'label1', 'Directory', row=0, column=0)
@@ -291,21 +296,21 @@ with app.frame(TITLEDIR, row=1, colspan=3):
 app.hideFrame(TITLEDIR)
 
 app.setSticky('new')
-app.addOptionBox('TYPE', types_list, row=0, colspan=2)
+app.addOptionBox('TYPE', ('- Choose a type -', *types_list), row=0, colspan=2)
 app.setOptionBoxChangeFunction('TYPE', change_type)
 app.addButton('Help', press, row=0, column=2)
 
 app.setSticky('sew')
-if windows:
-    def rb_change(_):
-        if app.getRadioButton('mountpoint-choice') == 'Drive letter':
-            app.hideFrame('mountpoint-dir')
-            app.showFrame('mountpoint-drive')
-        else:
-            app.hideFrame('mountpoint-drive')
-            app.showFrame('mountpoint-dir')
+with app.frame('mountpoint', row=2, colspan=3):
+    if windows:
+        def rb_change(_):
+            if app.getRadioButton('mountpoint-choice') == 'Drive letter':
+                app.hideFrame('mountpoint-dir')
+                app.showFrame('mountpoint-drive')
+            else:
+                app.hideFrame('mountpoint-drive')
+                app.showFrame('mountpoint-dir')
 
-    with app.frame('win-mountpoint', row=2, colspan=3):
         app.addLabel('mountpoint-choice-label', 'Mount type', row=0)
         app.addRadioButton('mountpoint-choice', "Drive letter", row=0, column=1)
         app.addRadioButton('mountpoint-choice', "Directory", row=0, column=2)
@@ -319,14 +324,15 @@ if windows:
         app.hideFrame('mountpoint-dir')
         # noinspection PyUnboundLocalVariable
         update_drives()
-else:
-    app.addLabel('mountlabel', 'Mount point', row=2, column=0)
-    app.addDirectoryEntry('mountpoint', row=2, column=1, colspan=2)
+    else:
+        app.addLabel('mountlabel', 'Mount point', row=2, column=0)
+        app.addDirectoryEntry('mountpoint', row=2, column=1, colspan=2)
+
+    app.addButtons(['Mount', 'Unmount'], press, colspan=3)
+    app.disableButton('Unmount')
+app.hideFrame('mountpoint')
 
 with app.frame('FOOTER', row=3, colspan=3):
-    app.addButtons(['Mount', 'Unmount'], press, colspan=3)
-    app.disableButton('Mount')
-    app.disableButton('Unmount')
     if not b9_found:
         app.addHorizontalSeparator()
         app.addLabel('no-b9', 'boot9 was not found.\n'
@@ -344,8 +350,6 @@ with app.frame('FOOTER', row=3, colspan=3):
     app.addLabel('footer', 'fuse-3ds {0} running on Python {1[0]}.{1[1]}.{1[2]} {2} on {3}'.format(
         init.__version__, version_info, '64-bit' if maxsize > 0xFFFFFFFF else '32-bit', platform), colspan=3)
 
-# app.addStatusbar()
-# app.setStatusbar('Waiting')
 app.setFont(10)
 app.setResizable(False)
 
