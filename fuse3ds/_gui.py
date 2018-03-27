@@ -399,7 +399,7 @@ def main(_pyi=False, _allow_admin=False):
                     webbrowser.open('https://github.com/ihaveamac/fuse-3ds')
         elif macos:
             print('Failed to load fusepy. Make sure FUSE for macOS (osxfuse) is installed.\n'
-                  'https://osxfuse.github.io')
+                  '  https://osxfuse.github.io')
         else:
             print("Failed to load fusepy. libfuse probably couldn't be found.")
         return 1
