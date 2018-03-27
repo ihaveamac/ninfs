@@ -254,7 +254,7 @@ def main(prog: str = None, args: list = None):
                 # volume label can only be up to 32 chars
                 opts['volname'] = "CIA ({})".format(mount.title_id.upper())
         FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
-             sname=os.path.realpath(a.cia).replace(',', '_'), **opts)
+             fsname=os.path.realpath(a.cia).replace(',', '_'), **opts)
 
 
 if __name__ == '__main__':
