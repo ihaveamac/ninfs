@@ -13,6 +13,7 @@ from stat import S_IFDIR
 from sys import exit, argv
 from typing import Dict
 
+from pyctr.smdh import SMDH, SMDH_SIZE, InvalidSMDHError
 from pyctr.tmd import TitleMetadataReader, CHUNK_RECORD_SIZE
 
 from . import _common as _c
@@ -27,6 +28,9 @@ except Exception as e:
     exit("Failed to import the fuse module:\n"
          "{}: {}".format(type(e).__name__, e))
 
+_region_order_check = ('English', 'Japanese', 'French', 'German', 'Italian', 'Spanish', 'Simplified Chinese', 'Korean',
+                       'Dutch', 'Portuguese', 'Russian', 'Traditional Chinese',)
+
 
 class TitleDirectoryMount(LoggingMixIn, Operations):
     fd = 0
@@ -36,6 +40,7 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
         self.titles_dir = titles_dir
         self.files = {}
         self.dirs = {}  # type: Dict[str, NCCHContainerMount]
+        self._real_dir_names = {}  # type: Dict[str, str]
 
         self.mount_all = mount_all
         self.dev = dev
@@ -86,10 +91,29 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
                     content_fuse = NCCHContainerMount(content_vfp, decompress_code=self.decompress_code, dev=self.dev,
                                                       g_stat=f_stat, seeddb=self.seeddb)
                     content_fuse.init(path)
-                    self.dirs[dirname] = content_fuse
-                    self.total_size += chunk.size
                 except Exception as e:
                     print("Failed to mount {}: {}: {}".format(real_filename, type(e).__name__, e))
+                else:
+                    self.total_size += chunk.size
+                    try:
+                        # noinspection PyTypeChecker
+                        smdh = SMDH.load(_c.VirtualFileWrapper(content_fuse.exefs_fuse, '/icon.bin', SMDH_SIZE))
+                    except (AttributeError, InvalidSMDHError):
+                        pass
+                    except FuseOSError as e:
+                        if e.args[0] == ENOENT:
+                            pass
+                        else:
+                            print('Unexpected Exception when loading SMDH: {}: {}'.format(type(e).__name__, e))
+                    else:
+                        for x in _region_order_check:
+                            try:
+                                dirname += ' ' + smdh.names[x].short_desc
+                                break
+                            except (AttributeError, TypeError):
+                                pass
+                    self.dirs[dirname] = content_fuse
+                    self._real_dir_names[dirname.lower()] = dirname
 
                 if self.mount_all is False:
                     break
@@ -99,8 +123,8 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
     @_c.ensure_lower_path
     def getattr(self, path, fh=None):
         first_dir = _c.get_first_dir(path)
-        if first_dir in self.dirs:
-            return self.dirs[first_dir].getattr(_c.remove_first_dir(path), fh)
+        if first_dir in self._real_dir_names:
+            return self.dirs[self._real_dir_names[first_dir]].getattr(_c.remove_first_dir(path), fh)
         uid, gid, pid = fuse_get_context()
         if path == '/' or path in self.dirs:
             st = {'st_mode': (S_IFDIR | 0o555), 'st_nlink': 2}
@@ -118,8 +142,8 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
     @_c.ensure_lower_path
     def readdir(self, path, fh):
         first_dir = _c.get_first_dir(path)
-        if first_dir in self.dirs:
-            yield from self.dirs[first_dir].readdir(_c.remove_first_dir(path), fh)
+        if first_dir in self._real_dir_names:
+            yield from self.dirs[self._real_dir_names[first_dir]].readdir(_c.remove_first_dir(path), fh)
         else:
             yield from ('.', '..')
             yield from (x[1:] for x in self.dirs)
@@ -128,8 +152,8 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
     @_c.ensure_lower_path
     def read(self, path, size, offset, fh):
         first_dir = _c.get_first_dir(path)
-        if first_dir in self.dirs:
-            return self.dirs[first_dir].read(_c.remove_first_dir(path), size, offset, fh)
+        if first_dir in self._real_dir_names:
+            return self.dirs[self._real_dir_names[first_dir]].read(_c.remove_first_dir(path), size, offset, fh)
         # file handling only to support the above.
         fi = self.files[path]
         with open(fi['real_filepath'], 'rb') as f:
@@ -139,8 +163,8 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
     @_c.ensure_lower_path
     def statfs(self, path):
         first_dir = _c.get_first_dir(path)
-        if first_dir in self.dirs:
-            return self.dirs[first_dir].read(_c.remove_first_dir(path))
+        if first_dir in self._real_dir_names:
+            return self.dirs[self._real_dir_names[first_dir]].read(_c.remove_first_dir(path))
         return {'f_bsize': 4096, 'f_blocks': self.total_size // 4096, 'f_bavail': 0, 'f_bfree': 0, 'f_files': 0}
 
 

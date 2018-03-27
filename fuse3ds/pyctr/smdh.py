@@ -35,10 +35,7 @@ class SMDH:
     # TODO: support other settings
 
     def __init__(self, names: Dict[str, AppTitle]):
-        # self.names = {}
-        # for n in region_names:
-        #     self.names[n] = names.get(n, '')
-        self.names = MappingProxyType({n: names.get(n, None) for n in region_names})  # type: Dict[str, str]
+        self.names = MappingProxyType({n: names.get(n, None) for n in region_names})  # type: Dict[str, AppTitle]
 
     @classmethod
     def load(cls, fp: BinaryIO) -> 'SMDH':
@@ -53,6 +50,12 @@ class SMDH:
         names = {}  # type: Dict[str, AppTitle]
         # due to region_names only being 12 elements, this will only process 12. the other 4 are unused.
         for app_title, region in zip((app_structs[x:x + 0x200] for x in range(0, 0x200, 0x2000)), region_names):
-            names[region] = AppTitle(app_title[0:0x80].decode('utf-16le'), app_title[0x80:0x180].decode('utf-16le'),
-                                     app_title[0x180:0x200].decode('utf-16le'))
+            names[region] = AppTitle(app_title[0:0x80].decode('utf-16le').strip('\0'),
+                                     app_title[0x80:0x180].decode('utf-16le').strip('\0'),
+                                     app_title[0x180:0x200].decode('utf-16le').strip('\0'))
         return cls(names)
+
+    @classmethod
+    def from_file(cls, fn: str) -> 'SMDH':
+        with open(fn, 'rb') as f:
+            return cls.load(f)
