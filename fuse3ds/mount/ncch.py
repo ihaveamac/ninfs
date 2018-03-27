@@ -118,14 +118,6 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                                         'keyslot': 0x2C, 'keyslot_extra': self.reader.extra_keyslot,
                                         'iv': (self.reader.partition_id << 64 | (0x02 << 56)),
                                         'keyslot_normal_range': [(0, 0x200)]}
-            if not self.reader.flags.no_crypto:
-                self.f.seek(exefs_region.offset)
-                exefs_header = self.crypto.aes_ctr(0x2C, self.files['/exefs.bin']['iv'], self.f.read(0xA0))
-                for name, offset, size in iter_unpack('<8sII', exefs_header):
-                    # TODO: move this to use ExeFSReader
-                    if name in {b'icon\0\0\0\0', b'banner\0\0'}:
-                        self.files['/exefs.bin']['keyslot_normal_range'].append(
-                            (offset + 0x200, offset + 0x200 + util.roundup(size, 0x200)))
 
             try:
                 # get code compression bit
@@ -140,6 +132,12 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                 self.exefs_fuse = exefs_fuse
             except Exception as e:
                 print("Failed to mount ExeFS: {}: {}".format(type(e).__name__, e))
+            else:
+                if not self.reader.flags.no_crypto:
+                    for n, ent in self.exefs_fuse.reader.entries.items():
+                        if n in {'icon', 'banner'}:
+                            self.files['/exefs.bin']['keyslot_normal_range'].append(
+                                (ent.offset + 0x200, ent.offset + 0x200 + util.roundup(ent.size, 0x200)))
 
         if not self.reader.flags.no_romfs:
             romfs_region = self.reader.romfs_region
