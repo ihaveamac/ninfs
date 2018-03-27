@@ -51,7 +51,6 @@ class NCCHContainerMount(LoggingMixIn, Operations):
     def __init__(self, ncch_fp: BinaryIO, g_stat: os.stat_result, decompress_code: bool = True, dev: bool = False,
                  seeddb: str = None):
         self.crypto = crypto.CTRCrypto(is_dev=dev)
-        self.crypto.setup_keys_from_boot9()
 
         self.decompress_code = decompress_code
         self.seeddb = seeddb

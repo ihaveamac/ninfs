@@ -49,10 +49,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         return hash_p1 ^ hash_p2
 
     def __init__(self, sd_dir: str, movable: str, dev: bool = False, readonly: bool = False):
-        self.fds = {}
         self.crypto = crypto.CTRCrypto(is_dev=dev)
-
-        self.crypto.setup_keys_from_boot9()
 
         with open(movable, 'rb') as mv:
             mv.seek(0x110)
@@ -63,6 +60,8 @@ class SDFilesystemMount(LoggingMixIn, Operations):
 
         if not os.path.isdir(sd_dir + '/' + self.root_dir):
             exit('Failed to find {} in the SD dir.'.format(self.root_dir))
+
+        self.fds = {}
 
         print('Root dir: ' + self.root_dir)
 

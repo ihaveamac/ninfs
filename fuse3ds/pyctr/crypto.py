@@ -66,7 +66,7 @@ class CTRCrypto:
         (0x5E66998AB4E8931606850FD7A16DD755,) * 2
     )
 
-    def __init__(self, is_dev: int = 0):
+    def __init__(self, is_dev: int = 0, setup_b9_keys: bool = True):
         self.key_x = {}  # type: Dict[int, int]
         self.key_y = {0x03: 0xE1A00005202DDD1DBD4DC4D30AB9DC76, 0x05: 0x4D804F4E9990194613A204AC584460BE}  # type: Dict[int, int]
         self.key_normal = {}  # type: Dict[int, bytes]
@@ -75,6 +75,9 @@ class CTRCrypto:
 
         for keyslot, keys in base_key_x.items():
             self.key_x[keyslot] = keys[is_dev]
+
+        if setup_b9_keys:
+            self.setup_keys_from_boot9()
 
     @property
     def b9_extdata_otp(self) -> bytes:

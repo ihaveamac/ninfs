@@ -53,11 +53,6 @@ class NANDImageMount(LoggingMixIn, Operations):
                  otp: bytes = None, cid: AnyStr = None):
         self.crypto = CTRCrypto(is_dev=dev)
 
-        try:
-            self.crypto.setup_keys_from_boot9()
-        except crypto.BootromNotFoundError as e:
-            print("Bootrom was not found.")
-
         nand_fp.seek(0x100)  # screw the signature
         ncsd_header = nand_fp.read(0x100)
         if ncsd_header[0:4] != b'NCSD':

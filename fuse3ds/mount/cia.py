@@ -52,7 +52,6 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
 
     def __init__(self, cia_fp: BinaryIO, g_stat: os.stat_result, dev: bool = False, seeddb: bool = None):
         self.crypto = CTRCrypto(is_dev=dev)
-        self.crypto.setup_keys_from_boot9()
 
         self.dev = dev
         self.seeddb = seeddb

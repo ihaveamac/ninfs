@@ -19,16 +19,8 @@ class NCCHSeedError(NCCHError):
     """NCCH seed is not set up, or attempted to set up seed when seed crypto is not used."""
 
 
-def check_seeddb_file(path=None) -> Union[str, bool]:
-    """Check for seeddb.bin."""
-    if path:
-        paths = (path,)
-    else:
-        paths = ('seeddb.bin', util.config_dirs[0] + '/seeddb.bin', util.config_dirs[1] + '/seeddb.bin')
-    for fn in paths:
-        if isfile(fn):
-            return fn
-    return False
+class SeedDBNotFoundError(NCCHSeedError):
+    """SeedDB was not found. Main argument is a tuple of checked paths."""
 
 
 def get_seed(f: BinaryIO, program_id: int) -> bytes:
@@ -103,13 +95,20 @@ class NCCHReader:
     def load_seed_from_seeddb(self, path: str = None):
         if not self.flags.uses_seed:
             raise NCCHSeedError("NCCH does not use seed crypto")
-        # can't just try to open and catch an exception. False subclasses int and means 0,
-        #   so trying to open it would open stdin, not a real file.
-        seeddb_path = check_seeddb_file(path)
-        if seeddb_path is False:
-            raise NCCHSeedError("couldn't find seeddb.bin")
-        with open(seeddb_path, 'rb') as f:
-            self.setup_seed(get_seed(f, self.program_id))
+        if path:
+            paths = (path,)
+        else:
+            paths = ('seeddb.bin', util.config_dirs[0] + '/seeddb.bin', util.config_dirs[1] + '/seeddb.bin')
+        for fn in paths:
+            try:
+                with open(fn, 'rb') as f:
+                    self.setup_seed(get_seed(f, self.program_id))
+                    return
+            except FileNotFoundError:
+                continue
+
+        # if keys are not set...
+        raise InvalidNCCHError(paths)
 
     @classmethod
     def from_header(cls, header: bytes) -> 'NCCHReader':

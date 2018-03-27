@@ -49,7 +49,6 @@ class CDNContentsMount(LoggingMixIn, Operations):
         self.cdn_dir = cdn_dir
 
         self.crypto = CTRCrypto(is_dev=dev)
-        self.crypto.setup_keys_from_boot9()
 
         self.cdn_content_size = 0
         self.dev = dev
