@@ -161,7 +161,7 @@ def press(button: str):
                 extra_args.extend(('--otp', otp))
             if cid:
                 extra_args.extend(('--cid', cid))
-            if aw:
+            if not aw:
                 extra_args.append('-r')
         elif mount_type == SD:
             movable = app.getEntry(SD + 'movable')
