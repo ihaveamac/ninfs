@@ -113,12 +113,21 @@ class ExeFSReader:
     http://3dbrew.org/wiki/ExeFS
     """
 
-    def __init__(self, entries: Iterable[ExeFSEntry]):
+    def __init__(self, entries: Iterable[ExeFSEntry], strict: bool = False):
         self.entries = {}  # type: Dict[str, ExeFSEntry]
         for x in entries:
             if x.offset % 0x200:
-                print('Warning: {0.name} has an offset not aligned to 0x200 ({0.offset:#x}).\n'
-                      'This ExeFS will not work on console.'.format(x))
+                msg = '{0.name} has an offset not aligned to 0x200 ({0.offset:#x})'.format(x)
+                if strict:
+                    raise InvalidExeFSError(msg)
+                print('Warning: {}.\n'
+                      'This ExeFS will not work on console.'.format(msg))
+            for e in self.entries.values():
+                if e.offset + e.size > x.offset > e.offset:
+                    msg = '{0.name} overlaps with {1.name}'.format(x, e)
+                    if strict:
+                        raise InvalidExeFSError(msg)
+                    print('Warning:', msg)
             self.entries[x.name] = x
 
     def __hash__(self) -> int:
