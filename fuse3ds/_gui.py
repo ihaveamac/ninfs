@@ -169,6 +169,10 @@ def press(button: str):
             extra_args.extend(('--movable', movable))
             if not aw:
                 extra_args.append('-r')
+        elif mount_type == TITLEDIR:
+            decompress = app.getCheckBox(TITLEDIR + 'decompress')
+            if decompress:
+                extra_args.append('--decompress-code')
 
         try:
             run_mount(mount_types[mount_type], item, mountpoint, extra_args)
@@ -201,7 +205,7 @@ def press(button: str):
             print_exception(type(e), e, e.__traceback__)
             app.showSubWindow('unmounterror')
             app.enableButton('Unmount')
-    elif button == 'GitHub repository':
+    elif button == 'Help':
         webbrowser.open('https://github.com/ihaveamac/fuse-3ds')
 
 
@@ -231,62 +235,65 @@ def change_type(*_):
 
 with app.frame(CCI, row=1, colspan=3):
     app.addLabel(CCI + 'label1', 'File', row=0, column=0)
-    app.addFileEntry(CCI + 'item', row=0, column=1)
+    app.addFileEntry(CCI + 'item', row=0, column=1, colspan=2)
 
 with app.frame(CDN, row=1, colspan=3):
     app.addLabel(CDN + 'label1', 'Directory', row=0, column=0)
-    app.addDirectoryEntry(CDN + 'item', row=0, column=1)
+    app.addDirectoryEntry(CDN + 'item', row=0, column=1, colspan=2)
 app.hideFrame(CDN)
 
 with app.frame(CIA, row=1, colspan=3):
     app.addLabel(CIA + 'label1', 'File', row=0, column=0)
-    app.addFileEntry(CIA + 'item', row=0, column=1)
+    app.addFileEntry(CIA + 'item', row=0, column=1, colspan=2)
 app.hideFrame(CIA)
 
 with app.frame(EXEFS, row=1, colspan=3):
     app.addLabel(EXEFS + 'label1', 'File', row=0, column=0)
-    app.addFileEntry(EXEFS + 'item', row=0, column=1)
+    app.addFileEntry(EXEFS + 'item', row=0, column=1, colspan=2)
 app.hideFrame(EXEFS)
 
 with app.frame(NAND, row=1, colspan=3):
     app.addLabel(NAND + 'label1', 'File', row=0, column=0)
-    app.addFileEntry(NAND + 'item', row=0, column=1)
+    app.addFileEntry(NAND + 'item', row=0, column=1, colspan=2)
     app.addLabel(NAND + 'label2', 'OTP file*', row=2, column=0)
-    app.addFileEntry(NAND + 'otp', row=2, column=1)
+    app.addFileEntry(NAND + 'otp', row=2, column=1, colspan=2)
     app.addLabel(NAND + 'label3', 'CID file*', row=3, column=0)
-    app.addFileEntry(NAND + 'cid', row=3, column=1)
+    app.addFileEntry(NAND + 'cid', row=3, column=1, colspan=2)
     app.addLabel(NAND + 'label4', '*Not required if backup has essential.exefs from GodMode9.', row=4, colspan=3)
-    app.addLabel(NAND + 'label5', 'Allow writing', row=5, column=0)
-    app.addNamedCheckBox('', NAND + 'aw', row=5, column=1)
+    app.addLabel(NAND + 'label5', 'Options', row=5, column=0)
+    app.addNamedCheckBox('Allow writing', NAND + 'aw', row=5, column=1, colspan=1)
 app.hideFrame(NAND)
 
 with app.frame(NCCH, row=1, colspan=3):
     app.addLabel(NCCH + 'label1', 'File', row=0, column=0)
-    app.addFileEntry(NCCH + 'item', row=0, column=1)
+    app.addFileEntry(NCCH + 'item', row=0, column=1, colspan=2)
 app.hideFrame(NCCH)
 
 with app.frame(ROMFS, row=1, colspan=3):
     app.addLabel(ROMFS + 'label1', 'File', row=0, column=0)
-    app.addFileEntry(ROMFS + 'item', row=0, column=1)
+    app.addFileEntry(ROMFS + 'item', row=0, column=1, colspan=2)
 app.hideFrame(ROMFS)
 
 with app.frame(SD, row=1, colspan=3):
     app.addLabel(SD + 'label1', 'Directory', row=0, column=0)
-    app.addDirectoryEntry(SD + 'item', row=0, column=1)
+    app.addDirectoryEntry(SD + 'item', row=0, column=1, colspan=2)
     app.addLabel(SD + 'label2', 'movable.sed', row=2, column=0)
-    app.addFileEntry(SD + 'movable', row=2, column=1)
-    app.addLabel(SD + 'label3', 'Allow writing', row=3, column=0)
-    app.addNamedCheckBox('', SD + 'aw', row=3, column=1)
+    app.addFileEntry(SD + 'movable', row=2, column=1, colspan=2)
+    app.addLabel(SD + 'label3', 'Options', row=3, column=0)
+    app.addNamedCheckBox('Allow writing', SD + 'aw', row=3, column=1, colspan=1)
 app.hideFrame(SD)
 
 with app.frame(TITLEDIR, row=1, colspan=3):
     app.addLabel(TITLEDIR + 'label1', 'Directory', row=0, column=0)
-    app.addDirectoryEntry(TITLEDIR + 'item', row=0, column=1)
+    app.addDirectoryEntry(TITLEDIR + 'item', row=0, column=1, colspan=2)
+    app.addLabel(TITLEDIR + 'label3', 'Options', row=3, column=0)
+    app.addNamedCheckBox('Decompress .code (slow!)', TITLEDIR + 'decompress', row=3, column=1, colspan=1)
 app.hideFrame(TITLEDIR)
 
 app.setSticky('new')
-app.addOptionBox('TYPE', types_list, row=0, colspan=3)
+app.addOptionBox('TYPE', types_list, row=0, colspan=2)
 app.setOptionBoxChangeFunction('TYPE', change_type)
+app.addButton('Help', press, row=0, column=2)
 
 app.setSticky('sew')
 if windows:
@@ -305,19 +312,20 @@ if windows:
         app.setRadioButtonChangeFunction('mountpoint-choice', rb_change)
         with app.frame('mountpoint-drive', row=1, colspan=3):
             app.addLabel('mountlabel1', 'Drive letter', row=0, column=0)
-            app.addOptionBox('mountpoint', ['WWWW'], row=0, column=1) # putting "WWWW" to avoid a warning
+            app.addOptionBox('mountpoint', ['WWWW'], row=0, column=1, colspan=2) # putting "WWWW" to avoid a warning
         with app.frame('mountpoint-dir', row=1, colspan=3):
             app.addLabel('mountlabel2', 'Mount point', row=0, column=0)
-            app.addDirectoryEntry('mountpoint', row=0, column=1)
+            app.addDirectoryEntry('mountpoint', row=0, column=1, colspan=2)
         app.hideFrame('mountpoint-dir')
         # noinspection PyUnboundLocalVariable
         update_drives()
 else:
     app.addLabel('mountlabel', 'Mount point', row=2, column=0)
-    app.addDirectoryEntry('mountpoint', row=2, column=1)
+    app.addDirectoryEntry('mountpoint', row=2, column=1, colspan=2)
 
 with app.frame('FOOTER', row=3, colspan=3):
-    app.addButtons(['Mount', 'Unmount', 'GitHub repository'], press, colspan=3)
+    app.addButtons(['Mount', 'Unmount'], press, colspan=3)
+    app.disableButton('Mount')
     app.disableButton('Unmount')
     if not b9_found:
         app.addHorizontalSeparator()
