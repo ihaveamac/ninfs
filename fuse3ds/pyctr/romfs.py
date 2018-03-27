@@ -37,7 +37,11 @@ RomFSFileEntry = NamedTuple('RomFSFileEntry', (('name', str), ('type', str), ('o
 
 
 class RomFSReader:
-    """Class for 3DS RomFS Level 3 partition."""
+    """
+    Class for 3DS RomFS Level 3 partition.
+
+    https://www.3dbrew.org/wiki/RomFS
+    """
 
     lv3_offset = 0
     _index_setup = False

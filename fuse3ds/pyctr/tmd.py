@@ -93,7 +93,11 @@ class TitleVersion(NamedTuple('_TitleVersion', (('major', int), ('minor', int), 
 
 
 class TitleMetadataReader:
-    """Class for 3DS Title Metadata."""
+    """
+    Class for 3DS Title Metadata.
+
+    https://www.3dbrew.org/wiki/Title_metadata
+    """
 
     __slots__ = ('title_id', 'save_size', 'srl_save_size', 'title_version', 'info_records',
                  'chunk_records', 'content_count')

@@ -100,6 +100,17 @@ class NCCHReader:
         self._seeded_key_y = sha256(self._key_y + seed).digest()[0:16]
         self.seed_set_up = True
 
+    def load_seed_from_seeddb(self, path: str = None):
+        if not self.flags.uses_seed:
+            raise NCCHSeedError("NCCH does not use seed crypto")
+        # can't just try to open and catch an exception. False subclasses int and means 0,
+        #   so trying to open it would open stdin, not a real file.
+        seeddb_path = check_seeddb_file(path)
+        if seeddb_path is False:
+            raise NCCHSeedError("couldn't find seeddb.bin")
+        with open(seeddb_path, 'rb') as f:
+            self.setup_seed(get_seed(f, self.program_id))
+
     @classmethod
     def from_header(cls, header: bytes) -> 'NCCHReader':
         """Create an NCCHReader from an NCCH header."""

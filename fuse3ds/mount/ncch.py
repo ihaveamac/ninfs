@@ -67,15 +67,6 @@ class NCCHContainerMount(LoggingMixIn, Operations):
 
         self.f = ncch_fp
 
-    def __del__(self, *args):
-        try:
-            self.f.close()
-        except AttributeError:
-            pass
-
-    destroy = __del__
-
-    def init(self, path):
         if not self.reader.flags.no_crypto:
             # I should figure out what happens if fixed-key crypto is
             #   used along with seed. even though this will never
@@ -86,15 +77,21 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                 self.crypto.set_normal_key(0x2C, normal_key.to_bytes(0x10, 'big'))
             else:
                 if self.reader.flags.uses_seed:
-                    with open(ncch.check_seeddb_file(self.seeddb), 'rb') as f:
-                        seed = ncch.get_seed(f, self.reader.program_id)
-
-                    self.reader.setup_seed(seed)
+                    self.reader.load_seed_from_seeddb()
 
                 self.crypto.set_keyslot('y', 0x2C, util.readbe(self.reader.get_key_y(original=True)))
                 self.crypto.set_keyslot('y', self.reader.extra_keyslot,
                                         util.readbe(self.reader.get_key_y()))
 
+    def __del__(self, *args):
+        try:
+            self.f.close()
+        except AttributeError:
+            pass
+
+    destroy = __del__
+
+    def init(self, path):
         decrypted_filename = '/decrypted.' + ('cxi' if self.reader.flags.executable else 'cfa')
 
         self.files[decrypted_filename] =  {'size': self.reader.content_size, 'offset': 0, 'enctype': 'fulldec'}

@@ -107,7 +107,11 @@ ExeFSEntry = NamedTuple('ExeFSEntry', (('name', str), ('offset', int), ('size', 
 
 
 class ExeFSReader:
-    """Class for 3DS ExeFS."""
+    """
+    Class for 3DS ExeFS.
+
+    http://3dbrew.org/wiki/ExeFS
+    """
 
     def __init__(self, entries: Iterable[ExeFSEntry]):
         self.entries = {}  # type: Dict[str, ExeFSEntry]

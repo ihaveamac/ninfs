@@ -30,7 +30,11 @@ class InvalidSMDHError(Exception):
 
 
 class SMDH:
-    """Class for 3DS SMDH. Icon data is currently not supported."""
+    """
+    Class for 3DS SMDH. Icon data is currently not supported.
+
+    https://www.3dbrew.org/wiki/SMDH
+    """
 
     # TODO: support other settings
 
