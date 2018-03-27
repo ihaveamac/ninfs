@@ -54,10 +54,9 @@ class SDFilesystemMount(LoggingMixIn, Operations):
 
         self.crypto.setup_keys_from_boot9()
 
-        mv = open(movable, 'rb')
-        mv.seek(0x110)
-        key_y = mv.read(0x10)
-        mv.close()
+        with open(movable, 'rb') as mv:
+            mv.seek(0x110)
+            key_y = mv.read(0x10)
         key_hash = sha256(key_y).digest()
         hash_parts = unpack('<IIII', key_hash[0:16])
         self.root_dir = '{0[0]:08x}{0[1]:08x}{0[2]:08x}{0[3]:08x}'.format(hash_parts)
@@ -80,8 +79,10 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         return super().__call__(op, self.root + path, *args)
 
     def __del__(self, *args):
-        for f in self.fds.values():
-            f.close()
+        # putting the keys in a tuple so the dict can be modified
+        for f in tuple(self.fds):
+            self.fds[f].close()
+            del self.fds[f]
 
     destroy = __del__
 
@@ -89,15 +90,18 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         if not os.access(path, mode):
             raise FuseOSError(EACCES)
 
-    chmod = os.chmod
+    # chmod = os.chmod
+    @_c.raise_on_readonly
+    def chmod(self, path, mode):
+        os.chmod(path, mode)
 
+    @_c.raise_on_readonly
     def chown(self, path, *args, **kwargs):
         if not _c.windows:
             os.chown(path, *args, **kwargs)
 
+    @_c.raise_on_readonly
     def create(self, path, mode, **kwargs):
-        if self.readonly:
-            raise FuseOSError(EROFS)
         fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode)
         self.fds[fd] = os.fdopen(fd, 'wb')
         return fd
@@ -118,7 +122,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
     def getattr(self, path, fh=None):
         st = os.lstat(path)
         uid, gid, _ = fuse_get_context()
-        res = dict((key, getattr(st, key)) for key in ('st_atime', 'st_ctime', 'st_mode', 'st_mtime', 'st_nlink', 'st_size'))
+        res = {key: getattr(st, key) for key in ('st_atime', 'st_ctime', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_flags')}
         res['st_uid'] = st.st_uid if st.st_uid != 0 else uid
         res['st_gid'] = st.st_gid if st.st_gid != 0 else gid
         return res
@@ -129,14 +133,12 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         return os.link(source, target)
 
     listxattr = None
+    @_c.raise_on_readonly
     def mkdir(self, path, *args, **kwargs):
-        if self.readonly:
-            raise FuseOSError(EROFS)
         os.mkdir(path, *args, **kwargs)
 
+    @_c.raise_on_readonly
     def mknod(self, path, *args, **kwargs):
-        if self.readonly:
-            raise FuseOSError(EROFS)
         if not _c.windows:
             os.mknod(path, *args, **kwargs)
 
@@ -175,14 +177,14 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         self.fds[fh].close()
         del self.fds[fh]
 
+    @_c.raise_on_readonly
     def rename(self, old, new):
         # renaming's too difficult. just copy the file to the name you want if you really need it.
-        raise FuseOSError(EROFS if self.readonly else EPERM)
+        raise FuseOSError(EPERM)
 
-    def rmdir(self, path, *args, **kwargs):
-        if self.readonly:
-            raise FuseOSError(EROFS)
-        os.rmdir(path, *args, **kwargs)
+    @_c.raise_on_readonly
+    def rmdir(self, path):
+        os.rmdir(path)
 
     def statfs(self, path):
         if _c.windows:
@@ -207,8 +209,8 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         else:
             stv = os.statvfs(path)
             # f_flag causes python interpreter crashes in some cases. i don't get it.
-            return dict((key, getattr(stv, key)) for key in ('f_bavail', 'f_bfree', 'f_blocks', 'f_bsize', 'f_favail',
-                                                             'f_ffree', 'f_files', 'f_frsize', 'f_namemax'))
+            return {key: getattr(stv, key) for key in ('f_bavail', 'f_bfree', 'f_blocks', 'f_bsize', 'f_favail',
+                                                       'f_ffree', 'f_files', 'f_frsize', 'f_namemax')}
 
     def symlink(self, target, source):
         return os.symlink(source, target)
@@ -221,22 +223,19 @@ class SDFilesystemMount(LoggingMixIn, Operations):
             f = self.fds[fh]
             f.truncate(length)
 
+    @_c.raise_on_readonly
     def unlink(self, path, *args, **kwargs):
-        if self.readonly:
-            raise FuseOSError(EROFS)
         os.unlink(path)
 
+    @_c.raise_on_readonly
     def utimens(self, path, *args, **kwargs):
-        if self.readonly:
-            raise FuseOSError(EROFS)
         os.utimens(path, *args, **kwargs)
 
+    @_c.raise_on_readonly
     def write(self, path, data, offset, fh):
-        if self.readonly:
-            raise FuseOSError(EROFS)
         f = self.fds[fh]
         # special check for special files
-        if os.path.basename(path).startswith('.') or 'Nintendo DSiWare' in path:
+        if os.path.basename(path).startswith('.') or 'nintendo dsiware' in path.lower():
             f.seek(offset)
             return f.write(data)
 
@@ -271,8 +270,8 @@ def main(prog: str = None, args: list = None):
             # windows
             opts['volname'] = "Nintendo 3DS SD Card ({}…)".format(mount.root_dir[0:8])
             opts['case_insensitive'] = False
-    fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=a.ro, nothreads=True, debug=a.d,
-                fsname=os.path.realpath(a.sd_dir).replace(',', '_'), **opts)
+    FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=a.ro, nothreads=True, debug=a.d,
+         fsname=os.path.realpath(a.sd_dir).replace(',', '_'), **opts)
 
 
 if __name__ == '__main__':

@@ -1,10 +1,11 @@
 import inspect
 import sys
 from argparse import ArgumentParser, SUPPRESS
+from errno import EROFS
 from functools import wraps
 from typing import Generator, Tuple, Union
 
-from fuse import Operations
+from fuse import Operations, FuseOSError
 
 windows = sys.platform in {'win32', 'cygwin'}
 macos = sys.platform == 'darwin'
@@ -79,15 +80,21 @@ def ensure_lower_path(method):
     return wrapper
 
 
-def raise_if_closed(func):
+def raise_on_readonly(method):
+    @wraps(method)
+    def wrapper(self, *args, **kwargs):
+        if self.readonly:
+            raise FuseOSError(EROFS)
+        return method(self, *args, **kwargs)
+    return wrapper
+
+
+def raise_if_closed(method):
+    @wraps(method)
     def decorator(self, *args, **kwargs):
         if self.closed:
             raise ValueError("I/O operation on closed file.")
-        return func(self, *args, **kwargs)
-    decorator.__signature__ = inspect.signature(func)
-    decorator.__annotations__ = func.__annotations__
-    decorator.__name__ = func.__name__
-    decorator.__doc__ = func.__doc__
+        return method(self, *args, **kwargs)
     return decorator
 
 

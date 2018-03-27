@@ -238,8 +238,8 @@ def main(prog: str = None, args: list = None):
     if _c.macos or _c.windows:
         opts['fstypename'] = 'CDN'
         opts['volname'] = "CDN Contents ({})".format(mount.title_id.upper())
-    fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
-                fsname=os.path.realpath(a.cdn_dir).replace(',', '_'), **opts)
+    FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
+         fsname=os.path.realpath(a.cdn_dir).replace(',', '_'), **opts)
 
 
 if __name__ == '__main__':

@@ -122,8 +122,8 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                 self.f.seek(exefs_region.offset)
                 exefs_header = self.crypto.aes_ctr(0x2C, self.files['/exefs.bin']['iv'], self.f.read(0xA0))
                 for name, offset, size in iter_unpack('<8sII', exefs_header):
-                    uname = name.decode('utf-8').strip('\0')
-                    if uname in {'icon', 'banner'}:
+                    # TODO: move this to use ExeFSReader
+                    if name in {b'icon\0\0\0\0', b'banner\0\0'}:
                         self.files['/exefs.bin']['keyslot_normal_range'].append(
                             (offset + 0x200, offset + 0x200 + util.roundup(size, 0x200)))
 
@@ -323,8 +323,8 @@ def main(prog: str = None, args: list = None):
             elif _c.windows:
                 # volume label can only be up to 32 chars
                 opts['volname'] = "NCCH ({0.product_code})".format(mount.reader)
-        fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
-                    fsname=os.path.realpath(a.ncch).replace(',', '_'), **opts)
+        FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
+             fsname=os.path.realpath(a.ncch).replace(',', '_'), **opts)
 
 
 if __name__ == '__main__':

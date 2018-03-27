@@ -170,8 +170,8 @@ def main(prog: str = None, args: list = None):
         elif _c.windows:
             # volume label can only be up to 32 chars
             opts['volname'] = "Nintendo 3DS Titles Directory"
-    fuse = FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
-                fsname=os.path.realpath(a.title_dir).replace(',', '_'), **opts)
+    FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
+         fsname=os.path.realpath(a.title_dir).replace(',', '_'), **opts)
 
 
 if __name__ == '__main__':
