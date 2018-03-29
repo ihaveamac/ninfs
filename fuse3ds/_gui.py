@@ -171,8 +171,11 @@ def press(button: str):
                 extra_args.append('-r')
         elif mount_type == TITLEDIR:
             decompress = app.getCheckBox(TITLEDIR + 'decompress')
+            mount_all = app.getCheckBox(TITLEDIR + 'mountall')
             if decompress:
                 extra_args.append('--decompress-code')
+            if mount_all:
+                extra_args.append('--mount-all')
 
         try:
             run_mount(mount_types[mount_type], item, mountpoint, extra_args)
@@ -293,6 +296,7 @@ with app.frame(TITLEDIR, row=1, colspan=3):
     app.addDirectoryEntry(TITLEDIR + 'item', row=0, column=1, colspan=2)
     app.addLabel(TITLEDIR + 'label3', 'Options', row=3, column=0)
     app.addNamedCheckBox('Decompress .code (slow!)', TITLEDIR + 'decompress', row=3, column=1, colspan=1)
+    app.addNamedCheckBox('Mount all contents', TITLEDIR + 'mountall', row=3, column=2, colspan=1)
 app.hideFrame(TITLEDIR)
 
 app.setSticky('new')
