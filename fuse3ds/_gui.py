@@ -336,14 +336,14 @@ with app.frame('FOOTER', row=3, colspan=3):
     if not b9_found:
         app.addHorizontalSeparator()
         app.addLabel('no-b9', 'boot9 was not found.\n'
-                              'Please see the GitHub README for details.\n'
+                              'Please click "Help" for more details.\n'
                               'Types that require encryption have been disabled.')
         app.setLabelBg('no-b9', '#ff9999')
         app.disableButton('Mount')
     if not seeddb_found:
         app.addHorizontalSeparator()
         app.addLabel('no-seeddb', 'SeedDB was not found.\n'
-                              'Please see the GitHub README for details.\n'
+                              'Please click "Help" for more details.\n'
                               'Titles that require seeds may fail.')
         app.setLabelBg('no-seeddb', '#ffff99')
     app.addHorizontalSeparator()
