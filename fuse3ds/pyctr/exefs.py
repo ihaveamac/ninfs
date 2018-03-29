@@ -140,7 +140,7 @@ class ExeFSReader:
         return self.entries[item]
 
     @classmethod
-    def load(cls, fp: BinaryIO) -> 'ExeFSReader':
+    def load(cls, fp: BinaryIO, strict: bool = False) -> 'ExeFSReader':
         """Load an ExeFS from a file-like object."""
         header = fp.read(0x200)
 
@@ -159,9 +159,9 @@ class ExeFSReader:
         except UnicodeDecodeError:
             raise InvalidExeFSError('Failed to convert name, probably not a valid ExeFS')
 
-        return cls(entries)
+        return cls(entries, strict)
 
     @classmethod
-    def from_file(cls, fn: str) -> 'ExeFSReader':
+    def from_file(cls, fn: str, strict: bool = False) -> 'ExeFSReader':
         with open(fn, 'rb') as f:
-            return cls.load(f)
+            return cls.load(f, strict)

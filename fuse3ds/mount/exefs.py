@@ -30,11 +30,11 @@ except Exception as e:
 class ExeFSMount(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, exefs_fp: BinaryIO, g_stat: os.stat_result, decompress_code: bool = False):
+    def __init__(self, exefs_fp: BinaryIO, g_stat: os.stat_result, decompress_code: bool = False, strict: bool = False):
         self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
                        'st_atime': int(g_stat.st_atime)}
 
-        self.reader = ExeFSReader.load(exefs_fp)
+        self.reader = ExeFSReader.load(exefs_fp, strict)
         self.files = {'/' + x.name.replace('.', '', 1) + '.bin': x for x in self.reader.entries.values()}
         self.exefs_size = sum(x.size for x in self.reader.entries.values())
         self.code_dec = b''

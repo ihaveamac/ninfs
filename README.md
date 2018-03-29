@@ -27,7 +27,7 @@ SeedDB is checked in order of:
 
 It can also be provided with the `--seeddb` argument.
 
-Python 3.5.2+ and fusepy are required.
+Python 3.5.2+, pycryptodomex, and fusepy are required.
 
 ### Windows
 A GUI is available for use. If you download the exe from the [latest release](https://github.com/ihaveamac/fuse-3ds/releases) and run it, a window will appear allowing you to choose mount options easily.
@@ -38,6 +38,7 @@ Python does not have to be installed, but [WinFsp](http://www.secfs.net/winfsp/d
 * Install the latest version of [Python 3](https://www.python.org/downloads/). The x86-64 version is preferred on 64-bit Windows.
 * Install the latest version of [WinFsp](http://www.secfs.net/winfsp/download/).
 * Install fuse-3ds with `py -3 -m pip install --upgrade https://github.com/ihaveamac/fuse-3ds/archive/master.zip https://github.com/billziss-gh/fusepy/archive/windows.zip`.
+  * At the moment, the [main fusepy repository](https://github.com/fusepy/fusepy) does not have full Windows support. This extra requirement will be removed once it is added and a new release is made.
 
 ### macOS
 * Install the latest version of Python 3. The recommended way is [Homebrew](https://brew.sh). You can also use an installer from [python.org](https://www.python.org/downloads/) or a tool like [pyenv](https://github.com/pyenv/pyenv).

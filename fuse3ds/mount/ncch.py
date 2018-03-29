@@ -123,7 +123,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                     decompress = exh_flag[0] & 1
                 exefs_vfp = _c.VirtualFileWrapper(self, '/exefs.bin', exefs_region.size)
                 # noinspection PyTypeChecker
-                exefs_fuse = ExeFSMount(exefs_vfp, self._g_stat, decompress_code=decompress)
+                exefs_fuse = ExeFSMount(exefs_vfp, self._g_stat, decompress_code=decompress, strict=True)
                 exefs_fuse.init(path)
                 self.exefs_fuse = exefs_fuse
             except Exception as e:
