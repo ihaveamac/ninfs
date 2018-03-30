@@ -17,7 +17,7 @@ if sys.platform not in {'win32', 'cygwin'}:
 
 setup(
     name='fuse-3ds',
-    version='1.0b4.dev1',
+    version='1.0b4.dev2',
     packages=['fuse3ds', 'fuse3ds.pyctr', 'fuse3ds.mount'],
     url='https://github.com/ihaveamac/fuse-3ds',
     license='MIT',

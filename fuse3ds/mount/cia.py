@@ -138,7 +138,7 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
                 content_fuse = NCCHContainerMount(content_vfp, dev=self.dev, g_stat=self._g_stat, seeddb=self.seeddb)
                 content_fuse.init(path)
                 self.dirs[dirname] = content_fuse
-            except KeyError as e:
+            except Exception as e:
                 print("Failed to mount {}: {}: {}".format(filename, type(e).__name__, e))
 
     def flush(self, path, fh):
