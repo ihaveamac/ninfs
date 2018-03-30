@@ -121,7 +121,8 @@ class SDFilesystemMount(LoggingMixIn, Operations):
     def getattr(self, path, fh=None):
         st = os.lstat(path)
         uid, gid, _ = fuse_get_context()
-        res = {key: getattr(st, key) for key in ('st_atime', 'st_ctime', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_flags')}
+        res = {key: getattr(st, key) for key in ('st_atime', 'st_ctime', 'st_mode', 'st_mtime', 'st_nlink', 'st_size',
+                                                 'st_flags') if hasattr(st, key)}
         res['st_uid'] = st.st_uid if st.st_uid != 0 else uid
         res['st_gid'] = st.st_gid if st.st_gid != 0 else gid
         return res
