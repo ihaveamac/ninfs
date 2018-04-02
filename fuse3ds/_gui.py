@@ -6,7 +6,7 @@ import subprocess
 import webbrowser
 from sys import argv, exit, executable, platform, version_info, maxsize
 from os import kill, rmdir
-from os.path import isfile, isdir, dirname
+from os.path import isfile, isdir, ismount, dirname
 from time import sleep
 from traceback import print_exception
 
@@ -106,7 +106,6 @@ def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = (
         if windows:
             opts['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
         process = subprocess.Popen(args, **opts)
-        process.wait(3)
 
 
 def stop_mount():
@@ -177,26 +176,26 @@ def press(button: str):
             if mount_all:
                 extra_args.append('--mount-all')
 
-        try:
-            run_mount(mount_types[mount_type], item, mountpoint, extra_args)
-        except subprocess.TimeoutExpired:
-            # worked! maybe! if it didn't exit after 3 seconds!
-            app.enableButton('Unmount')
-            if windows:
-                while not isdir(mountpoint):
-                    sleep(1)
-                try:
-                    subprocess.check_call(['explorer', mountpoint.replace('/', '\\')])
-                except subprocess.CalledProcessError:
-                    # not using startfile since i've been getting fatal errors (PyEval_RestoreThread) on windows
-                    #   for some reason
-                    pass
-            return
-        except Exception as e:
-            print_exception(type(e), e, e.__traceback__)
-        # if it didn't work...
-        app.showSubWindow('mounterror')
-        app.enableButton('Mount')
+        run_mount(mount_types[mount_type], item, mountpoint, extra_args)
+        # check if the mount exists, or if the process exited before it
+        check = isdir if windows else ismount
+        while not check(mountpoint):
+            sleep(1)
+            if process.poll() is not None:
+                app.showSubWindow('mounterror')
+                app.enableButton('Mount')
+                return
+        app.enableButton('Unmount')
+        if windows:
+            try:
+                subprocess.check_call(['explorer', mountpoint.replace('/', '\\')])
+            except subprocess.CalledProcessError:
+                # not using startfile since i've been getting fatal errors (PyEval_RestoreThread) on windows
+                #   for some reason
+                # also this error always appears when calling explorer, so i'm ignoring it
+                pass
+        elif macos:
+            subprocess.check_call(['/usr/bin/open', '-a', 'Finder', mountpoint])
 
     elif button == 'Unmount':
         app.disableButton('Unmount')
@@ -354,7 +353,8 @@ with app.frame('FOOTER', row=3, colspan=3):
     app.addLabel('footer', 'fuse-3ds {0} running on Python {1[0]}.{1[1]}.{1[2]} {2} on {3}'.format(
         init.__version__, version_info, '64-bit' if maxsize > 0xFFFFFFFF else '32-bit', platform), colspan=3)
 
-app.setFont(10)
+if windows:
+    app.setFont(10)
 app.setResizable(False)
 
 # failed to mount subwindow

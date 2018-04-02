@@ -1,3 +1,4 @@
+from functools import wraps
 from os.path import isfile, getsize
 from typing import Dict
 
@@ -30,6 +31,15 @@ base_key_x = {
     # 7x NCCH
     0x25: (0xCEE7D8AB30C00DAE850EF5E382AC5AF3, 0x81907A4B6F1B47323A677974CE4AD71B),
 }
+
+
+def _requires_bootrom(method):
+    @wraps(method)
+    def wrapper(self, *args, **kwargs):
+        if not self.b9_keys_set:
+            raise KeyslotMissingError("bootrom is required to set up keys")
+        return method(self, *args, **kwargs)
+    return wrapper
 
 
 # used from http://www.falatic.com/index.php/108/python-and-bitwise-rotation
@@ -76,37 +86,32 @@ class CTRCrypto:
         for keyslot, keys in base_key_x.items():
             self.key_x[keyslot] = keys[is_dev]
 
-        if setup_b9_keys:
+        if not setup_b9_keys:
             self.setup_keys_from_boot9()
 
     @property
+    @_requires_bootrom
     def b9_extdata_otp(self) -> bytes:
-        if not self.b9_keys_set:
-            raise KeyslotMissingError("bootrom is required to set up keys")
         return self._b9_extdata_otp
 
     @property
+    @_requires_bootrom
     def b9_extdata_keygen(self) -> bytes:
-        if not self.b9_keys_set:
-            raise KeyslotMissingError("bootrom is required to set up keys")
         return self._b9_extdata_keygen
 
     @property
+    @_requires_bootrom
     def b9_extdata_keygen_iv(self) -> bytes:
-        if not self.b9_keys_set:
-            raise KeyslotMissingError("bootrom is required to set up keys")
         return self._b9_extdata_keygen_iv
 
     @property
+    @_requires_bootrom
     def otp_key(self) -> bytes:
-        if not self.b9_keys_set:
-            raise KeyslotMissingError("bootrom is required to set up keys")
         return self._otp_key
 
     @property
+    @_requires_bootrom
     def otp_iv(self) -> bytes:
-        if not self.b9_keys_set:
-            raise KeyslotMissingError("bootrom is required to set up keys")
         return self._otp_iv
 
     def aes_cbc_decrypt(self, keyslot: int, iv: bytes, data: bytes) -> bytes:
