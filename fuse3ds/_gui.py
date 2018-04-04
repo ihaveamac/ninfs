@@ -5,7 +5,7 @@ import signal
 import subprocess
 import webbrowser
 from sys import argv, exit, executable, platform, version_info, maxsize
-from os import kill, rmdir
+from os import environ, kill, rmdir
 from os.path import isfile, isdir, ismount, dirname
 from time import sleep
 from traceback import print_exception
@@ -15,11 +15,19 @@ from appJar import gui
 import __init__ as init
 from pyctr.util import config_dirs
 
-b9_paths = ('boot9.bin', 'boot9_prot.bin',
+b9_paths = ['boot9.bin', 'boot9_prot.bin',
             config_dirs[0] + '/boot9.bin', config_dirs[0] + '/boot9_prot.bin',
-            config_dirs[1] + '/boot9.bin', config_dirs[1] + '/boot9_prot.bin')
+            config_dirs[1] + '/boot9.bin', config_dirs[1] + '/boot9_prot.bin']
+try:
+    b9_paths.insert(0, environ['BOOT9_PATH'])
+except KeyError:
+    pass
 
-seeddb_paths = ('seeddb.bin', config_dirs[0] + '/seeddb.bin', config_dirs[1] + '/seeddb.bin')
+seeddb_paths = ['seeddb.bin', config_dirs[0] + '/seeddb.bin', config_dirs[1] + '/seeddb.bin']
+try:
+    seeddb_paths.insert(0, environ['SEEDDB_PATH'])
+except KeyError:
+    pass
 
 for p in b9_paths:
     if isfile(p):

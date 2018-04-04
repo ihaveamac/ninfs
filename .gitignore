@@ -4,6 +4,10 @@ test/
 things/
 .idea/
 venv*/
+*.spec
 *.egg-info/
 __pycache__/
 docs-build/
+*.txt
+pyctr-test.py
+build_exes.py

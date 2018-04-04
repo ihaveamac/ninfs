@@ -1,4 +1,5 @@
 from functools import wraps
+from os import environ
 from os.path import isfile, getsize
 from typing import Dict
 
@@ -31,6 +32,14 @@ base_key_x = {
     # 7x NCCH
     0x25: (0xCEE7D8AB30C00DAE850EF5E382AC5AF3, 0x81907A4B6F1B47323A677974CE4AD71B),
 }
+
+b9_paths = ['boot9.bin', 'boot9_prot.bin',
+            util.config_dirs[0] + '/boot9.bin', util.config_dirs[0] + '/boot9_prot.bin',
+            util.config_dirs[1] + '/boot9.bin', util.config_dirs[1] + '/boot9_prot.bin']
+try:
+    b9_paths.insert(0, environ['BOOT9_PATH'])
+except KeyError:
+    pass
 
 
 def _requires_bootrom(method):
@@ -86,7 +95,7 @@ class CTRCrypto:
         for keyslot, keys in base_key_x.items():
             self.key_x[keyslot] = keys[is_dev]
 
-        if not setup_b9_keys:
+        if setup_b9_keys:
             self.setup_keys_from_boot9()
 
     @property
@@ -203,9 +212,7 @@ class CTRCrypto:
         if path:
             paths = (path,)
         else:
-            paths = ('boot9.bin', 'boot9_prot.bin',
-                     util.config_dirs[0] + '/boot9.bin', util.config_dirs[0] + '/boot9_prot.bin',
-                     util.config_dirs[1] + '/boot9.bin', util.config_dirs[1] + '/boot9_prot.bin')
+            paths = b9_paths
         for p in paths:
             if isfile(p):
                 keyblob_offset = 0x5860

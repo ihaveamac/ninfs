@@ -1,4 +1,5 @@
 from hashlib import sha256
+from os import environ
 from os.path import isfile
 from typing import BinaryIO, NamedTuple, Union
 
@@ -35,6 +36,12 @@ def get_seed(f: BinaryIO, program_id: int) -> bytes:
             return entry[0x8:0x18]
     raise NCCHSeedError("missing seed for {:016X} from seeddb.bin".format(program_id))
 
+
+seeddb_paths = ['seeddb.bin', util.config_dirs[0] + '/seeddb.bin', util.config_dirs[1] + '/seeddb.bin']
+try:
+    seeddb_paths.insert(0, environ['SEEDDB_PATH'])
+except KeyError:
+    pass
 
 NCCH_MEDIA_UNIT = 0x200
 extra_cryptoflags = {0x00: 0x2C, 0x01: 0x25, 0x0A: 0x18, 0x0B: 0x1B}
@@ -98,7 +105,7 @@ class NCCHReader:
         if path:
             paths = (path,)
         else:
-            paths = ('seeddb.bin', util.config_dirs[0] + '/seeddb.bin', util.config_dirs[1] + '/seeddb.bin')
+            paths = seeddb_paths
         for fn in paths:
             try:
                 with open(fn, 'rb') as f:
