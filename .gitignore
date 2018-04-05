@@ -5,6 +5,7 @@ things/
 .idea/
 venv*/
 *.spec
+*.bin
 *.egg-info/
 __pycache__/
 docs-build/

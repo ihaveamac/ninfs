@@ -29,7 +29,8 @@ SeedDB is checked in order of:
 
 It can also be provided with the `--seeddb` argument.
 
-Python 3.5.2+, pycryptodomex, and fusepy are required.
+Python 3.5.2+, pycryptodomex, and fusepy are required. appJar is required for the GUI.
+* Note that Python 3.5 support may be dropped some time after Ubuntu 18.04 is released, raising the requirement to 3.6.1.
 
 ### Windows
 A GUI is available for use. If you download the exe from the [latest release](https://github.com/ihaveamac/fuse-3ds/releases) and run it, a window will appear allowing you to choose mount options easily.
