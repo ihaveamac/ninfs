@@ -6,14 +6,19 @@ import subprocess
 import webbrowser
 from sys import argv, exit, executable, platform, version_info, maxsize
 from os import environ, kill, rmdir
-from os.path import isfile, isdir, ismount, dirname
+from os.path import abspath, isfile, isdir, ismount, dirname
 from time import sleep
 from traceback import print_exception
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Dict
 
 from appJar import gui
 
 import __init__ as init
 from pyctr.util import config_dirs
+from fmt_detect import detect_format
 
 b9_paths = ['boot9.bin', 'boot9_prot.bin',
             config_dirs[0] + '/boot9.bin', config_dirs[0] + '/boot9_prot.bin',
@@ -57,12 +62,15 @@ TITLEDIR = 'Titles directory ("title" from NAND or SD)'
 mount_types = {CCI: 'cci', CDN: 'cdn', CIA: 'cia', EXEFS: 'exefs', NAND: 'nand', NCCH: 'ncch', ROMFS: 'romfs', SD: 'sd',
                TITLEDIR: 'titledir'}
 
+mount_types_rv = {y: x for x, y in mount_types.items()}  # type: Dict[str, str]
+
 types_list = (CCI, CDN, CIA, EXEFS, NAND, NCCH, ROMFS, SD, TITLEDIR)
 
 windows = platform == 'win32'  # only for native windows, not cygwin
 macos = platform == 'darwin'
 
 if windows:
+    from reg_shell import add_reg, del_reg
     from ctypes import windll
     from os import startfile
     from string import ascii_uppercase
@@ -98,7 +106,7 @@ _used_pyinstaller = False
 process = None  # type: subprocess.Popen
 curr_mountpoint = None  # type: str
 
-app = gui('fuse-3ds ' + init.__version__, showIcon=False)
+app = gui('fuse-3ds ' + init.__version__, showIcon=False, handleArgs=False)
 
 def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = ()):
     global process, curr_mountpoint
@@ -215,8 +223,8 @@ def press(button: str):
             print_exception(type(e), e, e.__traceback__)
             app.showSubWindow('unmounterror')
             app.enableButton('Unmount')
-    elif button == 'Help':
-        webbrowser.open('https://github.com/ihaveamac/fuse-3ds')
+    elif button == 'Help & Extras':
+        app.showSubWindow('extras')
 
 
 def kill_process(_):
@@ -309,7 +317,7 @@ app.hideFrame(TITLEDIR)
 app.setSticky('new')
 app.addOptionBox('TYPE', ('- Choose a type -', *types_list), row=0, colspan=2)
 app.setOptionBoxChangeFunction('TYPE', change_type)
-app.addButton('Help', press, row=0, column=2)
+app.addButton('Help & Extras', press, row=0, column=2)
 
 app.setSticky('sew')
 with app.frame('mountpoint', row=2, colspan=3):
@@ -358,8 +366,8 @@ with app.frame('FOOTER', row=3, colspan=3):
                               'Titles that require seeds may fail.')
         app.setLabelBg('no-seeddb', '#ffff99')
     app.addHorizontalSeparator()
-    app.addLabel('footer', 'fuse-3ds {0} running on Python {1[0]}.{1[1]}.{1[2]} {2} on {3}'.format(
-        init.__version__, version_info, '64-bit' if maxsize > 0xFFFFFFFF else '32-bit', platform), colspan=3)
+    app.addLabel('footer', 'fuse-3ds {0} running on Python {1[0]}.{1[1]}.{1[2]} {2}-bit on {3}'.format(
+        init.__version__, version_info, '64' if maxsize > 0xFFFFFFFF else '32', platform), colspan=3)
 
 if windows:
     app.setFont(10)
@@ -379,6 +387,21 @@ if windows:
         app.addNamedButton('OK', 'mounterror-dir-ok', lambda _: app.hideSubWindow('mounterror-dir-win'))
         app.setResizable(False)
 
+with app.subWindow('extras', 'fuse-3ds Extras', modal=True, blocking=True):
+    app.addLabel('tutorial-label', 'View a tutorial on GBAtemp.', colspan=2)
+    app.addButton('Tutorial', lambda _: webbrowser.open('https://gbatemp.net/threads/499994/'), row='previous',
+                  column=2)
+
+    app.addLabel('repo-label', 'View the repository on GitHub.')
+    app.addButton('GitHub Repository', lambda _: webbrowser.open('https://github.com/ihaveamac/fuse-3ds'),
+                  row='previous', column=2)
+
+    if windows:
+        app.addLabel('ctxmenu-label', 'Add an entry to the right-click menu.', colspan=2)
+        app.addButton('Add to menu', lambda _: app.showSubWindow('ctxmenu-window'), row='previous', column=2)
+
+    app.setResizable(False)
+
 # failed to unmount subwindow
 with app.subWindow('unmounterror', 'fuse-3ds Error', modal=True, blocking=True):
     def unmount_ok(_):
@@ -394,6 +417,8 @@ with app.subWindow('unmounterror', 'fuse-3ds Error', modal=True, blocking=True):
     app.setResizable(False)
 
 
+# maybe get the file via an argument to main? instead of taking it from argv
+# it probably doesn't matter much
 def main(_pyi=False, _allow_admin=False):
     global _used_pyinstaller
     _used_pyinstaller = _pyi
@@ -438,6 +463,43 @@ def main(_pyi=False, _allow_admin=False):
                 'choose a directory as a mount point instead of a drive letter.'),
                 'fuse-3ds', 0x00000010)
             exit(1)
+
+    if len(argv) > 1:
+        fn = abspath(argv[1])  # type: str
+        try:
+            with open(fn, 'rb') as f:
+                mt = detect_format(f.read(0x200))
+                if mt is not None:
+                    mount_type = mount_types_rv[mt]
+                    print('Detected', fn, mount_type)
+                    app.hideFrame('default')
+                    app.setOptionBox('TYPE', mount_type)
+                    change_type()
+                    app.setEntry(mount_type + 'item', fn)
+                    app.showFrame(mount_type)
+        except Exception as e:
+            print('Failed to get type of {}: {}: {}'.format(fn, type(e).__name__, e))
+
+    # putting this here so i can use _pyi
+    if windows:
+        def add_entry(button: str):
+            app.hideSubWindow('ctxmenu-window')
+            if button == 'Add entry':
+                add_reg(_used_pyinstaller)
+            elif button == 'Remove entry':
+                del_reg()
+
+        with app.subWindow('ctxmenu-window', 'fuse-3ds', modal=True, blocking=True):
+            msg = ('A new entry can be added to the Windows context menu when you\n'
+                   'right-click on a file, providing an easy way to mount various files\n'
+                   'in Windows Explorer using fuse-3ds.\n'
+                   '\n'
+                   'This will modify the registry to add it.')
+            if _pyi:
+                msg += (' If you move or rename the EXE,\n'
+                        'you will need to re-add the entry.')
+            app.addLabel('extras-ctxmenu-label', msg)
+            app.addButtons(['Add entry', 'Remove entry', 'Cancel'], add_entry, colspan=3)
 
     app.go()
     stop_mount()
