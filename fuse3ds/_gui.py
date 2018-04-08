@@ -1,6 +1,7 @@
 # not very good with gui development...
 # don't read this file, it sucks
 
+import json
 import signal
 import subprocess
 import webbrowser
@@ -10,10 +11,14 @@ from os.path import abspath, isfile, isdir, ismount, dirname
 from time import sleep
 from traceback import print_exception
 from typing import TYPE_CHECKING
+from urllib.request import urlopen
+from urllib.error import URLError
 
 if TYPE_CHECKING:
-    from typing import Dict
+    from http.client import HTTPResponse
+    from typing import Any, Dict, List
 
+from pkg_resources import parse_version
 from appJar import gui
 
 import __init__ as init
@@ -464,6 +469,43 @@ def main(_pyi=False, _allow_admin=False):
                 'fuse-3ds', 0x00000010)
             exit(1)
 
+    # this will check for the latest non-prerelease, once there is one.
+    try:
+        print('Checking for updates...')
+        with urlopen('https://api.github.com/repos/ihaveamac/fuse-3ds/releases') as u:  # type: HTTPResponse
+            res = json.loads(u.read().decode('utf-8'))  # type: List[Dict[str, Any]]
+            latest_ver = res[0]['tag_name']  # type: str
+            if parse_version(latest_ver) > parse_version(init.__version__):
+                name = res[0]['name']  # type: str
+                url = res[0]['html_url']  # type: str
+                info_all = res[0]['body']  # type: str
+                info = info_all[:info_all.find('------')].strip().replace('\r\n', '\n')
+
+                def update_press(button: str):
+                    if button == 'Open release page':
+                        webbrowser.open(url)
+                        app.queueFunction(app.stop)
+                    app.destroySubWindow('update')
+
+                with app.subWindow('update', 'fuse-3ds Update', modal=True, blocking=True):
+                    app.addLabel('update-label1', 'A new version of fuse-3ds is available. '
+                                                  'You have v{}.'.format(init.__version__))
+                    app.addButtons(['Open release page', 'Close'], update_press)
+                    with app.labelFrame(name):
+                        app.addMessage('update-info', info)
+                        app.setMessageAlign('update-info', 'left')
+                    app.setResizable(False)
+
+                app.queueFunction(app.showSubWindow, 'update')
+            else:
+                print('No new version.')
+
+    except Exception as e:
+        exc_name = type(e).__name__
+        if type(e).__module__ != 'builtins':
+            exc_name = type(e).__module__ + '.' + exc_name
+        print('Failed to check for update: {}: {}'.format(exc_name, e))
+
     if len(argv) > 1:
         fn = abspath(argv[1])  # type: str
         try:
@@ -500,6 +542,7 @@ def main(_pyi=False, _allow_admin=False):
                         'you will need to re-add the entry.')
             app.addLabel('extras-ctxmenu-label', msg)
             app.addButtons(['Add entry', 'Remove entry', 'Cancel'], add_entry, colspan=3)
+            app.setResizable(False)
 
     app.go()
     stop_mount()
