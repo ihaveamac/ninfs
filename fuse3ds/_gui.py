@@ -256,6 +256,13 @@ def change_type(*_):
 
 # TODO: maybe check if the mount was unmounted outside of the unmount button
 
+def make_drag_and_drop_check(entry_name: str):
+    def handle(data: str):
+        if data.startswith('{'):
+            data = data[1:-1]
+        app.setEntry(entry_name, data)
+    return handle
+
 with app.frame('default', row=1, colspan=3):
     app.addLabel('d-label1', 'To get started, choose a type to mount above.', colspan=3)
     app.addLabel('d-label2', 'If you need help, click "Help" at the top-right.', colspan=3)
@@ -318,6 +325,12 @@ with app.frame(TITLEDIR, row=1, colspan=3):
     app.addNamedCheckBox('Decompress .code (slow!)', TITLEDIR + 'decompress', row=3, column=1, colspan=1)
     app.addNamedCheckBox('Mount all contents', TITLEDIR + 'mountall', row=3, column=2, colspan=1)
 app.hideFrame(TITLEDIR)
+
+for t in types_list:
+    app.setEntryDropTarget(t + 'item', make_drag_and_drop_check(t + 'item'))
+app.setEntryDropTarget(NAND + 'otp', make_drag_and_drop_check(NAND + 'otp'))
+app.setEntryDropTarget(NAND + 'cid', make_drag_and_drop_check(NAND + 'cid'))
+app.setEntryDropTarget(SD + 'movable', make_drag_and_drop_check(SD + 'movable'))
 
 app.setSticky('new')
 app.addOptionBox('TYPE', ('- Choose a type -', *types_list), row=0, colspan=2)
