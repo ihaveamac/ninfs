@@ -33,6 +33,17 @@ base_key_x = {
     0x25: (0xCEE7D8AB30C00DAE850EF5E382AC5AF3, 0x81907A4B6F1B47323A677974CE4AD71B),
 }
 
+# global values to be copied to new CTRCrypto instances after the first one
+_b9_key_x = {}
+_b9_key_y = {}
+
+_b9_extdata_otp = None  # type: bytes
+_b9_extdata_keygen = None  # type: bytes
+_b9_extdata_keygen_iv = None  # type: bytes
+
+_otp_key = None  # type: bytes
+_otp_iv = None  # type: bytes
+
 b9_paths = ['boot9.bin', 'boot9_prot.bin',
             util.config_dirs[0] + '/boot9.bin', util.config_dirs[0] + '/boot9_prot.bin',
             util.config_dirs[1] + '/boot9.bin', util.config_dirs[1] + '/boot9_prot.bin']
@@ -204,9 +215,25 @@ class CTRCrypto:
         # usually would convert to LE bytes in the end then flip with [::-1], but those just cancel out
         return rol((key_x ^ key_y) + 0xFFFEFB4E295902582A680F5F1A4F3E79, 42, 128).to_bytes(0x10, 'big')
 
+    def _copy_global_keys(self):
+        self.key_x.update(_b9_key_x)
+        self.key_y.update(_b9_key_y)
+        self._otp_key = _otp_key
+        self._otp_iv = _otp_iv
+        self._b9_extdata_otp = _b9_extdata_otp
+        self._b9_extdata_keygen = _b9_extdata_keygen
+        self._b9_extdata_keygen_iv = _b9_extdata_keygen_iv
+
+        self.b9_keys_set = True
+
     def setup_keys_from_boot9(self, path: str = None):
         """Set up certain keys from the ARM9 bootROM."""
+        global _otp_key, _otp_iv, _b9_extdata_otp, _b9_extdata_keygen, _b9_extdata_keygen_iv
         if self.b9_keys_set:
+            return
+
+        if _b9_key_x:
+            self._copy_global_keys()
             return
 
         if path:
@@ -226,35 +253,35 @@ class CTRCrypto:
 
                 with open(p, 'rb') as b9:
                     b9.seek(otp_key_offset)
-                    self._otp_key = b9.read(0x10)
-                    self._otp_iv = b9.read(0x10)
+                    _otp_key = b9.read(0x10)
+                    _otp_iv = b9.read(0x10)
 
                     b9.seek(keyblob_offset)
-                    self._b9_extdata_otp = b9.read(0x24)
-                    self._b9_extdata_keygen = b9.read(0x10)
-                    self._b9_extdata_keygen_iv = b9.read(0x10)
+                    _b9_extdata_otp = b9.read(0x24)
+                    _b9_extdata_keygen = b9.read(0x10)
+                    _b9_extdata_keygen_iv = b9.read(0x10)
 
                     # Original NCCH
                     b9.seek(keyblob_offset + 0x170)
-                    self.key_x[0x2C] = util.readbe(b9.read(0x10))
+                    _b9_key_x[0x2C] = util.readbe(b9.read(0x10))
 
                     # SD key
                     b9.seek(keyblob_offset + 0x190)
-                    self.key_x[0x34] = util.readbe(b9.read(0x10))
-                    self.key_x[0x35] = self.key_x[0x34]
+                    _b9_key_x[0x34] = util.readbe(b9.read(0x10))
+                    _b9_key_x[0x35] = _b9_key_x[0x34]
 
                     # Common key
                     b9.seek(keyblob_offset + 0x1C0)
-                    self.key_x[0x3D] = util.readbe(b9.read(0x10))
+                    _b9_key_x[0x3D] = util.readbe(b9.read(0x10))
 
                     # NAND keys
                     b9.seek(keyblob_offset + 0x1F0)
-                    self.key_y[0x04] = util.readbe(b9.read(0x10))
+                    _b9_key_y[0x04] = util.readbe(b9.read(0x10))
                     b9.seek(0x10, 1)
-                    self.key_y[0x06] = util.readbe(b9.read(0x10))
-                    self.key_y[0x07] = util.readbe(b9.read(0x10))
+                    _b9_key_y[0x06] = util.readbe(b9.read(0x10))
+                    _b9_key_y[0x07] = util.readbe(b9.read(0x10))
 
-                self.b9_keys_set = True
+                self._copy_global_keys()
                 return
 
         # if keys are not set...

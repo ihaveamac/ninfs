@@ -11,7 +11,7 @@ if len(argv) < 2 or argv[1] in {'gui', 'gui_i_want_to_be_an_admin_pls'}:
     if len(argv) > 1:
         admin = argv[1] == 'gui_i_want_to_be_an_admin_pls'
         del argv[1]
-    exit(main(_pyi=True))
+    exit(main(_pyi=True, _allow_admin=admin))
 else:
     from main import mount
     exit(mount(argv.pop(1).lower()))

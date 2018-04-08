@@ -15,7 +15,9 @@ from struct import iter_unpack
 from sys import exit, argv
 from typing import BinaryIO, Dict
 
-from pyctr import crypto, ncch, util
+from pyctr.crypto import CTRCrypto
+from pyctr.ncch import NCCHReader, FIXED_SYSTEM_KEY
+from pyctr.util import readbe, roundup
 
 from . import _common as _c
 from .exefs import ExeFSMount
@@ -50,7 +52,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
 
     def __init__(self, ncch_fp: BinaryIO, g_stat: os.stat_result, decompress_code: bool = True, dev: bool = False,
                  seeddb: str = None):
-        self.crypto = crypto.CTRCrypto(is_dev=dev)
+        self.crypto = CTRCrypto(is_dev=dev)
 
         self.decompress_code = decompress_code
         self.seeddb = seeddb
@@ -62,7 +64,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                        'st_atime': int(g_stat.st_atime)}
 
         ncch_header = ncch_fp.read(0x200)
-        self.reader = ncch.NCCHReader.from_header(ncch_header)
+        self.reader = NCCHReader.from_header(ncch_header)
 
         self.f = ncch_fp
 
@@ -72,15 +74,15 @@ class NCCHContainerMount(LoggingMixIn, Operations):
             #   happen in practice, I would still like to see what
             #   happens if it happens.
             if self.reader.flags.fixed_crypto_key:
-                normal_key = ncch.FIXED_SYSTEM_KEY if self.reader.program_id & (0x10 << 32) else 0x0
+                normal_key = FIXED_SYSTEM_KEY if self.reader.program_id & (0x10 << 32) else 0x0
                 self.crypto.set_normal_key(0x2C, normal_key.to_bytes(0x10, 'big'))
             else:
                 if self.reader.flags.uses_seed:
                     self.reader.load_seed_from_seeddb()
 
-                self.crypto.set_keyslot('y', 0x2C, util.readbe(self.reader.get_key_y(original=True)))
+                self.crypto.set_keyslot('y', 0x2C, readbe(self.reader.get_key_y(original=True)))
                 self.crypto.set_keyslot('y', self.reader.extra_keyslot,
-                                        util.readbe(self.reader.get_key_y()))
+                                        readbe(self.reader.get_key_y()))
 
     def __del__(self, *args):
         try:
@@ -133,7 +135,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                     for n, ent in self.exefs_fuse.reader.entries.items():
                         if n in {'icon', 'banner'}:
                             self.files['/exefs.bin']['keyslot_normal_range'].append(
-                                (ent.offset + 0x200, ent.offset + 0x200 + util.roundup(ent.size, 0x200)))
+                                (ent.offset + 0x200, ent.offset + 0x200 + roundup(ent.size, 0x200)))
 
         if not self.reader.flags.no_romfs:
             romfs_region = self.reader.romfs_region

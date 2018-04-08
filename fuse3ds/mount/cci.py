@@ -12,7 +12,7 @@ from stat import S_IFDIR, S_IFREG
 from sys import exit, argv
 from typing import BinaryIO, Dict
 
-from pyctr import util
+from pyctr.util import readle
 
 from . import _common as _c
 from .ncch import NCCHContainerMount
@@ -33,6 +33,7 @@ class CTRCartImageMount(LoggingMixIn, Operations):
     def __init__(self, cci_fp: BinaryIO, g_stat: os.stat_result, dev: bool = False, seeddb: str = None):
         self.dev = dev
         self.seeddb = seeddb
+
         self._g_stat = g_stat
         # get status change, modify, and file access times
         self.g_stat = {'st_ctime': int(g_stat.st_ctime),
@@ -48,7 +49,7 @@ class CTRCartImageMount(LoggingMixIn, Operations):
         if self.media_id == b'\0' * 8:
             exit('Media ID is all-zero, is this a CCI?')
 
-        self.cci_size = util.readle(self.ncsd_header[4:8]) * 0x200
+        self.cci_size = readle(self.ncsd_header[4:8]) * 0x200
 
         # create initial virtual files
         self.files = {'/ncsd.bin': {'size': 0x200, 'offset': 0},
@@ -69,8 +70,8 @@ class CTRCartImageMount(LoggingMixIn, Operations):
 
     def init(self, path):
         ncsd_part_raw = self.ncsd_header[0x20:0x60]
-        ncsd_partitions = [[util.readle(ncsd_part_raw[i:i + 4]) * 0x200,
-                            util.readle(ncsd_part_raw[i + 4:i + 8]) * 0x200] for i in range(0, 0x40, 0x8)]
+        ncsd_partitions = [[readle(ncsd_part_raw[i:i + 4]) * 0x200,
+                            readle(ncsd_part_raw[i + 4:i + 8]) * 0x200] for i in range(0, 0x40, 0x8)]
 
         ncsd_part_names = ('game', 'manual', 'dlp', 'unk', 'unk', 'unk', 'update_n3ds', 'update_o3ds')
 

@@ -5,7 +5,8 @@ from typing import BinaryIO, NamedTuple, Union
 
 from . import crypto, util
 
-__all__ = ['NCCHError', 'InvalidNCCHError', 'NCCHSeedError', 'NCCH_MEDIA_UNIT', 'NCCHRegion', 'NCCHFlags', 'NCCHReader']
+__all__ = ['NCCHError', 'InvalidNCCHError', 'NCCHSeedError', 'NCCH_MEDIA_UNIT', 'NCCHRegion', 'NCCHFlags', 'NCCHReader',
+           'FIXED_SYSTEM_KEY']
 
 
 class NCCHError(Exception):
