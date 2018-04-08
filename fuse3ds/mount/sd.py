@@ -229,7 +229,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
 
     @_c.raise_on_readonly
     def utimens(self, path, *args, **kwargs):
-        os.utimens(path, *args, **kwargs)
+        os.utime(path, *args, **kwargs)
 
     @_c.raise_on_readonly
     def write(self, path, data, offset, fh):
