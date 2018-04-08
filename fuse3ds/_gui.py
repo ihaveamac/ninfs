@@ -378,7 +378,7 @@ try:
     app.setEntryDropTarget('mountpoint', make_drag_and_drop_check('mountpoint'))
 except Exception as e:
     print('Warning: Failed to enable Drag & Drop, will not be used.',
-          '{}: {}'.format(type(e).__name__, e))
+          '{}: {}'.format(type(e).__name__, e), sep='\n')
 
 with app.frame('FOOTER', row=3, colspan=3):
     if not b9_found:
@@ -556,6 +556,7 @@ def main(_pyi=False, _allow_admin=False):
     if windows:
         def add_entry(button: str):
             app.hideSubWindow('ctxmenu-window')
+            app.hideSubWindow('extras')
             if button == 'Add entry':
                 add_reg(_used_pyinstaller)
             elif button == 'Remove entry':
