@@ -365,6 +365,8 @@ with app.frame('mountpoint', row=2, colspan=3):
         app.addLabel('mountlabel', 'Mount point', row=2, column=0)
         app.addDirectoryEntry('mountpoint', row=2, column=1, colspan=2)
 
+    app.setEntryDropTarget('mountpoint', make_drag_and_drop_check('mountpoint'))
+
     app.addButtons(['Mount', 'Unmount'], press, colspan=3)
     app.disableButton('Unmount')
 app.hideFrame('mountpoint')
