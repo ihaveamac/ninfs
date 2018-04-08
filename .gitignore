@@ -6,6 +6,7 @@ things/
 venv*/
 *.spec
 *.bin
+*.bat
 *.egg-info/
 __pycache__/
 docs-build/

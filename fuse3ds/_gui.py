@@ -6,6 +6,7 @@ import signal
 import subprocess
 import webbrowser
 from sys import argv, exit, executable, platform, version_info, maxsize
+from ssl import PROTOCOL_TLSv1_2, SSLContext
 from os import environ, kill, rmdir
 from os.path import abspath, isfile, isdir, ismount, dirname
 from time import sleep
@@ -15,7 +16,7 @@ from urllib.request import urlopen
 from urllib.error import URLError
 
 if TYPE_CHECKING:
-    from http.client import HTTPResponse
+    from http.client import HTTPResponse as HTTPResp
     from typing import Any, Dict, List
 
 from pkg_resources import parse_version
@@ -55,13 +56,13 @@ else:
 
 # types
 CCI = 'CTR Cart Image (".3ds", ".cci")'
-CDN = 'CDN contents (directory with "cetk", "tmd", and contents)'
+CDN = 'CDN contents ("cetk", "tmd", and contents)'
 CIA = 'CTR Importable Archive (".cia")'
 EXEFS = 'Executable Filesystem (".exefs", "exefs.bin")'
 NAND = 'NAND backup ("nand.bin")'
 NCCH = 'NCCH (".cxi", ".cfa", ".ncch", ".app")'
 ROMFS = 'Read-only Filesystem (".romfs", "romfs.bin")'
-SD = 'SD Card Contents ("Nintendo 3DS" from an SD card)'
+SD = 'SD Card Contents ("Nintendo 3DS" from SD)'
 TITLEDIR = 'Titles directory ("title" from NAND or SD)'
 
 mount_types = {CCI: 'cci', CDN: 'cdn', CIA: 'cia', EXEFS: 'exefs', NAND: 'nand', NCCH: 'ncch', ROMFS: 'romfs', SD: 'sd',
@@ -263,9 +264,13 @@ def make_drag_and_drop_check(entry_name: str):
         app.setEntry(entry_name, data)
     return handle
 
+with app.frame('loading', row=1, colspan=3):
+    app.addLabel('l-label', 'Getting ready...', colspan=3)
+
 with app.frame('default', row=1, colspan=3):
     app.addLabel('d-label1', 'To get started, choose a type to mount above.', colspan=3)
     app.addLabel('d-label2', 'If you need help, click "Help" at the top-right.', colspan=3)
+app.hideFrame('default')  # to be shown later
 
 with app.frame(CCI, row=1, colspan=3):
     app.addLabel(CCI + 'label1', 'File', row=0, column=0)
@@ -326,12 +331,6 @@ with app.frame(TITLEDIR, row=1, colspan=3):
     app.addNamedCheckBox('Mount all contents', TITLEDIR + 'mountall', row=3, column=2, colspan=1)
 app.hideFrame(TITLEDIR)
 
-for t in types_list:
-    app.setEntryDropTarget(t + 'item', make_drag_and_drop_check(t + 'item'))
-app.setEntryDropTarget(NAND + 'otp', make_drag_and_drop_check(NAND + 'otp'))
-app.setEntryDropTarget(NAND + 'cid', make_drag_and_drop_check(NAND + 'cid'))
-app.setEntryDropTarget(SD + 'movable', make_drag_and_drop_check(SD + 'movable'))
-
 app.setSticky('new')
 app.addOptionBox('TYPE', ('- Choose a type -', *types_list), row=0, colspan=2)
 app.setOptionBoxChangeFunction('TYPE', change_type)
@@ -365,32 +364,46 @@ with app.frame('mountpoint', row=2, colspan=3):
         app.addLabel('mountlabel', 'Mount point', row=2, column=0)
         app.addDirectoryEntry('mountpoint', row=2, column=1, colspan=2)
 
-    app.setEntryDropTarget('mountpoint', make_drag_and_drop_check('mountpoint'))
-
     app.addButtons(['Mount', 'Unmount'], press, colspan=3)
     app.disableButton('Unmount')
 app.hideFrame('mountpoint')
+
+# noinspection PyBroadException
+try:
+    for t in types_list:
+        app.setEntryDropTarget(t + 'item', make_drag_and_drop_check(t + 'item'))
+    app.setEntryDropTarget(NAND + 'otp', make_drag_and_drop_check(NAND + 'otp'))
+    app.setEntryDropTarget(NAND + 'cid', make_drag_and_drop_check(NAND + 'cid'))
+    app.setEntryDropTarget(SD + 'movable', make_drag_and_drop_check(SD + 'movable'))
+    app.setEntryDropTarget('mountpoint', make_drag_and_drop_check('mountpoint'))
+except Exception as e:
+    print('Warning: Failed to enable Drag & Drop, will not be used.',
+          '{}: {}'.format(type(e).__name__, e))
 
 with app.frame('FOOTER', row=3, colspan=3):
     if not b9_found:
         app.addHorizontalSeparator()
         app.addLabel('no-b9', 'boot9 was not found.\n'
-                              'Please click "Help" for more details.\n'
+                              'Please click "Help & Extras" for more details.\n'
                               'Types that require encryption have been disabled.')
         app.setLabelBg('no-b9', '#ff9999')
         app.disableButton('Mount')
+
     if not seeddb_found:
         app.addHorizontalSeparator()
         app.addLabel('no-seeddb', 'SeedDB was not found.\n'
-                              'Please click "Help" for more details.\n'
-                              'Titles that require seeds may fail.')
+                                  'Please click "Help & Extras" for more details.\n'
+                                  'Titles that require seeds may fail.')
         app.setLabelBg('no-seeddb', '#ffff99')
+
     app.addHorizontalSeparator()
     app.addLabel('footer', 'fuse-3ds {0} running on Python {1[0]}.{1[1]}.{1[2]} {2}-bit on {3}'.format(
         init.__version__, version_info, '64' if maxsize > 0xFFFFFFFF else '32', platform), colspan=3)
 
 if windows:
     app.setFont(10)
+elif macos:
+    app.setFont(14)
 app.setResizable(False)
 
 # failed to mount subwindow
@@ -487,7 +500,8 @@ def main(_pyi=False, _allow_admin=False):
     # this will check for the latest non-prerelease, once there is one.
     try:
         print('Checking for updates...')
-        with urlopen('https://api.github.com/repos/ihaveamac/fuse-3ds/releases') as u:  # type: HTTPResponse
+        ctx = SSLContext(PROTOCOL_TLSv1_2)
+        with urlopen('https://api.github.com/repos/ihaveamac/fuse-3ds/releases', context=ctx) as u: # type: HTTPResp
             res = json.loads(u.read().decode('utf-8'))  # type: List[Dict[str, Any]]
             latest_ver = res[0]['tag_name']  # type: str
             if parse_version(latest_ver) > parse_version(init.__version__):
@@ -528,12 +542,13 @@ def main(_pyi=False, _allow_admin=False):
                 mt = detect_format(f.read(0x200))
                 if mt is not None:
                     mount_type = mount_types_rv[mt]
-                    print('Detected', fn, mount_type)
                     app.hideFrame('default')
                     app.setOptionBox('TYPE', mount_type)
                     change_type()
                     app.setEntry(mount_type + 'item', fn)
                     app.showFrame(mount_type)
+                else:
+                    print('Unknown type for {}.'.format(fn))
         except Exception as e:
             print('Failed to get type of {}: {}: {}'.format(fn, type(e).__name__, e))
 
@@ -558,6 +573,13 @@ def main(_pyi=False, _allow_admin=False):
             app.addLabel('extras-ctxmenu-label', msg)
             app.addButtons(['Add entry', 'Remove entry', 'Cancel'], add_entry, colspan=3)
             app.setResizable(False)
+
+    # kinda lame way to prevent a resize bug
+    def sh():
+        app.queueFunction(app.showFrame, 'default')
+        app.queueFunction(app.hideFrame, 'loading')
+
+    app.thread(sh)
 
     app.go()
     stop_mount()

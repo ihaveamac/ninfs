@@ -1,5 +1,15 @@
+from typing import TYPE_CHECKING
 from sys import argv, exit, path, executable
 from os.path import dirname, realpath
+
+if TYPE_CHECKING:
+    # lazy way to get PyInstaller to detect the libraries, since this won't run at runtime
+    import _gui
+    import fmt_detect
+    import reg_shell
+    # noinspection PyProtectedMember
+    from mount import _common, cci, cdn, cia, exefs, nand, ncch, romfs, sd, titledir
+    from pyctr import crypto, exefs, ncch, romfs, smdh, tmd, util
 
 path.append(dirname(realpath(__file__)))
 
