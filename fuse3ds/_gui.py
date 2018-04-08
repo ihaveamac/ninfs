@@ -8,7 +8,7 @@ import webbrowser
 from sys import argv, exit, executable, platform, version_info, maxsize
 from ssl import PROTOCOL_TLSv1_2, SSLContext
 from os import environ, kill, rmdir
-from os.path import abspath, isfile, isdir, ismount, dirname
+from os.path import abspath, isfile, isdir, ismount, dirname, join as pjoin
 from time import sleep
 from traceback import print_exception
 from typing import TYPE_CHECKING
@@ -113,6 +113,9 @@ process = None  # type: subprocess.Popen
 curr_mountpoint = None  # type: str
 
 app = gui('fuse-3ds ' + init.__version__, showIcon=False, handleArgs=False)
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
 
 def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = ()):
     global process, curr_mountpoint
@@ -128,6 +131,50 @@ def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = (
         if windows:
             opts['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
         process = subprocess.Popen(args, **opts)
+
+        # check if the mount exists, or if the process exited before it
+        check = isdir if windows else ismount
+        while not check(mountpoint):
+            sleep(1)
+            if process.poll() is not None:
+                app.queueFunction(app.showSubWindow, 'mounterror')
+                app.queueFunction(app.enableButton, 'Mount')
+                return
+
+        app.queueFunction(app.enableButton, 'Unmount')
+
+        if windows:
+            try:
+                subprocess.check_call(['explorer', mountpoint.replace('/', '\\')])
+            except subprocess.CalledProcessError:
+                # not using startfile since i've been getting fatal errors (PyEval_RestoreThread) on windows
+                #   for some reason
+                # also this error always appears when calling explorer, so i'm ignoring it
+                pass
+        elif macos:
+            try:
+                subprocess.check_call(['/usr/bin/open', '-a', 'Finder', mountpoint])
+            except subprocess.CalledProcessError as e:
+                exc_name = type(e).__name__
+                if type(e).__module__ != 'builtins':
+                    exc_name = type(e).__module__ + '.' + exc_name
+                print('Failed to open Finder on {}: {}: {}'.format(mountpoint, exc_name, e))
+
+        print('waiting...')
+        if process.wait() != 0:
+            print('exit code')
+            # just in case there are leftover mounts
+            try:
+                stop_mount()
+            except subprocess.CalledProcessError as e:
+                print(type(e).__name__, e)
+            app.queueFunction(app.setLabel, 'exiterror-label',
+                'The mount process exited with an error code ({}). '
+                'Please check the output.'.format(process.returncode))
+            app.queueFunction(app.showSubWindow, 'exiterror')
+
+        app.queueFunction(app.disableButton, 'Unmount')
+        app.queueFunction(app.enableButton, 'Mount')
 
 
 def stop_mount():
@@ -198,26 +245,7 @@ def press(button: str):
             if mount_all:
                 extra_args.append('--mount-all')
 
-        run_mount(mount_types[mount_type], item, mountpoint, extra_args)
-        # check if the mount exists, or if the process exited before it
-        check = isdir if windows else ismount
-        while not check(mountpoint):
-            sleep(1)
-            if process.poll() is not None:
-                app.showSubWindow('mounterror')
-                app.enableButton('Mount')
-                return
-        app.enableButton('Unmount')
-        if windows:
-            try:
-                subprocess.check_call(['explorer', mountpoint.replace('/', '\\')])
-            except subprocess.CalledProcessError:
-                # not using startfile since i've been getting fatal errors (PyEval_RestoreThread) on windows
-                #   for some reason
-                # also this error always appears when calling explorer, so i'm ignoring it
-                pass
-        elif macos:
-            subprocess.check_call(['/usr/bin/open', '-a', 'Finder', mountpoint])
+        app.thread(run_mount, mount_types[mount_type], item, mountpoint, extra_args)
 
     elif button == 'Unmount':
         app.disableButton('Unmount')
@@ -242,6 +270,7 @@ def kill_process(_):
 
 def change_type(*_):
     mount_type = app.getOptionBox('TYPE')
+    app.hideFrame('default')
     app.showFrame('mountpoint')
     for t in mount_types:
         if t == mount_type:
@@ -257,7 +286,7 @@ def change_type(*_):
 
 # TODO: maybe check if the mount was unmounted outside of the unmount button
 
-def make_drag_and_drop_check(entry_name: str):
+def make_dnd_entry_check(entry_name: str):
     def handle(data: str):
         if data.startswith('{'):
             data = data[1:-1]
@@ -266,11 +295,6 @@ def make_drag_and_drop_check(entry_name: str):
 
 with app.frame('loading', row=1, colspan=3):
     app.addLabel('l-label', 'Getting ready...', colspan=3)
-
-with app.frame('default', row=1, colspan=3):
-    app.addLabel('d-label1', 'To get started, choose a type to mount above.', colspan=3)
-    app.addLabel('d-label2', 'If you need help, click "Help" at the top-right.', colspan=3)
-app.hideFrame('default')  # to be shown later
 
 with app.frame(CCI, row=1, colspan=3):
     app.addLabel(CCI + 'label1', 'File', row=0, column=0)
@@ -331,10 +355,41 @@ with app.frame(TITLEDIR, row=1, colspan=3):
     app.addNamedCheckBox('Mount all contents', TITLEDIR + 'mountall', row=3, column=2, colspan=1)
 app.hideFrame(TITLEDIR)
 
-app.setSticky('new')
-app.addOptionBox('TYPE', ('- Choose a type -', *types_list), row=0, colspan=2)
-app.setOptionBoxChangeFunction('TYPE', change_type)
-app.addButton('Help & Extras', press, row=0, column=2)
+with app.subWindow('unknowntype', 'fuse-3ds Error', modal=True):
+    app.addLabel('unknowntype-label1', "The type of the given file couldn't be detected.\n"
+                 "If you know it is a compatibile file, choose the \n"
+                 "correct type and file an issue on GitHub if it works.")
+    app.addLabel('unknowntype-label2', '<filepath>')
+    app.addNamedButton('OK', 'unknowntype-ok', lambda _: app.hideSubWindow('unknowntype'))
+    app.setResizable(False)
+
+
+def detect_type(fn: str):
+    if fn.startswith('{'):
+        fn = fn[1:-1]
+    try:
+        with open(fn, 'rb') as f:
+            mt = detect_format(f.read(0x200))
+            if mt is not None:
+                mount_type = mount_types_rv[mt]
+            else:
+                app.setLabel('unknowntype-label2', fn)
+                app.showSubWindow('unknowntype')
+                return
+    except IsADirectoryError:
+        if isfile(pjoin(fn, 'tmd')):
+            mount_type = CDN
+        else:  # TODO: maybe check if this is an SD dir
+            mount_type = SD
+    except Exception as e:
+        print('Failed to get type of {}: {}: {}'.format(fn, type(e).__name__, e))
+        return
+
+    app.setOptionBox('TYPE', mount_type)
+    # change_type()
+    app.setEntry(mount_type + 'item', fn)
+    app.showFrame(mount_type)
+
 
 app.setSticky('sew')
 with app.frame('mountpoint', row=2, colspan=3):
@@ -371,14 +426,33 @@ app.hideFrame('mountpoint')
 # noinspection PyBroadException
 try:
     for t in types_list:
-        app.setEntryDropTarget(t + 'item', make_drag_and_drop_check(t + 'item'))
-    app.setEntryDropTarget(NAND + 'otp', make_drag_and_drop_check(NAND + 'otp'))
-    app.setEntryDropTarget(NAND + 'cid', make_drag_and_drop_check(NAND + 'cid'))
-    app.setEntryDropTarget(SD + 'movable', make_drag_and_drop_check(SD + 'movable'))
-    app.setEntryDropTarget('mountpoint', make_drag_and_drop_check('mountpoint'))
+        app.setEntryDropTarget(t + 'item', make_dnd_entry_check(t + 'item'))
+    app.setEntryDropTarget(NAND + 'otp', make_dnd_entry_check(NAND + 'otp'))
+    app.setEntryDropTarget(NAND + 'cid', make_dnd_entry_check(NAND + 'cid'))
+    app.setEntryDropTarget(SD + 'movable', make_dnd_entry_check(SD + 'movable'))
+    app.setEntryDropTarget('mountpoint', make_dnd_entry_check('mountpoint'))
+    has_dnd = True
 except Exception as e:
     print('Warning: Failed to enable Drag & Drop, will not be used.',
           '{}: {}'.format(type(e).__name__, e), sep='\n')
+    has_dnd = False
+
+app.setSticky('new')
+app.addOptionBox('TYPE', ('- Choose a type{} -'.format(' or drag a file/directory here' if has_dnd else ''),
+                          *types_list), row=0, colspan=2)
+app.setOptionBoxChangeFunction('TYPE', change_type)
+app.addButton('Help & Extras', press, row=0, column=2)
+if has_dnd:
+    app.setOptionBoxDropTarget('TYPE', detect_type)
+
+with app.frame('default', row=1, colspan=3):
+    if has_dnd:
+        app.addLabel('d-label1', 'To get started, drag the file to the box above.', colspan=3)
+        app.addLabel('d-label2', 'You can also click it to manually choose a type.', colspan=3)
+    else:
+        app.addLabel('d-label1', 'To get started, choose a type to mount above.', colspan=3)
+    app.addLabel('d-label3', 'If you need help, click "Help" at the top-right.', colspan=3)
+app.hideFrame('default')  # to be shown later
 
 with app.frame('FOOTER', row=3, colspan=3):
     if not b9_found:
@@ -410,6 +484,12 @@ app.setResizable(False)
 with app.subWindow('mounterror', 'fuse-3ds Error', modal=True, blocking=True):
     app.addLabel('mounterror-label', 'Failed to mount. Please check the output.')
     app.addNamedButton('OK', 'mounterror-ok', lambda _: app.hideSubWindow('mounterror'))
+    app.setResizable(False)
+
+# exited with error subwindow
+with app.subWindow('exiterror', 'fuse-3ds Error', modal=True, blocking=True):
+    app.addLabel('exiterror-label', 'The mount process exited with an error code (<errcode>). Please check the output.')
+    app.addNamedButton('OK', 'exiterror-ok', lambda _: app.hideSubWindow('exiterror'))
     app.setResizable(False)
 
 if windows:
@@ -499,7 +579,7 @@ def main(_pyi=False, _allow_admin=False):
 
     # this will check for the latest non-prerelease, once there is one.
     try:
-        print('Checking for updates...')
+        print('Checking for updates... (Currently running v{})'.format(init.__version__))
         ctx = SSLContext(PROTOCOL_TLSv1_2)
         with urlopen('https://api.github.com/repos/ihaveamac/fuse-3ds/releases', context=ctx) as u: # type: HTTPResp
             res = json.loads(u.read().decode('utf-8'))  # type: List[Dict[str, Any]]
@@ -527,13 +607,15 @@ def main(_pyi=False, _allow_admin=False):
 
                 app.queueFunction(app.showSubWindow, 'update')
             else:
-                print('No new version.')
+                print('No new version. (Latest is {})'.format(latest_ver))
 
     except Exception as e:
         exc_name = type(e).__name__
         if type(e).__module__ != 'builtins':
             exc_name = type(e).__module__ + '.' + exc_name
         print('Failed to check for update: {}: {}'.format(exc_name, e))
+
+    show_default = True
 
     if len(argv) > 1:
         fn = abspath(argv[1])  # type: str
@@ -542,13 +624,13 @@ def main(_pyi=False, _allow_admin=False):
                 mt = detect_format(f.read(0x200))
                 if mt is not None:
                     mount_type = mount_types_rv[mt]
-                    app.hideFrame('default')
+                    show_default = False
                     app.setOptionBox('TYPE', mount_type)
-                    change_type()
+                    # change_type()
                     app.setEntry(mount_type + 'item', fn)
-                    app.showFrame(mount_type)
                 else:
-                    print('Unknown type for {}.'.format(fn))
+                    app.setLabel('unknowntype-label2', fn)
+                    app.queueFunction(app.showSubWindow, 'unknowntype')
         except Exception as e:
             print('Failed to get type of {}: {}: {}'.format(fn, type(e).__name__, e))
 
@@ -577,7 +659,8 @@ def main(_pyi=False, _allow_admin=False):
 
     # kinda lame way to prevent a resize bug
     def sh():
-        app.queueFunction(app.showFrame, 'default')
+        if show_default:
+            app.queueFunction(app.showFrame, 'default')
         app.queueFunction(app.hideFrame, 'loading')
 
     app.thread(sh)
