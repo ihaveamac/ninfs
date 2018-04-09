@@ -136,7 +136,6 @@ def main(prog: str = None, args: list = None):
                 opts['volname'] = "Nintendo 3DS ExeFS ({}/{})".format(path_to_show[-2], path_to_show[-1])
             elif _c.windows:
                 # volume label can only be up to 32 chars
-                # TODO: maybe I should show the path here, if i can shorten it properly
                 opts['volname'] = "Nintendo 3DS ExeFS"
         FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
              fsname=os.path.realpath(a.exefs).replace(',', '_'), **opts)

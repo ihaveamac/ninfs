@@ -1,7 +1,10 @@
 from hashlib import sha256
 from os import environ
 from os.path import isfile
-from typing import BinaryIO, NamedTuple, Union
+from typing import TYPE_CHECKING, NamedTuple
+
+if TYPE_CHECKING:
+    from typing import BinaryIO
 
 from . import crypto, util
 
@@ -25,7 +28,7 @@ class SeedDBNotFoundError(NCCHSeedError):
     """SeedDB was not found. Main argument is a tuple of checked paths."""
 
 
-def get_seed(f: BinaryIO, program_id: int) -> bytes:
+def get_seed(f: 'BinaryIO', program_id: int) -> bytes:
     """Get a seed in a seeddb.bin from an I/O stream."""
     tid_bytes = program_id.to_bytes(0x8, 'little')
     f.seek(0)

@@ -1,4 +1,7 @@
-from typing import BinaryIO, NamedTuple, Iterable, Dict
+from typing import TYPE_CHECKING, NamedTuple
+
+if TYPE_CHECKING:
+    from typing import BinaryIO, Dict, Iterable
 
 from .util import readle
 
@@ -113,7 +116,7 @@ class ExeFSReader:
     http://3dbrew.org/wiki/ExeFS
     """
 
-    def __init__(self, entries: Iterable[ExeFSEntry], strict: bool = False):
+    def __init__(self, entries: 'Iterable[ExeFSEntry]', strict: bool = False):
         self.entries = {}  # type: Dict[str, ExeFSEntry]
         for x in entries:
             if x.offset % 0x200:
@@ -140,7 +143,7 @@ class ExeFSReader:
         return self.entries[item]
 
     @classmethod
-    def load(cls, fp: BinaryIO, strict: bool = False) -> 'ExeFSReader':
+    def load(cls, fp: 'BinaryIO', strict: bool = False) -> 'ExeFSReader':
         """Load an ExeFS from a file-like object."""
         header = fp.read(0x200)
 

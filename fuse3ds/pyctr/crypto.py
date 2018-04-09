@@ -1,7 +1,10 @@
 from functools import wraps
 from os import environ
 from os.path import isfile, getsize
-from typing import Dict
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Dict
 
 from Cryptodome.Cipher import AES
 from Cryptodome.Util import Counter
@@ -36,11 +39,9 @@ base_key_x = {
 # global values to be copied to new CTRCrypto instances after the first one
 _b9_key_x = {}
 _b9_key_y = {}
-
 _b9_extdata_otp = None  # type: bytes
 _b9_extdata_keygen = None  # type: bytes
 _b9_extdata_keygen_iv = None  # type: bytes
-
 _otp_key = None  # type: bytes
 _otp_iv = None  # type: bytes
 

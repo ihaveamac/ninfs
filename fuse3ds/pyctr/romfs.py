@@ -1,5 +1,8 @@
 from io import BytesIO
-from typing import BinaryIO, NamedTuple, Tuple, Union
+from typing import TYPE_CHECKING, NamedTuple, Tuple  # Tuple is here until I can use 3.6+ exclusively.
+
+if TYPE_CHECKING:
+    from typing import BinaryIO, Union
 
 from .util import readle, roundup
 
@@ -32,7 +35,7 @@ class RomFSFileIndexNotSetup(RomFSError):
 
 
 RomFSRegion = NamedTuple('RomFSRegion', (('offset', int), ('size', int)))
-RomFSDirectoryEntry = NamedTuple('RomFSDirectoryEntry', (('name', str), ('type', str), ('contents', Tuple[str])))
+RomFSDirectoryEntry = NamedTuple('RomFSDirectoryEntry', (('name', str), ('type', str), ('contents', Tuple[str, ...])))
 RomFSFileEntry = NamedTuple('RomFSFileEntry', (('name', str), ('type', str), ('offset', int), ('size', int)))
 
 
@@ -55,7 +58,7 @@ class RomFSReader:
         self.case_insensitive = case_insensitive
         self.total_size = 0
 
-    def get_info_from_path(self, path: str) -> Union[RomFSDirectoryEntry, RomFSFileEntry]:
+    def get_info_from_path(self, path: str) -> 'Union[RomFSDirectoryEntry, RomFSFileEntry]':
         """Get a directory or file entry"""
         if not self._index_setup:
             raise RomFSFileIndexNotSetup("file index must be set up with parse_metadata")
@@ -95,7 +98,7 @@ class RomFSReader:
             raise InvalidRomFSHeaderError("File Data offset is before the end of the File Metadata region")
 
     @classmethod
-    def load(cls, fp: BinaryIO, *, case_insensitive: bool = False) -> 'RomFSReader':
+    def load(cls, fp: 'BinaryIO', *, case_insensitive: bool = False) -> 'RomFSReader':
         # reading IVFC header size just in case it is, but if it's RomFS Lv3 it will be shortened.
         original_offset = fp.tell()
         header = fp.read(IVFC_HEADER_SIZE)

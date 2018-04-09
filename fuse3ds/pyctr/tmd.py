@@ -1,5 +1,8 @@
 from hashlib import sha256
-from typing import BinaryIO, NamedTuple, Iterable
+from typing import TYPE_CHECKING, NamedTuple
+
+if TYPE_CHECKING:
+    from typing import BinaryIO, Iterable
 
 from .util import readbe
 
@@ -103,7 +106,7 @@ class TitleMetadataReader:
                  'chunk_records', 'content_count')
 
     def __init__(self, *, title_id: str, save_size: int, srl_save_size: int, title_version: TitleVersion,
-                 info_records: Iterable[ContentInfoRecord], chunk_records: Iterable[ContentChunkRecord]):
+                 info_records: 'Iterable[ContentInfoRecord]', chunk_records: 'Iterable[ContentChunkRecord]'):
         self.title_id = title_id.lower()
         self.save_size = save_size
         self.srl_save_size = srl_save_size
@@ -121,7 +124,7 @@ class TitleMetadataReader:
                'content_count={0.content_count!r}>'.format(self)
 
     @classmethod
-    def load(cls, fp: BinaryIO, verify_hashes: bool = True) -> 'TitleMetadataReader':
+    def load(cls, fp: 'BinaryIO', verify_hashes: bool = True) -> 'TitleMetadataReader':
         """Load a tmd from a file-like object."""
         sig_type = readbe(fp.read(4))
         try:

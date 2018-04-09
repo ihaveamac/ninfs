@@ -1,5 +1,8 @@
 from types import MappingProxyType
-from typing import BinaryIO, Dict, NamedTuple, Tuple
+from typing import TYPE_CHECKING, NamedTuple
+
+if TYPE_CHECKING:
+    from typing import BinaryIO, Dict, Tuple
 
 SMDH_SIZE = 0x36C0
 
@@ -38,11 +41,11 @@ class SMDH:
 
     # TODO: support other settings
 
-    def __init__(self, names: Dict[str, AppTitle]):
+    def __init__(self, names: 'Dict[str, AppTitle]'):
         self.names = MappingProxyType({n: names.get(n, None) for n in region_names})  # type: Dict[str, AppTitle]
 
     @classmethod
-    def load(cls, fp: BinaryIO) -> 'SMDH':
+    def load(cls, fp: 'BinaryIO') -> 'SMDH':
         """Load an SMDH from a file-like object."""
         smdh = fp.read(SMDH_SIZE)
         if len(smdh) != SMDH_SIZE:

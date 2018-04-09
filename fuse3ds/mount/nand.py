@@ -53,6 +53,9 @@ class NANDImageMount(LoggingMixIn, Operations):
                  otp: bytes = None, cid: AnyStr = None):
         self.crypto = CTRCrypto(is_dev=dev)
 
+        self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
+                       'st_atime': int(g_stat.st_atime)}
+
         nand_fp.seek(0x100)  # screw the signature
         ncsd_header = nand_fp.read(0x100)
         if ncsd_header[0:4] != b'NCSD':
@@ -142,9 +145,6 @@ class NANDImageMount(LoggingMixIn, Operations):
         self.crypto.set_keyslot('x', 0x05, key_x)
         self.crypto.set_keyslot('x', 0x06, key_x)
         self.crypto.set_keyslot('x', 0x07, key_x)
-
-        self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
-                       'st_atime': int(g_stat.st_atime)}
 
         nand_fp.seek(0, 2)
         raw_nand_size = nand_fp.tell()
@@ -448,7 +448,6 @@ def main(prog: str = None, args: list = None):
                 opts['volname'] = "Nintendo 3DS NAND ({}/{})".format(path_to_show[-2], path_to_show[-1])
             elif _c.windows:
                 # volume label can only be up to 32 chars
-                # TODO: maybe I should show the path here, if i can shorten it properly
                 opts['volname'] = "Nintendo 3DS NAND"
         FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=a.ro, nothreads=True, debug=a.d,
              fsname=os.path.realpath(a.nand).replace(',', '_'), **opts)
