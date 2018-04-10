@@ -1,7 +1,7 @@
 from functools import wraps
 from io import BufferedIOBase, TextIOWrapper
 from threading import Lock
-from typing import TYPE_CHECKING, NamedTuple, Tuple  # Tuple is here until I can use 3.6+ exclusively.
+from typing import overload, TYPE_CHECKING, NamedTuple, Tuple  # Tuple is here until I can use 3.6+ exclusively.
 
 from ..util import readle, roundup
 
@@ -227,8 +227,15 @@ class RomFSReader:
         self.closed = True
         self._fp.close()
 
-    def open(self, path: str, encoding: 'Optional[str]' = None, errors: 'Optional[str]' = None,
-             newline: 'Optional[str]' = None) -> _RomFSOpenFile:
+    @overload
+    def open(self, path: str, encoding: str, errors: 'Optional[str]' = None,
+             newline: 'Optional[str]' = None) -> TextIOWrapper: ...
+
+    @overload
+    def open(self, path: str, encoding: None = None, errors: 'Optional[str]' = None,
+             newline: 'Optional[str]' = None) -> _RomFSOpenFile: ...
+
+    def open(self, path, encoding=None, errors=None, newline=None):
         """Open a file in the RomFS for reading."""
         f = _RomFSOpenFile(self, path)
         if encoding is not None:

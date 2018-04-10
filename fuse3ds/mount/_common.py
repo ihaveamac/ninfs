@@ -54,7 +54,7 @@ def main_positional_args(name: str, help: str) -> ArgumentParser:
 
 
 # aren't type hints great?
-def parse_fuse_opts(opts) -> Generator[Tuple[str, Union[str, bool]], None, None]:
+def parse_fuse_opts(opts) -> 'Generator[Tuple[str, Union[str, bool]], None, None]':
     if not opts:
         return
     for arg in opts.split(','):
