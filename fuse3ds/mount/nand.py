@@ -300,7 +300,7 @@ class NANDImageMount(LoggingMixIn, Operations):
             if path in {'/', '/essential'}:
                 st = {'st_mode': (S_IFDIR | (0o555 if self.readonly else 0o777)), 'st_nlink': 2}
             elif path in self.files:
-                st = {'st_mode': (S_IFREG | (0o444 if (self.readonly or path == '/_nandinfo.txt') else 0o666)),
+                st = {'st_mode': (S_IFREG | (0o444 if self.readonly else 0o666)),
                       'st_size': self.files[path]['size'], 'st_nlink': 1}
             else:
                 raise FuseOSError(ENOENT)
@@ -387,15 +387,18 @@ class NANDImageMount(LoggingMixIn, Operations):
             self.f.write(data)
 
         elif fi['type'] == 'enc':
-            # thanks Stary2001
-            size = real_len
+            twl = fi['keyslot'] < 0x04
             before = offset % 16
-            after = (offset + size) % 16
-            data = (b'\0' * before) + data + (b'\0' * after)
-            iv = (self.ctr if fi['keyslot'] > 0x03 else self.ctr_twl) + (real_offset >> 4)
-            data = self.crypto.aes_ctr(fi['keyslot'], iv, data)[before:len(data) - after]
+            if twl:
+                after = 16 - ((offset + real_len) % 16)
+                if after == 16:
+                    after = 0
+            else:
+                after = 0  # not needed for ctr
+            iv = (self.ctr_twl if twl else self.ctr) + (real_offset >> 4)
+            out_data = self.crypto.aes_ctr(fi['keyslot'], iv, (b'\0' * before) + data + (b'\0' * after))
             self.f.seek(real_offset)
-            self.f.write(data)
+            self.f.write(out_data[before:])
 
         elif fi['type'] == 'twlmbr':
             twlmbr = bytearray(fi['content'])

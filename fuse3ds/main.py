@@ -11,7 +11,9 @@ python_cmd = 'py -3' if windows else 'python3'
 mount_types = ('cci', 'cdn', 'cia', 'exefs', 'nand', 'ncch', 'romfs', 'sd', 'titledir')
 mount_aliases = {'3ds': 'cci', 'cxi': 'ncch', 'cfa': 'ncch', 'app': 'ncch'}
 
-path.append(dirname(realpath(__file__)))
+_path = dirname(realpath(__file__))
+if _path not in path:
+    path.insert(0, _path)
 
 from __init__ import __version__
 

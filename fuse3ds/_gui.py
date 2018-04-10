@@ -113,8 +113,6 @@ process = None  # type: subprocess.Popen
 curr_mountpoint = None  # type: str
 
 app = gui('fuse-3ds ' + init.__version__, showIcon=False, handleArgs=False)
-import logging
-logging.basicConfig(level=logging.DEBUG)
 
 
 def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = ()):
@@ -129,6 +127,7 @@ def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = (
         print('Running:', args)
         opts = {}
         if windows:
+            # noinspection PyUnresolvedReferences
             opts['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
         process = subprocess.Popen(args, **opts)
 
@@ -160,17 +159,15 @@ def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = (
                     exc_name = type(e).__module__ + '.' + exc_name
                 print('Failed to open Finder on {}: {}: {}'.format(mountpoint, exc_name, e))
 
-        print('waiting...')
         if process.wait() != 0:
-            print('exit code')
             # just in case there are leftover mounts
             try:
                 stop_mount()
             except subprocess.CalledProcessError as e:
                 print(type(e).__name__, e)
             app.queueFunction(app.setLabel, 'exiterror-label',
-                'The mount process exited with an error code ({}). '
-                'Please check the output.'.format(process.returncode))
+                              'The mount process exited with an error code ({}). '
+                              'Please check the output.'.format(process.returncode))
             app.queueFunction(app.showSubWindow, 'exiterror')
 
         app.queueFunction(app.disableButton, 'Unmount')
@@ -211,6 +208,7 @@ def press(button: str):
                 except FileNotFoundError:
                     pass
                 except Exception as e:
+                    # noinspection PyUnresolvedReferences
                     if isinstance(e, OSError) and e.winerror == 145:  # "The directory is not empty"
                         app.showSubWindow('mounterror-dir-win')
                     else:
@@ -284,14 +282,14 @@ def change_type(*_):
             app.enableButton('Mount')
 
 
-# TODO: maybe check if the mount was unmounted outside of the unmount button
-
 def make_dnd_entry_check(entry_name: str):
     def handle(data: str):
         if data.startswith('{'):
             data = data[1:-1]
         app.setEntry(entry_name, data)
+
     return handle
+
 
 with app.frame('loading', row=1, colspan=3):
     app.addLabel('l-label', 'Getting ready...', colspan=3)
@@ -357,8 +355,8 @@ app.hideFrame(TITLEDIR)
 
 with app.subWindow('unknowntype', 'fuse-3ds Error', modal=True):
     app.addLabel('unknowntype-label1', "The type of the given file couldn't be detected.\n"
-                 "If you know it is a compatibile file, choose the \n"
-                 "correct type and file an issue on GitHub if it works.")
+                                       "If you know it is a compatibile file, choose the \n"
+                                       "correct type and file an issue on GitHub if it works.")
     app.addLabel('unknowntype-label2', '<filepath>')
     app.addNamedButton('OK', 'unknowntype-ok', lambda _: app.hideSubWindow('unknowntype'))
     app.setResizable(False)
@@ -408,7 +406,7 @@ with app.frame('mountpoint', row=2, colspan=3):
         app.setRadioButtonChangeFunction('mountpoint-choice', rb_change)
         with app.frame('mountpoint-drive', row=1, colspan=3):
             app.addLabel('mountlabel1', 'Drive letter', row=0, column=0)
-            app.addOptionBox('mountpoint', ['WWWW'], row=0, column=1, colspan=2) # putting "WWWW" to avoid a warning
+            app.addOptionBox('mountpoint', ['WWWW'], row=0, column=1, colspan=2)  # putting "WWWW" to avoid a warning
         with app.frame('mountpoint-dir', row=1, colspan=3):
             app.addLabel('mountlabel2', 'Mount point', row=0, column=0)
             app.addDirectoryEntry('mountpoint', row=0, column=1, colspan=2)
@@ -570,9 +568,9 @@ def main(_pyi=False, _allow_admin=False):
         if windll.shell32.IsUserAnAdmin():
             windll.user32.MessageBoxW(None, (
                 'This should not be run as administrator.\n'
-                'The mount point may not be accessible by your account normally,'
+                'The mount point may not be accessible by your account normally, '
                 'only by the administrator.\n\n'
-                'If you are having issues with administrative tools not seeing files,'
+                'If you are having issues with administrative tools not seeing files, '
                 'choose a directory as a mount point instead of a drive letter.'),
                 'fuse-3ds', 0x00000010)
             exit(1)
@@ -581,7 +579,7 @@ def main(_pyi=False, _allow_admin=False):
     try:
         print('Checking for updates... (Currently running v{})'.format(init.__version__))
         ctx = SSLContext(PROTOCOL_TLSv1_2)
-        with urlopen('https://api.github.com/repos/ihaveamac/fuse-3ds/releases', context=ctx) as u: # type: HTTPResp
+        with urlopen('https://api.github.com/repos/ihaveamac/fuse-3ds/releases', context=ctx) as u:  # type: HTTPResp
             res = json.loads(u.read().decode('utf-8'))  # type: List[Dict[str, Any]]
             latest_ver = res[0]['tag_name']  # type: str
             if parse_version(latest_ver) > parse_version(init.__version__):
