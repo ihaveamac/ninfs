@@ -89,7 +89,6 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         if not os.access(path, mode):
             raise FuseOSError(EACCES)
 
-    # chmod = os.chmod
     @_c.raise_on_readonly
     def chmod(self, path, mode):
         os.chmod(path, mode)
@@ -159,7 +158,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
 
         before = offset % 16
         f.seek(offset - before)
-        data = f.read(size)
+        data = f.read(size + before)
         iv = self.path_to_iv(path) + (offset >> 4)
         return self.crypto.aes_ctr(0x34, iv, data)[before:]
 
