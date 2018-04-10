@@ -11,6 +11,12 @@ python_cmd = 'py -3' if windows else 'python3'
 mount_types = ('cci', 'cdn', 'cia', 'exefs', 'nand', 'ncch', 'romfs', 'sd', 'titledir')
 mount_aliases = {'3ds': 'cci', 'cxi': 'ncch', 'cfa': 'ncch', 'app': 'ncch'}
 
+path.append(dirname(realpath(__file__)))
+
+from __init__ import __version__
+
+print('fuse-3ds {} - https://github.com/ihaveamac/fuse-3ds'.format(__version__))
+
 
 def exit_print_types():
     print('Please provide a mount type as the first argument.')
@@ -28,9 +34,6 @@ def mount(mount_type: str, return_doc: bool = False) -> int:
     # noinspection PyProtectedMember
     from pyctr.crypto import BootromNotFoundError
 
-    from __init__ import __version__
-    print('fuse-3ds {} - https://github.com/ihaveamac/fuse-3ds'.format(__version__))
-
     if windows:
         from ctypes import windll
         if windll.shell32.IsUserAnAdmin():
@@ -45,8 +48,7 @@ def mount(mount_type: str, return_doc: bool = False) -> int:
                       '- The mount will not be normally accessible by other users.',
                       '- This should be run from a non-root terminal.',
                       '- If you want root to be able to access the mount,',
-                      '-   you can add `-o allow_root` to the arguments.',
-                      sep='\n')
+                      '-   you can add `-o allow_root` to the arguments.', sep='\n')
         except (AttributeError, ImportError):
             pass
     if mount_type not in mount_types and mount_type not in mount_aliases:
@@ -73,19 +75,17 @@ def mount(mount_type: str, return_doc: bool = False) -> int:
 
 
 def main():
-    path.append(dirname(realpath(__file__)))
     exit(mount(basename(argv[0])[6:].lower()))
 
 
 def gui():
-    path.append(dirname(realpath(__file__)))
     import _gui
     return _gui.main()
 
 
 if __name__ == '__main__':
     # path fun times
-    path.append(dirname(realpath(__file__)))
+
     if len(argv) < 2:
         exit_print_types()
 

@@ -7,18 +7,18 @@ Mounts SD contents under `/Nintendo 3DS`, creating a virtual filesystem with dec
 import logging
 import os
 from argparse import ArgumentParser
-from ctypes import c_wchar_p, pointer, c_ulonglong
-from errno import EPERM, EACCES, EROFS, EBADF
+from errno import EPERM, EACCES, EBADF
 from hashlib import sha256
 from struct import unpack
 from sys import exit, argv
 
-from pyctr import crypto, util
+from pyctr.crypto import CTRCrypto
+from pyctr.util import readbe
 
 from . import _common as _c
 
 if _c.windows:
-    from ctypes import windll, wintypes
+    from ctypes import c_wchar_p, pointer, c_ulonglong, windll, wintypes
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
@@ -44,12 +44,12 @@ class SDFilesystemMount(LoggingMixIn, Operations):
     @_c.ensure_lower_path
     def path_to_iv(self, path):
         path_hash = sha256(path[self.root_len + 33:].encode('utf-16le') + b'\0\0').digest()
-        hash_p1 = util.readbe(path_hash[0:16])
-        hash_p2 = util.readbe(path_hash[16:32])
+        hash_p1 = readbe(path_hash[0:16])
+        hash_p2 = readbe(path_hash[16:32])
         return hash_p1 ^ hash_p2
 
     def __init__(self, sd_dir: str, movable: str, dev: bool = False, readonly: bool = False):
-        self.crypto = crypto.CTRCrypto(is_dev=dev)
+        self.crypto = CTRCrypto(is_dev=dev)
 
         with open(movable, 'rb') as mv:
             mv.seek(0x110)
@@ -65,7 +65,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
 
         print('Root dir: ' + self.root_dir)
 
-        self.crypto.set_keyslot('y', 0x34, util.readbe(key_y))
+        self.crypto.set_keyslot('y', 0x34, readbe(key_y))
         print('Key:      ' + self.crypto.key_normal[0x34].hex())
 
         self.root = os.path.realpath(sd_dir + '/' + self.root_dir)

@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     import reg_shell
     # noinspection PyProtectedMember
     from mount import _common, cci, cdn, cia, exefs, nand, ncch, romfs, sd, titledir
-    from pyctr import crypto, exefs, ncch, romfs, smdh, tmd, util
+    from pyctr.types import crypto, exefs, ncch, romfs, smdh, tmd, util
 
 path.append(dirname(realpath(__file__)))
 

@@ -19,7 +19,7 @@ def detect_format(header: bytes) -> 'Optional[str]':
         else:
             return 'cci'
 
-    elif header[0:4] == b'IVFC' or header[0:8] == bytes.fromhex('28000000'):
+    elif header[0:4] == b'IVFC' or header[0:4] == bytes.fromhex('28000000'):
         # IVFC magic, or hardcoded romfs header size
         return 'romfs'
 

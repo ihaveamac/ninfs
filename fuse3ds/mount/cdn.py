@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from typing import Dict
 
 from pyctr.crypto import CTRCrypto
-from pyctr.tmd import TitleMetadataReader, CHUNK_RECORD_SIZE
+from pyctr.types.tmd import TitleMetadataReader, CHUNK_RECORD_SIZE
 
 from . import _common as _c
 from .ncch import NCCHContainerMount

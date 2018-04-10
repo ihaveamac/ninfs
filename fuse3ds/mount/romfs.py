@@ -12,7 +12,7 @@ from stat import S_IFDIR, S_IFREG
 from sys import exit, argv
 from typing import BinaryIO
 
-from pyctr.romfs import RomFSReader, RomFSFileNotFoundError
+from pyctr.types.romfs import RomFSReader, RomFSFileNotFoundError
 
 from . import _common as _c
 
@@ -35,19 +35,19 @@ class RomFSMount(LoggingMixIn, Operations):
                        'st_atime': int(g_stat.st_atime)}
 
         self.reader = None  # type: RomFSReader
-
         self.f = romfs_fp
 
     def __del__(self, *args):
         try:
-            self.f.close()
+            self.f.close()  # just in case
+            self.reader.close()
         except AttributeError:
             pass
 
     destroy = __del__
 
     def init(self, path):
-        self.reader = RomFSReader.load(self.f, case_insensitive=True)
+        self.reader = RomFSReader(self.f, case_insensitive=True)
 
     def getattr(self, path, fh=None):
         uid, gid, pid = fuse_get_context()
@@ -81,14 +81,11 @@ class RomFSMount(LoggingMixIn, Operations):
             item = self.reader.get_info_from_path(path)
         except RomFSFileNotFoundError:
             raise FuseOSError(ENOENT)
-        real_offset = item.offset + offset
-        if real_offset > item.offset + item.size:
-            # do I raise an exception or return nothing? I'm not sure
+        if item.offset + offset > item.offset + item.size:
             return b''
         if offset + size > item.size:
             size = item.size - offset
-        self.f.seek(self.reader.data_offset + real_offset)
-        return self.f.read(size)
+        return self.reader.get_data(item, offset, size)
 
     def statfs(self, path):
         try:

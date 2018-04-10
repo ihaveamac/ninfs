@@ -13,8 +13,8 @@ from stat import S_IFDIR
 from sys import exit, argv
 from typing import Dict
 
-from pyctr.smdh import SMDH, SMDH_SIZE, InvalidSMDHError
-from pyctr.tmd import TitleMetadataReader, CHUNK_RECORD_SIZE
+from pyctr.types.smdh import SMDH, SMDH_SIZE, InvalidSMDHError
+from pyctr.types.tmd import TitleMetadataReader
 
 from . import _common as _c
 from .ncch import NCCHContainerMount

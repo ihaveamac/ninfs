@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, NamedTuple
 if TYPE_CHECKING:
     from typing import BinaryIO, Dict, Iterable
 
-from .util import readle
+from ..util import readle
 
 __all__ = ['EMPTY_ENTRY', 'ExeFSError', 'InvalidExeFSError', 'CodeDecompressionError', 'decompress_code', 'ExeFSEntry',
            'ExeFSReader']

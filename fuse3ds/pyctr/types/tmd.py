@@ -1,10 +1,10 @@
 from hashlib import sha256
 from typing import TYPE_CHECKING, NamedTuple
 
+from ..util import readbe
+
 if TYPE_CHECKING:
     from typing import BinaryIO, Iterable
-
-from .util import readbe
 
 __all__ = ['CHUNK_RECORD_SIZE', 'TitleMetadataError', 'InvalidSignatureTypeError', 'InvalidHashError',
            'ContentInfoRecord', 'ContentChunkRecord', 'ContentTypeFlags', 'TitleVersion', 'TitleMetadataReader']
@@ -44,6 +44,7 @@ class InvalidHashError(TitleMetadataError):
 class ContentTypeFlags(NamedTuple('_ContentTypeFlags',
                        (('encrypted', bool), ('disc', bool), ('cfm', bool), ('optional', bool), ('shared', bool)))):
     __slots__ = ()
+
     def __index__(self) -> int:
         return self.encrypted | (self.disc << 1) | (self.cfm << 2) | (self.optional << 14) | (self.shared << 15)
 
@@ -62,6 +63,7 @@ class ContentTypeFlags(NamedTuple('_ContentTypeFlags',
 class ContentInfoRecord(NamedTuple('_ContentInfoRecord',
                                    (('index_offset', int), ('command_count', int), ('hash', bytes)))):
     __slots__ = ()
+
     def __bytes__(self) -> bytes:
         return b''.join((self.index_offset.to_bytes(2, 'big'), self.command_count.to_bytes(2, 'big'), self.hash))
 
@@ -70,6 +72,7 @@ class ContentChunkRecord(NamedTuple('_ContentChunkRecord',
                                     (('id', str), ('cindex', int), ('type', ContentTypeFlags), ('size', int),
                                      ('hash', bytes)))):
     __slots__ = ()
+
     def __bytes__(self) -> bytes:
         return b''.join((bytes.fromhex(self.id), self.cindex.to_bytes(2, 'big'), self.type.to_bytes(2, 'big'),
                          self.size.to_bytes(8, 'big'), self.hash))
@@ -77,6 +80,7 @@ class ContentChunkRecord(NamedTuple('_ContentChunkRecord',
 
 class TitleVersion(NamedTuple('_TitleVersion', (('major', int), ('minor', int), ('micro', int)))):
     __slots__ = ()
+
     def __str__(self) -> str:
         return '{0.major}.{0.minor}.{0.micro}'.format(self)
 

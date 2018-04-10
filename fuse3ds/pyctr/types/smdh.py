@@ -2,7 +2,7 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING, NamedTuple
 
 if TYPE_CHECKING:
-    from typing import BinaryIO, Dict, Tuple
+    from typing import BinaryIO, Dict
 
 SMDH_SIZE = 0x36C0
 

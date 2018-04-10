@@ -13,7 +13,7 @@ from stat import S_IFDIR, S_IFREG
 from sys import exit, argv
 from typing import BinaryIO
 
-from pyctr.exefs import ExeFSReader, ExeFSEntry, CodeDecompressionError, decompress_code as _decompress_code
+from pyctr.types.exefs import ExeFSReader, ExeFSEntry, CodeDecompressionError, decompress_code as _decompress_code
 
 from . import _common as _c
 

@@ -11,12 +11,11 @@ from collections import OrderedDict
 from errno import ENOENT
 from math import ceil
 from stat import S_IFDIR, S_IFREG
-from struct import iter_unpack
 from sys import exit, argv
 from typing import BinaryIO, Dict
 
 from pyctr.crypto import CTRCrypto
-from pyctr.ncch import NCCHReader, FIXED_SYSTEM_KEY
+from pyctr.types.ncch import NCCHReader, FIXED_SYSTEM_KEY
 from pyctr.util import readbe, roundup
 
 from . import _common as _c

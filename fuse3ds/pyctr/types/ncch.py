@@ -1,12 +1,11 @@
 from hashlib import sha256
 from os import environ
-from os.path import isfile
 from typing import TYPE_CHECKING, NamedTuple
+
+from ..util import config_dirs, readle
 
 if TYPE_CHECKING:
     from typing import BinaryIO
-
-from . import crypto, util
 
 __all__ = ['NCCHError', 'InvalidNCCHError', 'NCCHSeedError', 'NCCH_MEDIA_UNIT', 'NCCHRegion', 'NCCHFlags', 'NCCHReader',
            'FIXED_SYSTEM_KEY']
@@ -32,7 +31,7 @@ def get_seed(f: 'BinaryIO', program_id: int) -> bytes:
     """Get a seed in a seeddb.bin from an I/O stream."""
     tid_bytes = program_id.to_bytes(0x8, 'little')
     f.seek(0)
-    seed_count = util.readle(f.read(2))
+    seed_count = readle(f.read(2))
     f.seek(0x10)
     for _ in range(seed_count):
         entry = f.read(0x20)
@@ -41,7 +40,7 @@ def get_seed(f: 'BinaryIO', program_id: int) -> bytes:
     raise NCCHSeedError("missing seed for {:016X} from seeddb.bin".format(program_id))
 
 
-seeddb_paths = ['seeddb.bin', util.config_dirs[0] + '/seeddb.bin', util.config_dirs[1] + '/seeddb.bin']
+seeddb_paths = ['seeddb.bin', config_dirs[0] + '/seeddb.bin', config_dirs[1] + '/seeddb.bin']
 try:
     seeddb_paths.insert(0, environ['SEEDDB_PATH'])
 except KeyError:
@@ -132,21 +131,21 @@ class NCCHReader:
             raise InvalidNCCHError("NCCH magic not found in given header")
 
         key_y = header[0x0:0x10]
-        content_size = util.readle(header[0x104:0x108]) * NCCH_MEDIA_UNIT
-        partition_id = util.readle(header[0x108:0x110])
+        content_size = readle(header[0x104:0x108]) * NCCH_MEDIA_UNIT
+        partition_id = readle(header[0x108:0x110])
         seed_verify = header[0x114:0x118]
         product_code = header[0x150:0x160].decode('ascii').strip('\0')
-        program_id = util.readle(header[0x118:0x120])
-        extheader_size = util.readle(header[0x180:0x184])
+        program_id = readle(header[0x118:0x120])
+        extheader_size = readle(header[0x180:0x184])
         flags_raw = header[0x188:0x190]
-        plain_region = NCCHRegion(offset=util.readle(header[0x190:0x194]) * NCCH_MEDIA_UNIT,
-                                  size=util.readle(header[0x194:0x198]) * NCCH_MEDIA_UNIT)
-        logo_region = NCCHRegion(offset=util.readle(header[0x198:0x19C]) * NCCH_MEDIA_UNIT,
-                                 size=util.readle(header[0x19C:0x1A0]) * NCCH_MEDIA_UNIT)
-        exefs_region = NCCHRegion(offset=util.readle(header[0x1A0:0x1A4]) * NCCH_MEDIA_UNIT,
-                                  size=util.readle(header[0x1A4:0x1A8]) * NCCH_MEDIA_UNIT)
-        romfs_region = NCCHRegion(offset=util.readle(header[0x1B0:0x1B4]) * NCCH_MEDIA_UNIT,
-                                  size=util.readle(header[0x1B4:0x1B8]) * NCCH_MEDIA_UNIT)
+        plain_region = NCCHRegion(offset=readle(header[0x190:0x194]) * NCCH_MEDIA_UNIT,
+                                  size=readle(header[0x194:0x198]) * NCCH_MEDIA_UNIT)
+        logo_region = NCCHRegion(offset=readle(header[0x198:0x19C]) * NCCH_MEDIA_UNIT,
+                                 size=readle(header[0x19C:0x1A0]) * NCCH_MEDIA_UNIT)
+        exefs_region = NCCHRegion(offset=readle(header[0x1A0:0x1A4]) * NCCH_MEDIA_UNIT,
+                                  size=readle(header[0x1A4:0x1A8]) * NCCH_MEDIA_UNIT)
+        romfs_region = NCCHRegion(offset=readle(header[0x1B0:0x1B4]) * NCCH_MEDIA_UNIT,
+                                  size=readle(header[0x1B4:0x1B8]) * NCCH_MEDIA_UNIT)
 
         flags = NCCHFlags(crypto_method=flags_raw[3], executable=bool(flags_raw[5] & 0x2),
                           fixed_crypto_key=bool(flags_raw[7] & 0x1), no_romfs=bool(flags_raw[7] & 0x2),

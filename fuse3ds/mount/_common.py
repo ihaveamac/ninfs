@@ -40,6 +40,7 @@ dev_argp.add_argument('--dev', help="use dev keys", action='store_const', const=
 seeddb_argp = ArgumentParser(add_help=False)
 seeddb_argp.add_argument('--seeddb', help="path to seeddb.bin")
 
+
 def main_positional_args(name: str, help: str) -> ArgumentParser:
     parser = ArgumentParser(add_help=False)
     parser.add_argument(name, help=help)
@@ -121,7 +122,7 @@ class VirtualFileWrapper:
     def seek(self, seek: int, whence: int = 0) -> int:
         if whence == 0:
             if seek < 0:
-                raise ValueError("negative seek value -1")
+                raise ValueError("negative seek value {}".format(seek))
             self._seek = min(seek, self.size)
         elif whence == 1:
             self._seek = max(self._seek + seek, 0)
