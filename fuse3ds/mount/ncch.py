@@ -320,9 +320,3 @@ def main(prog: str = None, args: list = None):
                 opts['volname'] = "NCCH ({0.product_code})".format(mount.reader)
         FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
              fsname=os.path.realpath(a.ncch).replace(',', '_'), **opts)
-
-
-if __name__ == '__main__':
-    print('Note: You should be calling this script as "mount_{0}" or "{1} -mfuse3ds {0}" '
-          'instead of calling it directly.'.format('ncch', _c.python_cmd))
-    main()

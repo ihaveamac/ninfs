@@ -205,9 +205,3 @@ def main(prog: str = None, args: list = None):
             opts['volname'] = "Nintendo 3DS Titles Directory"
     FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
          fsname=os.path.realpath(a.title_dir).replace(',', '_'), **opts)
-
-
-if __name__ == '__main__':
-    print('Note: You should be calling this script as "mount_{0}" or "{1} -mfuse3ds {0}" '
-          'instead of calling it directly.'.format('titledir', _c.python_cmd))
-    main()
