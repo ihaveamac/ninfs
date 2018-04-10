@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 """
-Mounts NAND images, creating a virtual filesystem of decrypted partitions. Can read essentials backup by GodMode9, else OTP file/NAND CID must be provided in arguments.
+Mounts NAND images, creating a virtual filesystem of decrypted partitions. Can read essentials backup by GodMode9, else
+OTP file/NAND CID must be provided in arguments.
 """
 
 import logging
@@ -10,12 +11,11 @@ from argparse import ArgumentParser
 from errno import EPERM, ENOENT, EROFS
 from hashlib import sha1, sha256
 from stat import S_IFDIR, S_IFREG
-from struct import unpack, pack
 from sys import exit, argv
 from typing import BinaryIO, AnyStr
 
 from pyctr.crypto import CTRCrypto
-from pyctr.exefs import ExeFSReader, InvalidExeFSError
+from pyctr.types.exefs import ExeFSReader, InvalidExeFSError
 from pyctr.util import readbe, readle, roundup
 
 from . import _common as _c
@@ -274,7 +274,6 @@ class NANDImageMount(LoggingMixIn, Operations):
             self.files['/essential.exefs'] = {'size': exefs_size, 'offset': 0x200, 'keyslot': 0xFF, 'type': 'raw'}
             try:
                 exefs_vfp = _c.VirtualFileWrapper(self, '/essential.exefs', exefs_size)
-                # noinspection PyTypeChecker
                 self.exefs_fuse = ExeFSMount(exefs_vfp, g_stat=g_stat)
                 self.exefs_fuse.init('/')
                 self._essentials_mounted = True
@@ -338,7 +337,7 @@ class NANDImageMount(LoggingMixIn, Operations):
             before = offset % 16
             after = (offset + size) % 16
             data = (b'\0' * before) + data + (b'\0' * after)
-            iv = (self.ctr if fi['keyslot']> 0x03 else self.ctr_twl) + (real_offset >> 4)
+            iv = (self.ctr if fi['keyslot'] > 0x03 else self.ctr_twl) + (real_offset >> 4)
             data = self.crypto.aes_ctr(fi['keyslot'], iv, data)[before:len(data) - after]
 
         elif fi['type'] in {'keysect', 'twlmbr', 'info'}:
@@ -404,6 +403,7 @@ class NANDImageMount(LoggingMixIn, Operations):
             final = bytes(twlmbr)
             self.f.seek(fi['offset'])
             self.f.write(self.crypto.aes_ctr(fi['keyslot'], self.ctr_twl + 0x1B, bytes(0xE) + final)[0xE:0x50])
+            # noinspection PyTypeChecker
             fi['content'] = final
 
         elif fi['type'] == 'keysect':
@@ -413,6 +413,7 @@ class NANDImageMount(LoggingMixIn, Operations):
             cipher_keysect = AES.new(self.keysect_key, AES.MODE_ECB)
             self.f.seek(fi['offset'])
             self.f.write(cipher_keysect.encrypt(final))
+            # noinspection PyTypeChecker
             fi['content'] = final
 
         return real_len

@@ -1,11 +1,16 @@
-import inspect
 import sys
 from argparse import ArgumentParser, SUPPRESS
 from errno import EROFS
+from io import BufferedIOBase
 from functools import wraps
-from typing import Generator, Tuple, Union
+from typing import TYPE_CHECKING
 
 from fuse import Operations, FuseOSError
+
+if TYPE_CHECKING:
+    from typing import BinaryIO, Generator, Tuple, Union
+else:
+    BinaryIO = object  # so it doesn't affect anything at runtime
 
 windows = sys.platform in {'win32', 'cygwin'}
 macos = sys.platform == 'darwin'
@@ -90,7 +95,7 @@ def raise_on_readonly(method):
     return wrapper
 
 
-def raise_if_closed(method):
+def _raise_if_closed(method):
     @wraps(method)
     def decorator(self, *args, **kwargs):
         if self.closed:
@@ -99,18 +104,18 @@ def raise_if_closed(method):
     return decorator
 
 
-class VirtualFileWrapper:
+class VirtualFileWrapper(BufferedIOBase, BinaryIO):
     """Wrapper for a FUSE Operations class for things that need a file-like object."""
 
-    closed = False
     _seek = 0
 
+    # noinspection PyMissingConstructor
     def __init__(self, fuse_op: Operations, path: str, size: int):
         self.fuse_op = fuse_op
         self.path = path
         self.size = size
 
-    @raise_if_closed
+    @_raise_if_closed
     def read(self, size: int = -1) -> bytes:
         if size == -1:
             size = self.size - self._seek
@@ -118,7 +123,9 @@ class VirtualFileWrapper:
         self._seek += len(data)
         return data
 
-    @raise_if_closed
+    read1 = read  # probably make this act like read1 should, but this for now enables some other things to work
+
+    @_raise_if_closed
     def seek(self, seek: int, whence: int = 0) -> int:
         if whence == 0:
             if seek < 0:
@@ -130,21 +137,14 @@ class VirtualFileWrapper:
             self._seek = max(self.size + seek, 0)
         return self._seek
 
-    @raise_if_closed
+    @_raise_if_closed
     def tell(self) -> int:
         return self._seek
 
-    def close(self):
-        self.closed = True
-
-    @raise_if_closed
+    @_raise_if_closed
     def readable(self) -> bool:
         return True
 
-    @raise_if_closed
-    def writable(self) -> bool:
-        return False
-
-    @raise_if_closed
+    @_raise_if_closed
     def seekable(self) -> bool:
         return True

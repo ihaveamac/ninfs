@@ -83,7 +83,6 @@ class CTRCartImageMount(LoggingMixIn, Operations):
                 dirname = '/content{}.{}'.format(idx, ncsd_part_names[idx])
                 try:
                     content_vfp = _c.VirtualFileWrapper(self, filename, part[1])
-                    # noinspection PyTypeChecker
                     content_fuse = NCCHContainerMount(content_vfp, g_stat=self._g_stat, dev=self.dev,
                                                       seeddb=self.seeddb)
                     content_fuse.init(path)

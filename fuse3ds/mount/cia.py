@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 """
-Mounts CTR Importable Archive (CIA) files, creating a virtual filesystem of decrypted contents (if encrypted) + Ticket, Title Metadata, and Meta region (if exists).
+Mounts CTR Importable Archive (CIA) files, creating a virtual filesystem of decrypted contents (if encrypted) + Ticket,
+Title Metadata, and Meta region (if exists).
 
 DLC with missing contents is currently not supported.
 """
@@ -134,7 +135,6 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
             dirname = '/{:04x}.{}'.format(chunk.cindex, chunk.id)
             try:
                 content_vfp = _c.VirtualFileWrapper(self, filename, chunk.size)
-                # noinspection PyTypeChecker
                 content_fuse = NCCHContainerMount(content_vfp, dev=self.dev, g_stat=self._g_stat, seeddb=self.seeddb)
                 content_fuse.init(path)
                 self.dirs[dirname] = content_fuse
@@ -196,6 +196,7 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
                 size = size + 16 - size % 16
             if offset - before == 0:
                 # use the initial value if reading from the first block
+                # noinspection PyTypeChecker
                 iv = fi['index'] + (b'\0' * 14)
             else:
                 # use the previous block if reading anywhere else

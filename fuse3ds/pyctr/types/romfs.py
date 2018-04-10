@@ -250,6 +250,7 @@ class RomFSReader:
             if part == '':
                 break
             try:
+                # noinspection PyTypeChecker
                 curr = curr['contents'][part]
             except KeyError:
                 raise RomFSFileNotFoundError(path)

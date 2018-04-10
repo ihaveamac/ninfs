@@ -94,7 +94,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
     def init(self, path):
         decrypted_filename = '/decrypted.' + ('cxi' if self.reader.flags.executable else 'cfa')
 
-        self.files[decrypted_filename] =  {'size': self.reader.content_size, 'offset': 0, 'enctype': 'fulldec'}
+        self.files[decrypted_filename] = {'size': self.reader.content_size, 'offset': 0, 'enctype': 'fulldec'}
         self.files['/ncch.bin'] = {'size': 0x200, 'offset': 0, 'enctype': 'none'}
 
         if self.reader.check_for_extheader():
@@ -123,7 +123,6 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                     exh_flag = self.read('/extheader.bin', 1, 0xD, 0)
                     decompress = exh_flag[0] & 1
                 exefs_vfp = _c.VirtualFileWrapper(self, '/exefs.bin', exefs_region.size)
-                # noinspection PyTypeChecker
                 exefs_fuse = ExeFSMount(exefs_vfp, self._g_stat, decompress_code=decompress, strict=True)
                 exefs_fuse.init(path)
                 self.exefs_fuse = exefs_fuse
@@ -145,7 +144,6 @@ class NCCHContainerMount(LoggingMixIn, Operations):
 
             try:
                 romfs_vfp = _c.VirtualFileWrapper(self, '/romfs.bin', romfs_region.size)
-                # noinspection PyTypeChecker
                 romfs_fuse = RomFSMount(romfs_vfp, self._g_stat)
                 romfs_fuse.init(path)
                 self.romfs_fuse = romfs_fuse
@@ -219,6 +217,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
             aligned_size = size + before
             self.f.seek(aligned_real_offset)
             data = b''
+            # noinspection PyTypeChecker
             for chunk in range(ceil(aligned_size / 0x200)):
                 iv = fi['iv'] + ((aligned_offset + (chunk * 0x200)) >> 4)
                 keyslot = fi['keyslot_extra']
@@ -238,6 +237,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
             self.f.seek(aligned_real_offset)
             data = b''
             files_to_read = OrderedDict()
+            # noinspection PyTypeChecker
             for chunk in range(ceil(aligned_size / 0x200)):
                 new_offset = (aligned_offset + (chunk * 0x200))
                 added = False

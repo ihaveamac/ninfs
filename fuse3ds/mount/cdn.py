@@ -12,14 +12,14 @@ from stat import S_IFDIR, S_IFREG
 from sys import exit, argv
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from typing import Dict
-
 from pyctr.crypto import CTRCrypto
 from pyctr.types.tmd import TitleMetadataReader, CHUNK_RECORD_SIZE
 
 from . import _common as _c
 from .ncch import NCCHContainerMount
+
+if TYPE_CHECKING:
+    from typing import Dict
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
@@ -81,7 +81,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
                     exit('--dec-key input is not 32 hex characters.')
             except ValueError:
                 exit('Failed to convert --dec-key input to bytes. Non-hex character likely found, or is not '
-                         '32 hex characters.')
+                     '32 hex characters.')
         else:
             with open(self.rp('cetk'), 'rb') as tik:
                 # read encrypted titlekey and common key index
@@ -97,10 +97,10 @@ class CDNContentsMount(LoggingMixIn, Operations):
 
         # create virtual files
         self.files = {'/ticket.bin': {'size': 0x350, 'type': 'raw', 'real_filepath': self.rp('cetk')},
-                      '/tmd.bin': {'size': 0xB04 + self.tmd.content_count * CHUNK_RECORD_SIZE, 'offset': 0, 'type': 'raw',
-                                   'real_filepath': self.rp('tmd')},
-                      '/tmdchunks.bin': {'size': self.tmd.content_count * CHUNK_RECORD_SIZE, 'offset': 0xB04, 'type': 'raw',
-                                         'real_filepath': self.rp('tmd')}}
+                      '/tmd.bin': {'size': 0xB04 + self.tmd.content_count * CHUNK_RECORD_SIZE, 'offset': 0,
+                                   'type': 'raw', 'real_filepath': self.rp('tmd')},
+                      '/tmdchunks.bin': {'size': self.tmd.content_count * CHUNK_RECORD_SIZE, 'offset': 0xB04,
+                                         'type': 'raw', 'real_filepath': self.rp('tmd')}}
 
         self.dirs = {}  # type: Dict[str, NCCHContainerMount]
 
@@ -127,7 +127,6 @@ class CDNContentsMount(LoggingMixIn, Operations):
             dirname = '/{:04x}.{}'.format(chunk.cindex, chunk.id)
             try:
                 content_vfp = _c.VirtualFileWrapper(self, filename, chunk.size)
-                # noinspection PyTypeChecker
                 content_fuse = NCCHContainerMount(content_vfp, dev=self.dev, g_stat=f_stat, seeddb=self.seeddb)
                 content_fuse.init(path)
                 self.dirs[dirname] = content_fuse
@@ -185,7 +184,6 @@ class CDNContentsMount(LoggingMixIn, Operations):
                 #   application requires just a few bytes.
                 # thanks Stary2001
                 before = offset % 16
-                after = (offset + size) % 16
                 if size % 16 != 0:
                     size = size + 16 - size % 16
                 if offset - before == 0:

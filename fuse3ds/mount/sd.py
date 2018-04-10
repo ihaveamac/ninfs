@@ -133,6 +133,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         return os.link(source, target)
 
     listxattr = None
+
     @_c.raise_on_readonly
     def mkdir(self, path, *args, **kwargs):
         os.mkdir(path, *args, **kwargs)
@@ -186,6 +187,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
     def rmdir(self, path):
         os.rmdir(path)
 
+    # noinspection PyPep8Naming
     def statfs(self, path):
         if _c.windows:
             lpSectorsPerCluster = c_ulonglong(0)
@@ -252,7 +254,7 @@ def main(prog: str = None, args: list = None):
     parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS SD card contents.',
                             parents=(_c.default_argp, _c.readonly_argp, _c.dev_argp,
                                      _c.main_positional_args(
-                                         'sd_dir',"path to folder with SD contents (on SD: /Nintendo 3DS)")))
+                                         'sd_dir', "path to folder with SD contents (on SD: /Nintendo 3DS)")))
     parser.add_argument('--movable', metavar='MOVABLESED', help='path to movable.sed', required=True)
 
     a = parser.parse_args(args)

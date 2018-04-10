@@ -53,7 +53,6 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
                   'The mount may take some time to appear if this mount is running in the background.',
                   'Use -f to run in the foreground to see progress.', sep='\n')
 
-
         titles_stat = os.stat(titles_dir)
         self.g_stat = {'st_ctime': int(titles_stat.st_ctime), 'st_mtime': int(titles_stat.st_mtime),
                        'st_atime': int(titles_stat.st_atime)}
@@ -96,7 +95,6 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
                 dirname = '/{}.{:04x}.{}'.format(tmd.title_id, chunk.cindex, chunk.id)
                 try:
                     content_vfp = _c.VirtualFileWrapper(self, filename, chunk.size)
-                    # noinspection PyTypeChecker
                     content_fuse = NCCHContainerMount(content_vfp, decompress_code=self.decompress_code, dev=self.dev,
                                                       g_stat=f_stat, seeddb=self.seeddb)
                     content_fuse.init(path)
@@ -105,7 +103,6 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
                 else:
                     self.total_size += chunk.size
                     try:
-                        # noinspection PyTypeChecker
                         smdh = SMDH.load(_c.VirtualFileWrapper(content_fuse.exefs_fuse, '/icon.bin', SMDH_SIZE))
                     except (AttributeError, InvalidSMDHError):
                         pass
