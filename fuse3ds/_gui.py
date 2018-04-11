@@ -6,22 +6,22 @@ import signal
 import subprocess
 import webbrowser
 from glob import iglob
-from shutil import get_terminal_size
-from sys import argv, exit, executable, platform, version_info, maxsize
-from ssl import PROTOCOL_TLSv1_2, SSLContext
 from os import environ, kill, rmdir
 from os.path import abspath, isfile, isdir, ismount, dirname, join as pjoin
+from shutil import get_terminal_size
+from ssl import PROTOCOL_TLSv1_2, SSLContext
+from sys import argv, exit, executable, platform, version_info, maxsize
 from time import sleep
-from traceback import print_exception
+from traceback import print_exc
 from typing import TYPE_CHECKING
 from urllib.request import urlopen
 
-from pkg_resources import parse_version
 from appJar import gui
+from pkg_resources import parse_version
 
 from __init__ import __version__ as version
-from pyctr.util import config_dirs
 from fmt_detect import detect_format
+from pyctr.util import config_dirs
 
 if TYPE_CHECKING:
     from http.client import HTTPResponse as HTTPResp
@@ -89,7 +89,7 @@ if windows:
             'This should be installed as a module, then run using the py launcher on Python 3.5.2 or later.\n\n'
             'Click OK to open the fuse-3ds repository on GitHub:\n'
             'https://github.com/ihaveamac/fuse-3ds'),
-            'fuse-3ds', 0x00000010 | 0x00000001)
+                                        'fuse-3ds', 0x00000010 | 0x00000001)
         if res == 1:
             webbrowser.open('https://github.com/ihaveamac/fuse-3ds')
         exit(1)
@@ -112,7 +112,7 @@ _used_pyinstaller = False
 process = None  # type: subprocess.Popen
 curr_mountpoint = None  # type: str
 
-app = gui('fuse-3ds ' + version, showIcon=False, handleArgs=False)
+app = gui('fuse-3ds v' + version, showIcon=False, handleArgs=False)
 
 
 def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = ()):
@@ -125,7 +125,7 @@ def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = (
         args.extend(extra_args)
         curr_mountpoint = mountpoint
         x, _ = get_terminal_size()
-        print('-' * x)
+        print('-' * x - 1)
         print('Running:', args)
         opts = {}
         if windows:
@@ -214,7 +214,7 @@ def press(button: str):
                     if isinstance(e, OSError) and e.winerror == 145:  # "The directory is not empty"
                         app.showSubWindow('mounterror-dir-win')
                     else:
-                        print_exception(type(e), e, e.__traceback__)
+                        print_exc()
                         app.showSubWindow('mounterror')
                     app.enableButton('Mount')
                     return
@@ -254,7 +254,7 @@ def press(button: str):
             stop_mount()
             app.enableButton('Mount')
         except Exception as e:
-            print_exception(type(e), e, e.__traceback__)
+            print_exc()
             app.showSubWindow('unmounterror')
             app.enableButton('Unmount')
     elif button == 'Help & Extras':
@@ -367,6 +367,7 @@ with app.subWindow('unknowntype', 'fuse-3ds Error', modal=True):
 def detect_type(fn: str):
     if fn.startswith('{'):
         fn = fn[1:-1]
+    # noinspection PyBroadException
     try:
         with open(fn, 'rb') as f:
             mt = detect_format(f.read(0x200))
@@ -388,13 +389,12 @@ def detect_type(fn: str):
             else:
                 # at least one entry
                 mount_type = SD
-    except Exception as e:
+    except Exception:
         print('Failed to get type of', fn)
-        print_exception(type(e), e, e.__traceback__)
+        print_exc()
         return
 
     app.setOptionBox('TYPE', mount_type)
-    # change_type()
     app.setEntry(mount_type + 'item', fn)
     app.showFrame(mount_type)
 
@@ -441,8 +441,8 @@ try:
     app.setEntryDropTarget('mountpoint', make_dnd_entry_check('mountpoint'))
     has_dnd = True
 except Exception as e:
-    print('Warning: Failed to enable Drag & Drop, will not be used.',
-          '{}: {}'.format(type(e).__name__, e), sep='\n')
+    print('Warning: Failed to enable Drag & Drop, will not be used.')
+    print_exc()
     has_dnd = False
 
 app.setSticky('new')
@@ -454,33 +454,33 @@ if has_dnd:
     app.setOptionBoxDropTarget('TYPE', detect_type)
 
 with app.frame('default', row=1, colspan=3):
-    if has_dnd:
-        app.addLabel('d-label1', 'To get started, drag the file to the box above.', colspan=3)
-        app.addLabel('d-label2', 'You can also click it to manually choose a type.', colspan=3)
-    else:
-        app.addLabel('d-label1', 'To get started, choose a type to mount above.', colspan=3)
-    app.addLabel('d-label3', 'If you need help, click "Help" at the top-right.', colspan=3)
+    app.setSticky('ew')
+    with app.labelFrame('Getting started', colspan=3):
+        app.setSticky('ew')
+        if has_dnd:
+            app.addLabel('d-label1', 'To get started, drag the file to the box above.', colspan=3)
+            app.addLabel('d-label2', 'You can also click it to manually choose a type.', colspan=3)
+        else:
+            app.addLabel('d-label1', 'To get started, choose a type to mount above.', colspan=3)
+        app.addLabel('d-label3', 'If you need help, click "Help" at the top-right.', colspan=3)
 app.hideFrame('default')  # to be shown later
 
-with app.frame('FOOTER', row=3, colspan=3):
-    if not b9_found:
-        app.addHorizontalSeparator()
-        app.addLabel('no-b9', 'boot9 was not found.\n'
-                              'Please click "Help & Extras" for more details.\n'
-                              'Types that require encryption have been disabled.')
-        app.setLabelBg('no-b9', '#ff9999')
-        app.disableButton('Mount')
-
-    if not seeddb_found:
-        app.addHorizontalSeparator()
-        app.addLabel('no-seeddb', 'SeedDB was not found.\n'
+if not b9_found or not seeddb_found:
+    with app.frame('FOOTER', row=3, colspan=3):
+        if not b9_found:
+            app.addHorizontalSeparator()
+            app.addLabel('no-b9', 'boot9 was not found.\n'
                                   'Please click "Help & Extras" for more details.\n'
-                                  'Titles that require seeds may fail.')
-        app.setLabelBg('no-seeddb', '#ffff99')
+                                  'Types that require encryption have been disabled.')
+            app.setLabelBg('no-b9', '#ff9999')
+            app.disableButton('Mount')
 
-    app.addHorizontalSeparator()
-    app.addLabel('footer', 'fuse-3ds {0} running on Python {1[0]}.{1[1]}.{1[2]} {2}-bit on {3}'.format(
-        version, version_info, '64' if maxsize > 0xFFFFFFFF else '32', platform), colspan=3)
+        if not seeddb_found:
+            app.addHorizontalSeparator()
+            app.addLabel('no-seeddb', 'SeedDB was not found.\n'
+                                      'Please click "Help & Extras" for more details.\n'
+                                      'Titles that require seeds may fail.')
+            app.setLabelBg('no-seeddb', '#ffff99')
 
 if windows:
     app.setFont(10)
@@ -509,17 +509,32 @@ if windows:
         app.setResizable(False)
 
 with app.subWindow('extras', 'fuse-3ds Extras', modal=True, blocking=True):
-    app.addLabel('tutorial-label', 'View a tutorial on GBAtemp.', colspan=2)
-    app.addButton('Tutorial', lambda _: webbrowser.open('https://gbatemp.net/threads/499994/'), row='previous',
-                  column=2)
+    app.setSticky('ew')
+    with app.labelFrame('Tutorial', colspan=3):
+        app.setSticky('ew')
+        app.addLabel('tutorial-label', 'View a tutorial on GBAtemp.', colspan=2)
+        app.addNamedButton('Open', 'tutorial-btn', lambda _: webbrowser.open('https://gbatemp.net/threads/499994/'),
+                           row='previous', column=2)
 
-    app.addLabel('repo-label', 'View the repository on GitHub.')
-    app.addButton('GitHub Repository', lambda _: webbrowser.open('https://github.com/ihaveamac/fuse-3ds'),
-                  row='previous', column=2)
+    app.setSticky('ew')
+    with app.labelFrame('GitHub Repository', colspan=3):
+        app.setSticky('ew')
+        app.addLabel('repo-label', 'View the repository on GitHub.')
+        app.addNamedButton('Open', 'repo-btn', lambda _: webbrowser.open('https://github.com/ihaveamac/fuse-3ds'),
+                           row='previous', column=2)
 
     if windows:
-        app.addLabel('ctxmenu-label', 'Add an entry to the right-click menu.', colspan=2)
-        app.addButton('Add to menu', lambda _: app.showSubWindow('ctxmenu-window'), row='previous', column=2)
+        app.setSticky('ew')
+        with app.labelFrame('Context Menu', colspan=3):
+            app.setSticky('ew')
+            app.addLabel('ctxmenu-label', 'Add an entry to the right-click menu.', colspan=2)
+            app.addNamedButton('Add', 'ctxmenu-btn', lambda _: app.showSubWindow('ctxmenu-window'),
+                               row='previous', column=2)
+
+    with app.frame('extras-footer', colspan=3):
+        app.addHorizontalSeparator()
+        app.addLabel('footer', 'fuse-3ds v{0} running on Python {1[0]}.{1[1]}.{1[2]} {2}-bit on {3}'.format(
+            version, version_info, '64' if maxsize > 0xFFFFFFFF else '32', platform))
 
     app.setResizable(False)
 
@@ -555,7 +570,7 @@ def main(_pyi=False, _allow_admin=False):
                     'Failed to import fusepy. WinFsp needs to be installed.\n\n'
                     'Click OK to open the WinFsp download page:\n'
                     'http://www.secfs.net/winfsp/download/'),
-                    'fuse-3ds', 0x00000010 | 0x00000001)
+                                                'fuse-3ds', 0x00000010 | 0x00000001)
                 if res == 1:
                     webbrowser.open('http://www.secfs.net/winfsp/download/')
             else:
@@ -564,7 +579,7 @@ def main(_pyi=False, _allow_admin=False):
                     'Please check the README of fuse-3ds for more details.\n\n'
                     'Click OK to open the fuse-3ds repository on GitHub:\n'
                     'https://github.com/ihaveamac/fuse-3ds'),
-                    'fuse-3ds', 0x00000010 | 0x00000001)
+                                                'fuse-3ds', 0x00000010 | 0x00000001)
                 if res == 1:
                     webbrowser.open('https://github.com/ihaveamac/fuse-3ds')
         elif macos:
@@ -582,10 +597,11 @@ def main(_pyi=False, _allow_admin=False):
                 'only by the administrator.\n\n'
                 'If you are having issues with administrative tools not seeing files, '
                 'choose a directory as a mount point instead of a drive letter.'),
-                'fuse-3ds', 0x00000010)
+                                      'fuse-3ds', 0x00000010)
             exit(1)
 
     # this will check for the latest non-prerelease, once there is one.
+    # noinspection PyBroadException
     try:
         print('Checking for updates... (Currently running v{})'.format(version))
         ctx = SSLContext(PROTOCOL_TLSv1_2)
@@ -617,11 +633,9 @@ def main(_pyi=False, _allow_admin=False):
             else:
                 print('No new version. (Latest is {})'.format(latest_ver))
 
-    except Exception as e:
-        exc_name = type(e).__name__
-        if type(e).__module__ != 'builtins':
-            exc_name = type(e).__module__ + '.' + exc_name
-        print('Failed to check for update: {}: {}'.format(exc_name, e))
+    except Exception:
+        print('Failed to check for update')
+        print_exc()
 
     show_default = True
 
