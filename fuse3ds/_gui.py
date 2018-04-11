@@ -5,6 +5,8 @@ import json
 import signal
 import subprocess
 import webbrowser
+from glob import iglob
+from shutil import get_terminal_size
 from sys import argv, exit, executable, platform, version_info, maxsize
 from ssl import PROTOCOL_TLSv1_2, SSLContext
 from os import environ, kill, rmdir
@@ -13,18 +15,17 @@ from time import sleep
 from traceback import print_exception
 from typing import TYPE_CHECKING
 from urllib.request import urlopen
-from urllib.error import URLError
-
-if TYPE_CHECKING:
-    from http.client import HTTPResponse as HTTPResp
-    from typing import Any, Dict, List
 
 from pkg_resources import parse_version
 from appJar import gui
 
-import __init__ as init
+from __init__ import __version__ as version
 from pyctr.util import config_dirs
 from fmt_detect import detect_format
+
+if TYPE_CHECKING:
+    from http.client import HTTPResponse as HTTPResp
+    from typing import Any, Dict, List
 
 b9_paths = ['boot9.bin', 'boot9_prot.bin',
             config_dirs[0] + '/boot9.bin', config_dirs[0] + '/boot9_prot.bin',
@@ -78,7 +79,6 @@ macos = platform == 'darwin'
 if windows:
     from reg_shell import add_reg, del_reg
     from ctypes import windll
-    from os import startfile
     from string import ascii_uppercase
     from sys import stdout
 
@@ -112,7 +112,7 @@ _used_pyinstaller = False
 process = None  # type: subprocess.Popen
 curr_mountpoint = None  # type: str
 
-app = gui('fuse-3ds ' + init.__version__, showIcon=False, handleArgs=False)
+app = gui('fuse-3ds ' + version, showIcon=False, handleArgs=False)
 
 
 def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = ()):
@@ -124,6 +124,8 @@ def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = (
         args.extend((module_type, '-f', item, mountpoint))
         args.extend(extra_args)
         curr_mountpoint = mountpoint
+        x, _ = get_terminal_size()
+        print('-' * x)
         print('Running:', args)
         opts = {}
         if windows:
@@ -374,13 +376,21 @@ def detect_type(fn: str):
                 app.setLabel('unknowntype-label2', fn)
                 app.showSubWindow('unknowntype')
                 return
-    except IsADirectoryError:
+    except (IsADirectoryError, PermissionError):  # PermissionError sometimes occurs on Windows
         if isfile(pjoin(fn, 'tmd')):
             mount_type = CDN
-        else:  # TODO: maybe check if this is an SD dir
-            mount_type = SD
+        else:
+            try:
+                next(iglob(pjoin(fn, '[0-9a-f]' * 32)))
+            except StopIteration:
+                # no entries
+                mount_type = TITLEDIR
+            else:
+                # at least one entry
+                mount_type = SD
     except Exception as e:
-        print('Failed to get type of {}: {}: {}'.format(fn, type(e).__name__, e))
+        print('Failed to get type of', fn)
+        print_exception(type(e), e, e.__traceback__)
         return
 
     app.setOptionBox('TYPE', mount_type)
@@ -470,7 +480,7 @@ with app.frame('FOOTER', row=3, colspan=3):
 
     app.addHorizontalSeparator()
     app.addLabel('footer', 'fuse-3ds {0} running on Python {1[0]}.{1[1]}.{1[2]} {2}-bit on {3}'.format(
-        init.__version__, version_info, '64' if maxsize > 0xFFFFFFFF else '32', platform), colspan=3)
+        version, version_info, '64' if maxsize > 0xFFFFFFFF else '32', platform), colspan=3)
 
 if windows:
     app.setFont(10)
@@ -577,12 +587,12 @@ def main(_pyi=False, _allow_admin=False):
 
     # this will check for the latest non-prerelease, once there is one.
     try:
-        print('Checking for updates... (Currently running v{})'.format(init.__version__))
+        print('Checking for updates... (Currently running v{})'.format(version))
         ctx = SSLContext(PROTOCOL_TLSv1_2)
         with urlopen('https://api.github.com/repos/ihaveamac/fuse-3ds/releases', context=ctx) as u:  # type: HTTPResp
             res = json.loads(u.read().decode('utf-8'))  # type: List[Dict[str, Any]]
             latest_ver = res[0]['tag_name']  # type: str
-            if parse_version(latest_ver) > parse_version(init.__version__):
+            if parse_version(latest_ver) > parse_version(version):
                 name = res[0]['name']  # type: str
                 url = res[0]['html_url']  # type: str
                 info_all = res[0]['body']  # type: str
@@ -596,7 +606,7 @@ def main(_pyi=False, _allow_admin=False):
 
                 with app.subWindow('update', 'fuse-3ds Update', modal=True, blocking=True):
                     app.addLabel('update-label1', 'A new version of fuse-3ds is available. '
-                                                  'You have v{}.'.format(init.__version__))
+                                                  'You have v{}.'.format(version))
                     app.addButtons(['Open release page', 'Close'], update_press)
                     with app.labelFrame(name):
                         app.addMessage('update-info', info)
