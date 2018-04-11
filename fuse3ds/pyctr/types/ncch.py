@@ -2,6 +2,7 @@ from hashlib import sha256
 from os import environ
 from typing import TYPE_CHECKING, NamedTuple
 
+from ..common import PyCTRError
 from ..util import config_dirs, readle
 
 if TYPE_CHECKING:
@@ -11,7 +12,7 @@ __all__ = ['NCCHError', 'InvalidNCCHError', 'NCCHSeedError', 'NCCH_MEDIA_UNIT', 
            'FIXED_SYSTEM_KEY']
 
 
-class NCCHError(Exception):
+class NCCHError(PyCTRError):
     """Generic exception for NCCH operations."""
 
 

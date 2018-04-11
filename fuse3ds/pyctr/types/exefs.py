@@ -1,9 +1,10 @@
 from typing import TYPE_CHECKING, NamedTuple
 
+from ..common import PyCTRError
+from ..util import readle
+
 if TYPE_CHECKING:
     from typing import BinaryIO, Dict, Iterable
-
-from ..util import readle
 
 __all__ = ['EMPTY_ENTRY', 'ExeFSError', 'InvalidExeFSError', 'CodeDecompressionError', 'decompress_code', 'ExeFSEntry',
            'ExeFSReader']
@@ -11,7 +12,7 @@ __all__ = ['EMPTY_ENTRY', 'ExeFSError', 'InvalidExeFSError', 'CodeDecompressionE
 EMPTY_ENTRY = b'\0' * 0x10
 
 
-class ExeFSError(Exception):
+class ExeFSError(PyCTRError):
     """Generic exception for ExeFS operations."""
 
 

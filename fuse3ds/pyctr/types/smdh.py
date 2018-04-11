@@ -1,6 +1,8 @@
 from types import MappingProxyType
 from typing import TYPE_CHECKING, NamedTuple
 
+from ..common import PyCTRError
+
 if TYPE_CHECKING:
     from typing import BinaryIO, Dict
 
@@ -24,11 +26,11 @@ region_names = (
 AppTitle = NamedTuple('AppTitle', (('short_desc', str), ('long_desc', str), ('publisher', str)))
 
 
-class SMDHError(Exception):
+class SMDHError(PyCTRError):
     """Generic exception for SMDH operations."""
 
 
-class InvalidSMDHError(Exception):
+class InvalidSMDHError(SMDHError):
     """Invalid SMDH contents."""
 
 

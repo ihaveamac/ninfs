@@ -1,4 +1,4 @@
-# pyctr
+# PyCTR
 
 Python library to parse several Nintendo 3DS files. Nothing is stable yet.
 

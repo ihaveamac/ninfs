@@ -1,6 +1,7 @@
 from hashlib import sha256
 from typing import TYPE_CHECKING, NamedTuple
 
+from ..common import PyCTRError
 from ..util import readbe
 
 if TYPE_CHECKING:
@@ -27,7 +28,7 @@ signature_types = {
 }
 
 
-class TitleMetadataError(Exception):
+class TitleMetadataError(PyCTRError):
     """Generic exception for TitleMetadata operations."""
 
 

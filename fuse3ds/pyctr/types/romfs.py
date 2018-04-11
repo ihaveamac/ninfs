@@ -3,6 +3,7 @@ from io import BufferedIOBase, TextIOWrapper
 from threading import Lock
 from typing import overload, TYPE_CHECKING, NamedTuple, Tuple  # Tuple is here until I can use 3.6+ exclusively.
 
+from ..common import PyCTRError
 from ..util import readle, roundup
 
 if TYPE_CHECKING:
