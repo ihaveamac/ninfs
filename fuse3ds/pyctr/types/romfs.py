@@ -118,8 +118,6 @@ class RomFSReader:
 
     closed = False
     lv3_offset = 0
-    _index_setup = False
-
     data_offset = 0
 
     def __init__(self, fp: 'Union[str, BinaryIO]', case_insensitive: bool = False):
@@ -222,8 +220,6 @@ class RomFSReader:
         fp.seek(lv3_offset + lv3_dirmeta.offset)
         iterate_dir(self._tree_root, fp.read(0x18), '/')
 
-        self._index_setup = True  # TODO: kill this
-
     def close(self):
         self.closed = True
         self._fp.close()
@@ -247,8 +243,6 @@ class RomFSReader:
 
     def get_info_from_path(self, path: str) -> 'Union[RomFSDirectoryEntry, RomFSFileEntry]':
         """Get a directory or file entry"""
-        if not self._index_setup:
-            raise RomFSFileIndexNotSetup("file index must be set up with parse_metadata")
         curr = self._tree_root
         if self.case_insensitive:
             path = path.lower()
