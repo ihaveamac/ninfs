@@ -253,7 +253,7 @@ def press(button: str):
         try:
             stop_mount()
             app.enableButton('Mount')
-        except Exception as e:
+        except Exception:
             print_exc()
             app.showSubWindow('unmounterror')
             app.enableButton('Unmount')

@@ -10,15 +10,14 @@ if TYPE_CHECKING:
     from typing import BinaryIO, Optional, Union
 
 __all__ = ['IVFC_HEADER_SIZE', 'IVFC_ROMFS_MAGIC_NUM', 'ROMFS_LV3_HEADER_SIZE', 'RomFSError', 'InvalidIVFCError',
-           'InvalidRomFSHeaderError', 'RomFSEntryError', 'RomFSFileNotFoundError', 'RomFSFileIndexNotSetup',
-           'RomFSReader']
+           'InvalidRomFSHeaderError', 'RomFSEntryError', 'RomFSFileNotFoundError', 'RomFSReader']
 
 IVFC_HEADER_SIZE = 0x5C
 IVFC_ROMFS_MAGIC_NUM = 0x10000
 ROMFS_LV3_HEADER_SIZE = 0x28
 
 
-class RomFSError(Exception):
+class RomFSError(PyCTRError):
     """Generic exception for RomFS operations."""
 
 
@@ -36,10 +35,6 @@ class RomFSEntryError(RomFSError):
 
 class RomFSFileNotFoundError(RomFSError):
     """Invalid file path in RomFS Level 3."""
-
-
-class RomFSFileIndexNotSetup(RomFSError):
-    """RomFS file index still needs to be set up."""
 
 
 RomFSRegion = NamedTuple('RomFSRegion', (('offset', int), ('size', int)))
