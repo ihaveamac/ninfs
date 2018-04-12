@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """
 Mounts Read-only Filesystem (RomFS) files, creating a virtual filesystem of the RomFS contents. Accepts ones with and
 without an IVFC header (original HANS format).

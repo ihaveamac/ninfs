@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """
 Mounts NCCH containers, creating a virtual filesystem of decrypted sections.
 """

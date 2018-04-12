@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """
 Mounts Executable Filesystem (ExeFS) files, creating a virtual filesystem of the ExeFS contents.
 """

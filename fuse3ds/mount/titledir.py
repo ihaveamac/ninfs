@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """
 Mounts a "title" directory, creating a virtual system of all the installed titles inside it.
 """

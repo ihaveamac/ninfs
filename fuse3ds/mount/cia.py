@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """
 Mounts CTR Importable Archive (CIA) files, creating a virtual filesystem of decrypted contents (if encrypted) + Ticket,
 Title Metadata, and Meta region (if exists).
