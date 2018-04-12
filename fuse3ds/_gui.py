@@ -125,7 +125,7 @@ def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = (
         args.extend(extra_args)
         curr_mountpoint = mountpoint
         x, _ = get_terminal_size()
-        print('-' * x - 1)
+        print('-' * (x - 1))
         print('Running:', args)
         opts = {}
         if windows:
@@ -271,7 +271,8 @@ def kill_process(_):
 def change_type(*_):
     mount_type = app.getOptionBox('TYPE')
     app.hideFrame('default')
-    app.showFrame('mountpoint')
+    app.showLabelFrame('Mount point')
+    app.showLabelFrame('Mount settings')
     for t in mount_types:
         if t == mount_type:
             app.showFrame(t)
@@ -296,64 +297,67 @@ def make_dnd_entry_check(entry_name: str):
 with app.frame('loading', row=1, colspan=3):
     app.addLabel('l-label', 'Getting ready...', colspan=3)
 
-with app.frame(CCI, row=1, colspan=3):
-    app.addLabel(CCI + 'label1', 'File', row=0, column=0)
-    app.addFileEntry(CCI + 'item', row=0, column=1, colspan=2)
-app.hideFrame(CCI)
+app.setSticky('ew')
+with app.labelFrame('Mount settings', row=1, colspan=3):
+    app.setSticky('ew')
+    with app.frame(CCI, row=1, colspan=3):
+        app.addLabel(CCI + 'label1', 'File', row=0, column=0)
+        app.addFileEntry(CCI + 'item', row=0, column=1, colspan=2)
+    app.hideFrame(CCI)
 
-with app.frame(CDN, row=1, colspan=3):
-    app.addLabel(CDN + 'label1', 'Directory', row=0, column=0)
-    app.addDirectoryEntry(CDN + 'item', row=0, column=1, colspan=2)
-app.hideFrame(CDN)
+    with app.frame(CDN, row=1, colspan=3):
+        app.addLabel(CDN + 'label1', 'Directory', row=0, column=0)
+        app.addDirectoryEntry(CDN + 'item', row=0, column=1, colspan=2)
+    app.hideFrame(CDN)
 
-with app.frame(CIA, row=1, colspan=3):
-    app.addLabel(CIA + 'label1', 'File', row=0, column=0)
-    app.addFileEntry(CIA + 'item', row=0, column=1, colspan=2)
-app.hideFrame(CIA)
+    with app.frame(CIA, row=1, colspan=3):
+        app.addLabel(CIA + 'label1', 'File', row=0, column=0)
+        app.addFileEntry(CIA + 'item', row=0, column=1, colspan=2)
+    app.hideFrame(CIA)
 
-with app.frame(EXEFS, row=1, colspan=3):
-    app.addLabel(EXEFS + 'label1', 'File', row=0, column=0)
-    app.addFileEntry(EXEFS + 'item', row=0, column=1, colspan=2)
-app.hideFrame(EXEFS)
+    with app.frame(EXEFS, row=1, colspan=3):
+        app.addLabel(EXEFS + 'label1', 'File', row=0, column=0)
+        app.addFileEntry(EXEFS + 'item', row=0, column=1, colspan=2)
+    app.hideFrame(EXEFS)
 
-with app.frame(NAND, row=1, colspan=3):
-    app.addLabel(NAND + 'label1', 'File', row=0, column=0)
-    app.addFileEntry(NAND + 'item', row=0, column=1, colspan=2)
-    app.addLabel(NAND + 'label2', 'OTP file*', row=2, column=0)
-    app.addFileEntry(NAND + 'otp', row=2, column=1, colspan=2)
-    app.addLabel(NAND + 'label3', 'CID file*', row=3, column=0)
-    app.addFileEntry(NAND + 'cid', row=3, column=1, colspan=2)
-    app.addLabel(NAND + 'label4', '*Not required if backup has essential.exefs from GodMode9.', row=4, colspan=3)
-    app.addLabel(NAND + 'label5', 'Options', row=5, column=0)
-    app.addNamedCheckBox('Allow writing', NAND + 'aw', row=5, column=1, colspan=1)
-app.hideFrame(NAND)
+    with app.frame(NAND, row=1, colspan=3):
+        app.addLabel(NAND + 'label1', 'File', row=0, column=0)
+        app.addFileEntry(NAND + 'item', row=0, column=1, colspan=2)
+        app.addLabel(NAND + 'label2', 'OTP file*', row=2, column=0)
+        app.addFileEntry(NAND + 'otp', row=2, column=1, colspan=2)
+        app.addLabel(NAND + 'label3', 'CID file*', row=3, column=0)
+        app.addFileEntry(NAND + 'cid', row=3, column=1, colspan=2)
+        app.addLabel(NAND + 'label4', '*Not required if backup has essential.exefs from GodMode9.', row=4, colspan=3)
+        app.addLabel(NAND + 'label5', 'Options', row=5, column=0)
+        app.addNamedCheckBox('Allow writing', NAND + 'aw', row=5, column=1, colspan=1)
+    app.hideFrame(NAND)
 
-with app.frame(NCCH, row=1, colspan=3):
-    app.addLabel(NCCH + 'label1', 'File', row=0, column=0)
-    app.addFileEntry(NCCH + 'item', row=0, column=1, colspan=2)
-app.hideFrame(NCCH)
+    with app.frame(NCCH, row=1, colspan=3):
+        app.addLabel(NCCH + 'label1', 'File', row=0, column=0)
+        app.addFileEntry(NCCH + 'item', row=0, column=1, colspan=2)
+    app.hideFrame(NCCH)
 
-with app.frame(ROMFS, row=1, colspan=3):
-    app.addLabel(ROMFS + 'label1', 'File', row=0, column=0)
-    app.addFileEntry(ROMFS + 'item', row=0, column=1, colspan=2)
-app.hideFrame(ROMFS)
+    with app.frame(ROMFS, row=1, colspan=3):
+        app.addLabel(ROMFS + 'label1', 'File', row=0, column=0)
+        app.addFileEntry(ROMFS + 'item', row=0, column=1, colspan=2)
+    app.hideFrame(ROMFS)
 
-with app.frame(SD, row=1, colspan=3):
-    app.addLabel(SD + 'label1', 'Directory', row=0, column=0)
-    app.addDirectoryEntry(SD + 'item', row=0, column=1, colspan=2)
-    app.addLabel(SD + 'label2', 'movable.sed', row=2, column=0)
-    app.addFileEntry(SD + 'movable', row=2, column=1, colspan=2)
-    app.addLabel(SD + 'label3', 'Options', row=3, column=0)
-    app.addNamedCheckBox('Allow writing', SD + 'aw', row=3, column=1, colspan=1)
-app.hideFrame(SD)
+    with app.frame(SD, row=1, colspan=3):
+        app.addLabel(SD + 'label1', 'Directory', row=0, column=0)
+        app.addDirectoryEntry(SD + 'item', row=0, column=1, colspan=2)
+        app.addLabel(SD + 'label2', 'movable.sed', row=2, column=0)
+        app.addFileEntry(SD + 'movable', row=2, column=1, colspan=2)
+        app.addLabel(SD + 'label3', 'Options', row=3, column=0)
+        app.addNamedCheckBox('Allow writing', SD + 'aw', row=3, column=1, colspan=1)
+    app.hideFrame(SD)
 
-with app.frame(TITLEDIR, row=1, colspan=3):
-    app.addLabel(TITLEDIR + 'label1', 'Directory', row=0, column=0)
-    app.addDirectoryEntry(TITLEDIR + 'item', row=0, column=1, colspan=2)
-    app.addLabel(TITLEDIR + 'label3', 'Options', row=3, column=0)
-    app.addNamedCheckBox('Decompress .code (slow!)', TITLEDIR + 'decompress', row=3, column=1, colspan=1)
-    app.addNamedCheckBox('Mount all contents', TITLEDIR + 'mountall', row=3, column=2, colspan=1)
-app.hideFrame(TITLEDIR)
+    with app.frame(TITLEDIR, row=1, colspan=3):
+        app.addLabel(TITLEDIR + 'label1', 'Directory', row=0, column=0)
+        app.addDirectoryEntry(TITLEDIR + 'item', row=0, column=1, colspan=2)
+        app.addLabel(TITLEDIR + 'label3', 'Options', row=3, column=0)
+        app.addNamedCheckBox('Decompress .code (slow!)', TITLEDIR + 'decompress', row=3, column=1, colspan=1)
+        app.addNamedCheckBox('Mount all contents', TITLEDIR + 'mountall', row=3, column=2, colspan=1)
+    app.hideFrame(TITLEDIR)
 
 with app.subWindow('unknowntype', 'fuse-3ds Error', modal=True):
     app.addLabel('unknowntype-label1', "The type of the given file couldn't be detected.\n"
@@ -399,8 +403,9 @@ def detect_type(fn: str):
     app.showFrame(mount_type)
 
 
-app.setSticky('sew')
-with app.frame('mountpoint', row=2, colspan=3):
+app.setSticky('ew')
+with app.labelFrame('Mount point', row=2, colspan=3):
+    app.setSticky('ew')
     if windows:
         def rb_change(_):
             if app.getRadioButton('mountpoint-choice') == 'Drive letter':
@@ -429,7 +434,7 @@ with app.frame('mountpoint', row=2, colspan=3):
 
     app.addButtons(['Mount', 'Unmount'], press, colspan=3)
     app.disableButton('Unmount')
-app.hideFrame('mountpoint')
+app.hideLabelFrame('Mount point')
 
 # noinspection PyBroadException
 try:
@@ -637,7 +642,7 @@ def main(_pyi=False, _allow_admin=False):
         print('Failed to check for update')
         print_exc()
 
-    show_default = True
+    to_use = 'default'
 
     if len(argv) > 1:
         fn = abspath(argv[1])  # type: str
@@ -646,9 +651,7 @@ def main(_pyi=False, _allow_admin=False):
                 mt = detect_format(f.read(0x200))
                 if mt is not None:
                     mount_type = mount_types_rv[mt]
-                    show_default = False
-                    app.setOptionBox('TYPE', mount_type)
-                    # change_type()
+                    to_use = mount_type
                     app.setEntry(mount_type + 'item', fn)
                 else:
                     app.setLabel('unknowntype-label2', fn)
@@ -681,8 +684,10 @@ def main(_pyi=False, _allow_admin=False):
 
     # kinda lame way to prevent a resize bug
     def sh():
-        if show_default:
+        if to_use == 'default':
             app.queueFunction(app.showFrame, 'default')
+        else:
+            app.setOptionBox('TYPE', mount_type)
         app.queueFunction(app.hideFrame, 'loading')
 
     app.thread(sh)
