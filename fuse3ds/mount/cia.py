@@ -7,7 +7,6 @@ DLC with missing contents is currently not supported.
 
 import logging
 import os
-from argparse import ArgumentParser
 from errno import ENOENT
 from stat import S_IFDIR, S_IFREG
 from struct import unpack
@@ -228,6 +227,7 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
 
 
 def main(prog: str = None, args: list = None):
+    from argparse import ArgumentParser
     if args is None:
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description="Mount Nintendo 3DS CTR Importable Archive files.",

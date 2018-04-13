@@ -4,7 +4,6 @@ Mounts CTR Cart Image (CCI, ".3ds") files, creating a virtual filesystem of sepa
 
 import logging
 import os
-from argparse import ArgumentParser
 from errno import ENOENT
 from stat import S_IFDIR, S_IFREG
 from sys import exit, argv
@@ -139,6 +138,7 @@ class CTRCartImageMount(LoggingMixIn, Operations):
 
 
 def main(prog: str = None, args: list = None):
+    from argparse import ArgumentParser
     if args is None:
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS CTR Cart Image files.',

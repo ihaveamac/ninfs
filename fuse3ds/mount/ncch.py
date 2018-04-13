@@ -4,7 +4,6 @@ Mounts NCCH containers, creating a virtual filesystem of decrypted sections.
 
 import logging
 import os
-from argparse import ArgumentParser
 from collections import OrderedDict
 from errno import ENOENT
 from math import ceil
@@ -293,6 +292,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
 
 
 def main(prog: str = None, args: list = None):
+    from argparse import ArgumentParser
     if args is None:
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description="Mount Nintendo 3DS NCCH containers.",

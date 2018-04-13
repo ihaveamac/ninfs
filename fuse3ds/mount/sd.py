@@ -4,7 +4,6 @@ Mounts SD contents under `/Nintendo 3DS`, creating a virtual filesystem with dec
 
 import logging
 import os
-from argparse import ArgumentParser
 from errno import EPERM, EACCES, EBADF
 from hashlib import sha256
 from struct import unpack
@@ -246,6 +245,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
 
 
 def main(prog: str = None, args: list = None):
+    from argparse import ArgumentParser
     if args is None:
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS SD card contents.',

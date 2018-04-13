@@ -4,7 +4,6 @@ Mounts Executable Filesystem (ExeFS) files, creating a virtual filesystem of the
 
 import logging
 import os
-from argparse import ArgumentParser
 from errno import ENOENT
 from hashlib import sha256
 from stat import S_IFDIR, S_IFREG
@@ -109,6 +108,7 @@ class ExeFSMount(LoggingMixIn, Operations):
 
 
 def main(prog: str = None, args: list = None):
+    from argparse import ArgumentParser
     if args is None:
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS Executable Filesystem (ExeFS) files.',

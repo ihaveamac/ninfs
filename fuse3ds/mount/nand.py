@@ -5,7 +5,6 @@ OTP file/NAND CID must be provided in arguments.
 
 import logging
 import os
-from argparse import ArgumentParser
 from errno import EPERM, ENOENT, EROFS
 from hashlib import sha1, sha256
 from stat import S_IFDIR, S_IFREG
@@ -421,6 +420,7 @@ class NANDImageMount(LoggingMixIn, Operations):
 
 
 def main(prog: str = None, args: list = None):
+    from argparse import ArgumentParser
     if args is None:
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS NAND images.',

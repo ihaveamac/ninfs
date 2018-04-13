@@ -4,7 +4,6 @@ Mounts a "title" directory, creating a virtual system of all the installed title
 
 import logging
 import os
-from argparse import ArgumentParser
 from errno import ENOENT
 from glob import glob
 from stat import S_IFDIR
@@ -173,6 +172,7 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
 
 
 def main(prog: str = None, args: list = None):
+    from argparse import ArgumentParser
     if args is None:
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description="Mount Nintendo 3DS NCCH files from installed NAND/SD titles.",

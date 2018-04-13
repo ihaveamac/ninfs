@@ -4,7 +4,6 @@ Mounts 3DSX Homebrew files, creating a virtual filesystem with the 3DSX's RomFS 
 
 import logging
 import os
-from argparse import ArgumentParser
 from errno import ENOENT
 from stat import S_IFDIR, S_IFREG
 from struct import unpack
@@ -47,7 +46,7 @@ class ThreeDSXMount(LoggingMixIn, Operations):
         if readle(header[4:6]) < 44:
             exit('3DSX has no SMDH or RomFS.')
 
-        smdh_offset, smdh_size, romfs_offset = unpack('<3I', threedsx_fp.read(12))
+        smdh_offset, smdh_size, romfs_offset = unpack('<3I', threedsx_fp.read(12))  # type: int
         self.files = {}  # type: Dict[str, Dict[str, int]]
         if smdh_offset:  # unlikely, you can't add a romfs without this
             self.files['/icon.smdh'] = {'size': smdh_size, 'offset': smdh_offset}
@@ -122,6 +121,7 @@ class ThreeDSXMount(LoggingMixIn, Operations):
 
 
 def main(prog: str = None, args: list = None):
+    from argparse import ArgumentParser
     if args is None:
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description='Mount 3DSX Homebrew files.',
