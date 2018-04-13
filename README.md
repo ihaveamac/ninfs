@@ -90,6 +90,8 @@ Windows users can use a drive letter like `F:` as a mountpoint, or use `*` and a
   `mount_romfs romfs.bin mountpoint`
 * Mount a `Nintendo 3DS` directory from an SD card:  
   `mount_sd --movable movable.sed "/path/to/Nintendo 3DS" mountpoint`
+* Mount a 3DSX homebrew application:  
+  `mount_threedsx boot.3dsx mountpoint`
 * Mount an entire `title` directory (like one from a NAND backup, or in an SD card mount):  
   `mount_titledir title mountpoint`
 
@@ -174,7 +176,8 @@ mount_point
 ```
 
 ### mount_cia
-Mounts CTR Importable Archive (CIA) files, creating a virtual filesystem of decrypted contents (if encrypted) + Ticket, Title Metadata, and Meta region (if exists).
+Mounts CTR Importable Archive (CIA) files, creating a virtual filesystem of decrypted contents (if encrypted) + Ticket,
+Title Metadata, and Meta region (if exists).
 
 DLC with missing contents is currently not supported.
 
@@ -233,7 +236,8 @@ optional arguments:
 ```
 
 ### mount_nand
-Mounts NAND images, creating a virtual filesystem of decrypted partitions. Can read essentials backup by GodMode9, else OTP file/NAND CID must be provided in arguments.
+Mounts NAND images, creating a virtual filesystem of decrypted partitions. Can read essentials backup by GodMode9, else
+OTP file/NAND CID must be provided in arguments.
 
 ```
 usage: mount_nand [-h] [-f] [-d] [-o OPTIONS] [-r] [--dev] [--otp OTP]
@@ -317,7 +321,8 @@ mount_point
 ```
 
 ### mount_romfs
-Mounts Read-only Filesystem (RomFS) files, creating a virtual filesystem of the RomFS contents. Accepts ones with and without an IVFC header (original HANS format).
+Mounts Read-only Filesystem (RomFS) files, creating a virtual filesystem of the RomFS contents. Accepts ones with and
+without an IVFC header (original HANS format).
 
 ```
 usage: mount_romfs [-h] [-f] [-d] [-o OPTIONS] romfs mount_point
@@ -356,6 +361,25 @@ optional arguments:
   -r, --ro              mount read-only
   --dev                 use dev keys
   --movable MOVABLESED  path to movable.sed
+```
+
+### mount_threedsx
+Mounts 3DSX Homebrew files, creating a virtual filesystem with the 3DSX's RomFS and SMDH.
+
+```
+usage: mount_threedsx [-h] [-f] [-d] [-o OPTIONS] threedsx mount_point
+
+Mount 3DSX Homebrew files.
+
+positional arguments:
+  threedsx     3DSX file
+  mount_point  mount point
+
+optional arguments:
+  -h, --help   show this help message and exit
+  -f, --fg     run in foreground
+  -d           debug output (fuse/winfsp log)
+  -o OPTIONS   mount options
 ```
 
 ### mount_titledir
