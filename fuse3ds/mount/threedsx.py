@@ -53,7 +53,6 @@ class ThreeDSXMount(LoggingMixIn, Operations):
             self.files['/icon.smdh'] = {'size': smdh_size, 'offset': smdh_offset}
         if romfs_offset:
             self.files['/romfs.bin'] = {'size': self.total_size - romfs_offset, 'offset': romfs_offset}
-            print(hex(romfs_offset))
 
     def __del__(self, *args):
         try:

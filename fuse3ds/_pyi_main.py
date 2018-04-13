@@ -8,7 +8,7 @@ def _():
     import _gui
     import fmt_detect
     import reg_shell
-    from mount import _common, cci, cdn, cia, exefs, nand, ncch, romfs, sd, titledir
+    from mount import _common, cci, cdn, cia, exefs, nand, ncch, romfs, sd, threedsx, titledir
     from pyctr.types import crypto, exefs, ncch, romfs, smdh, tmd, util
 
 
