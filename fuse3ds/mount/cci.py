@@ -8,12 +8,15 @@ from argparse import ArgumentParser
 from errno import ENOENT
 from stat import S_IFDIR, S_IFREG
 from sys import exit, argv
-from typing import BinaryIO, Dict
+from typing import TYPE_CHECKING, BinaryIO
 
 from pyctr.util import readle
 
 from . import _common as _c
 from .ncch import NCCHContainerMount
+
+if TYPE_CHECKING:
+    from typing import Dict
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context

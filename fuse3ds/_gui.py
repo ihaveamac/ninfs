@@ -64,14 +64,15 @@ NAND = 'NAND backup ("nand.bin")'
 NCCH = 'NCCH (".cxi", ".cfa", ".ncch", ".app")'
 ROMFS = 'Read-only Filesystem (".romfs", "romfs.bin")'
 SD = 'SD Card Contents ("Nintendo 3DS" from SD)'
+THREEDSX = '3DSX Homebrew (".3dsx")'
 TITLEDIR = 'Titles directory ("title" from NAND or SD)'
 
 mount_types = {CCI: 'cci', CDN: 'cdn', CIA: 'cia', EXEFS: 'exefs', NAND: 'nand', NCCH: 'ncch', ROMFS: 'romfs', SD: 'sd',
-               TITLEDIR: 'titledir'}
+               THREEDSX: 'threedsx', TITLEDIR: 'titledir'}
 
 mount_types_rv = {y: x for x, y in mount_types.items()}  # type: Dict[str, str]
 
-types_list = (CCI, CDN, CIA, EXEFS, NAND, NCCH, ROMFS, SD, TITLEDIR)
+types_list = (CCI, CDN, CIA, EXEFS, NAND, NCCH, ROMFS, SD, THREEDSX, TITLEDIR)
 
 windows = platform == 'win32'  # only for native windows, not cygwin
 macos = platform == 'darwin'
@@ -350,6 +351,11 @@ with app.labelFrame('Mount settings', row=1, colspan=3):
         app.addLabel(SD + 'label3', 'Options', row=3, column=0)
         app.addNamedCheckBox('Allow writing', SD + 'aw', row=3, column=1, colspan=1)
     app.hideFrame(SD)
+
+    with app.frame(THREEDSX, row=1, colspan=3):
+        app.addLabel(THREEDSX + 'label1', 'File', row=0, column=0)
+        app.addFileEntry(THREEDSX + 'item', row=0, column=1, colspan=2)
+    app.hideFrame(THREEDSX)
 
     with app.frame(TITLEDIR, row=1, colspan=3):
         app.addLabel(TITLEDIR + 'label1', 'Directory', row=0, column=0)

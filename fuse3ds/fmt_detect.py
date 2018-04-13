@@ -27,6 +27,9 @@ def detect_format(header: bytes) -> 'Optional[str]':
         # hardcoded header, type, version, cert chain, ticket sizes (should never change in practice)
         return 'cia'
 
+    elif header[0:4] == b'3DSX':
+        return 'threedsx'
+
     # exefs is last because it's the hardest to do
     # this should work with any official files
     for offs in range(0, 0xA0, 0x10):

@@ -44,10 +44,12 @@ setup(
                                       'mount_ncch = fuse3ds.main:main',
                                       'mount_romfs = fuse3ds.main:main',
                                       'mount_sd = fuse3ds.main:main',
+                                      'mount_threedsx = fuse3ds.main:main',
                                       'mount_titledir = fuse3ds.main:main',
                                       # aliases
                                       'mount_3ds = fuse3ds.main:main',
                                       'mount_cxi = fuse3ds.main:main',
                                       'mount_cfa = fuse3ds.main:main',
-                                      'mount_app = fuse3ds.main:main']}
+                                      'mount_app = fuse3ds.main:main',
+                                      'mount_3dsx = fuse3ds.main:main']}
 )
