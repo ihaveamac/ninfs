@@ -48,6 +48,7 @@ setup(
                                       'mount_titledir = fuse3ds.main:main',
                                       # aliases
                                       'mount_3ds = fuse3ds.main:main',
+                                      'mount_csu = fuse3ds.main:main',
                                       'mount_cxi = fuse3ds.main:main',
                                       'mount_cfa = fuse3ds.main:main',
                                       'mount_app = fuse3ds.main:main',
