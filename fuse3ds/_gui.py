@@ -2,9 +2,9 @@
 # don't read this file, it sucks
 
 import json
-import signal
 import subprocess
 import webbrowser
+from contextlib import suppress
 from glob import iglob
 from os import environ, kill, rmdir
 from os.path import abspath, isfile, isdir, ismount, dirname, join as pjoin
@@ -27,19 +27,23 @@ if TYPE_CHECKING:
     from http.client import HTTPResponse as HTTPResp
     from typing import Any, Dict, List
 
+MOUNT = 'Mount'
+UNMOUNT = 'Unmount'
+DIRECTORY = 'Directory'
+FILE = 'File'
+ITEM = 'item'
+EASTWEST = 'ew'
+OK = 'OK'
+
 b9_paths = ['boot9.bin', 'boot9_prot.bin',
             config_dirs[0] + '/boot9.bin', config_dirs[0] + '/boot9_prot.bin',
             config_dirs[1] + '/boot9.bin', config_dirs[1] + '/boot9_prot.bin']
-try:
+with suppress(KeyError):
     b9_paths.insert(0, environ['BOOT9_PATH'])
-except KeyError:
-    pass
 
 seeddb_paths = ['seeddb.bin', config_dirs[0] + '/seeddb.bin', config_dirs[1] + '/seeddb.bin']
-try:
+with suppress(KeyError):
     seeddb_paths.insert(0, environ['SEEDDB_PATH'])
-except KeyError:
-    pass
 
 for p in b9_paths:
     if isfile(p):
@@ -78,10 +82,12 @@ windows = platform == 'win32'  # only for native windows, not cygwin
 macos = platform == 'darwin'
 
 if windows:
-    from reg_shell import add_reg, del_reg
     from ctypes import windll
+    from signal import CTRL_BREAK_EVENT
     from string import ascii_uppercase
     from sys import stdout
+
+    from reg_shell import add_reg, del_reg
 
     # unlikely, but this causes issues
     if stdout is None:  # happens if pythonw is used on windows
@@ -140,41 +146,37 @@ def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = (
             sleep(1)
             if process.poll() is not None:
                 app.queueFunction(app.showSubWindow, 'mounterror')
-                app.queueFunction(app.enableButton, 'Mount')
+                app.queueFunction(app.enableButton, MOUNT)
                 return
 
-        app.queueFunction(app.enableButton, 'Unmount')
+        app.queueFunction(app.enableButton, UNMOUNT)
 
         if windows:
-            try:
-                subprocess.check_call(['explorer', mountpoint.replace('/', '\\')])
-            except subprocess.CalledProcessError:
+            with suppress(subprocess.CalledProcessError):
                 # not using startfile since i've been getting fatal errors (PyEval_RestoreThread) on windows
                 #   for some reason
                 # also this error always appears when calling explorer, so i'm ignoring it
-                pass
+                subprocess.check_call(['explorer', mountpoint.replace('/', '\\')])
         elif macos:
             try:
                 subprocess.check_call(['/usr/bin/open', '-a', 'Finder', mountpoint])
-            except subprocess.CalledProcessError as e:
-                exc_name = type(e).__name__
-                if type(e).__module__ != 'builtins':
-                    exc_name = type(e).__module__ + '.' + exc_name
-                print('Failed to open Finder on {}: {}: {}'.format(mountpoint, exc_name, e))
+            except subprocess.CalledProcessError:
+                print('Failed to open Finder on {}'.format(mountpoint))
+                print_exc()
 
         if process.wait() != 0:
             # just in case there are leftover mounts
             try:
                 stop_mount()
-            except subprocess.CalledProcessError as e:
-                print(type(e).__name__, e)
+            except subprocess.CalledProcessError:
+                print_exc()
             app.queueFunction(app.setLabel, 'exiterror-label',
                               'The mount process exited with an error code ({}). '
                               'Please check the output.'.format(process.returncode))
             app.queueFunction(app.showSubWindow, 'exiterror')
 
-        app.queueFunction(app.disableButton, 'Unmount')
-        app.queueFunction(app.enableButton, 'Mount')
+        app.queueFunction(app.disableButton, UNMOUNT)
+        app.queueFunction(app.enableButton, MOUNT)
 
 
 def stop_mount():
@@ -182,7 +184,7 @@ def stop_mount():
     if process is not None and process.poll() is None:
         print('Stopping')
         if windows:
-            kill(process.pid, signal.CTRL_BREAK_EVENT)
+            kill(process.pid, CTRL_BREAK_EVENT)
         else:
             # this is cheating...
             if platform == 'darwin':
@@ -193,11 +195,11 @@ def stop_mount():
 
 
 def press(button: str):
-    if button == 'Mount':
+    if button == MOUNT:
         extra_args = []
         mount_type = app.getOptionBox('TYPE')
-        app.disableButton('Mount')
-        item = app.getEntry(mount_type + 'item')
+        app.disableButton(MOUNT)
+        item = app.getEntry(mount_type + ITEM)
 
         if windows:
             if app.getRadioButton('mountpoint-choice') == 'Drive letter':
@@ -217,7 +219,7 @@ def press(button: str):
                     else:
                         print_exc()
                         app.showSubWindow('mounterror')
-                    app.enableButton('Mount')
+                    app.enableButton(MOUNT)
                     return
         else:
             mountpoint = app.getEntry('mountpoint')
@@ -248,16 +250,16 @@ def press(button: str):
 
         app.thread(run_mount, mount_types[mount_type], item, mountpoint, extra_args)
 
-    elif button == 'Unmount':
-        app.disableButton('Unmount')
+    elif button == UNMOUNT:
+        app.disableButton(UNMOUNT)
         # noinspection PyBroadException
         try:
             stop_mount()
-            app.enableButton('Mount')
+            app.enableButton(MOUNT)
         except Exception:
             print_exc()
             app.showSubWindow('unmounterror')
-            app.enableButton('Unmount')
+            app.enableButton(UNMOUNT)
     elif button == 'Help & Extras':
         app.showSubWindow('extras')
 
@@ -265,8 +267,8 @@ def press(button: str):
 def kill_process(_):
     process.kill()
     app.hideSubWindow('unmounterror')
-    app.enableButton('Mount')
-    app.disableButton('Unmount')
+    app.enableButton(MOUNT)
+    app.disableButton(UNMOUNT)
 
 
 def change_type(*_):
@@ -280,10 +282,10 @@ def change_type(*_):
         else:
             app.hideFrame(t)
     if not b9_found and mount_type in {CCI, CDN, CIA, NAND, NCCH, SD, TITLEDIR}:
-        app.disableButton('Mount')
+        app.disableButton(MOUNT)
     else:
         if process is None or process.poll() is not None:
-            app.enableButton('Mount')
+            app.enableButton(MOUNT)
 
 
 def make_dnd_entry_check(entry_name: str):
@@ -298,32 +300,32 @@ def make_dnd_entry_check(entry_name: str):
 with app.frame('loading', row=1, colspan=3):
     app.addLabel('l-label', 'Getting ready...', colspan=3)
 
-app.setSticky('ew')
+app.setSticky(EASTWEST)
 with app.labelFrame('Mount settings', row=1, colspan=3):
-    app.setSticky('ew')
+    app.setSticky(EASTWEST)
     with app.frame(CCI, row=1, colspan=3):
-        app.addLabel(CCI + 'label1', 'File', row=0, column=0)
-        app.addFileEntry(CCI + 'item', row=0, column=1, colspan=2)
+        app.addLabel(CCI + 'label1', FILE, row=0, column=0)
+        app.addFileEntry(CCI + ITEM, row=0, column=1, colspan=2)
     app.hideFrame(CCI)
 
     with app.frame(CDN, row=1, colspan=3):
-        app.addLabel(CDN + 'label1', 'Directory', row=0, column=0)
-        app.addDirectoryEntry(CDN + 'item', row=0, column=1, colspan=2)
+        app.addLabel(CDN + 'label1', DIRECTORY, row=0, column=0)
+        app.addDirectoryEntry(CDN + ITEM, row=0, column=1, colspan=2)
     app.hideFrame(CDN)
 
     with app.frame(CIA, row=1, colspan=3):
-        app.addLabel(CIA + 'label1', 'File', row=0, column=0)
-        app.addFileEntry(CIA + 'item', row=0, column=1, colspan=2)
+        app.addLabel(CIA + 'label1', FILE, row=0, column=0)
+        app.addFileEntry(CIA + ITEM, row=0, column=1, colspan=2)
     app.hideFrame(CIA)
 
     with app.frame(EXEFS, row=1, colspan=3):
-        app.addLabel(EXEFS + 'label1', 'File', row=0, column=0)
-        app.addFileEntry(EXEFS + 'item', row=0, column=1, colspan=2)
+        app.addLabel(EXEFS + 'label1', FILE, row=0, column=0)
+        app.addFileEntry(EXEFS + ITEM, row=0, column=1, colspan=2)
     app.hideFrame(EXEFS)
 
     with app.frame(NAND, row=1, colspan=3):
-        app.addLabel(NAND + 'label1', 'File', row=0, column=0)
-        app.addFileEntry(NAND + 'item', row=0, column=1, colspan=2)
+        app.addLabel(NAND + 'label1', FILE, row=0, column=0)
+        app.addFileEntry(NAND + ITEM, row=0, column=1, colspan=2)
         app.addLabel(NAND + 'label2', 'OTP file*', row=2, column=0)
         app.addFileEntry(NAND + 'otp', row=2, column=1, colspan=2)
         app.addLabel(NAND + 'label3', 'CID file*', row=3, column=0)
@@ -334,18 +336,18 @@ with app.labelFrame('Mount settings', row=1, colspan=3):
     app.hideFrame(NAND)
 
     with app.frame(NCCH, row=1, colspan=3):
-        app.addLabel(NCCH + 'label1', 'File', row=0, column=0)
-        app.addFileEntry(NCCH + 'item', row=0, column=1, colspan=2)
+        app.addLabel(NCCH + 'label1', FILE, row=0, column=0)
+        app.addFileEntry(NCCH + ITEM, row=0, column=1, colspan=2)
     app.hideFrame(NCCH)
 
     with app.frame(ROMFS, row=1, colspan=3):
-        app.addLabel(ROMFS + 'label1', 'File', row=0, column=0)
-        app.addFileEntry(ROMFS + 'item', row=0, column=1, colspan=2)
+        app.addLabel(ROMFS + 'label1', FILE, row=0, column=0)
+        app.addFileEntry(ROMFS + ITEM, row=0, column=1, colspan=2)
     app.hideFrame(ROMFS)
 
     with app.frame(SD, row=1, colspan=3):
-        app.addLabel(SD + 'label1', 'Directory', row=0, column=0)
-        app.addDirectoryEntry(SD + 'item', row=0, column=1, colspan=2)
+        app.addLabel(SD + 'label1', DIRECTORY, row=0, column=0)
+        app.addDirectoryEntry(SD + ITEM, row=0, column=1, colspan=2)
         app.addLabel(SD + 'label2', 'movable.sed', row=2, column=0)
         app.addFileEntry(SD + 'movable', row=2, column=1, colspan=2)
         app.addLabel(SD + 'label3', 'Options', row=3, column=0)
@@ -353,13 +355,13 @@ with app.labelFrame('Mount settings', row=1, colspan=3):
     app.hideFrame(SD)
 
     with app.frame(THREEDSX, row=1, colspan=3):
-        app.addLabel(THREEDSX + 'label1', 'File', row=0, column=0)
-        app.addFileEntry(THREEDSX + 'item', row=0, column=1, colspan=2)
+        app.addLabel(THREEDSX + 'label1', FILE, row=0, column=0)
+        app.addFileEntry(THREEDSX + ITEM, row=0, column=1, colspan=2)
     app.hideFrame(THREEDSX)
 
     with app.frame(TITLEDIR, row=1, colspan=3):
-        app.addLabel(TITLEDIR + 'label1', 'Directory', row=0, column=0)
-        app.addDirectoryEntry(TITLEDIR + 'item', row=0, column=1, colspan=2)
+        app.addLabel(TITLEDIR + 'label1', DIRECTORY, row=0, column=0)
+        app.addDirectoryEntry(TITLEDIR + ITEM, row=0, column=1, colspan=2)
         app.addLabel(TITLEDIR + 'label3', 'Options', row=3, column=0)
         app.addNamedCheckBox('Decompress .code (slow!)', TITLEDIR + 'decompress', row=3, column=1, colspan=1)
         app.addNamedCheckBox('Mount all contents', TITLEDIR + 'mountall', row=3, column=2, colspan=1)
@@ -370,7 +372,7 @@ with app.subWindow('unknowntype', 'fuse-3ds Error', modal=True):
                                        "If you know it is a compatibile file, choose the \n"
                                        "correct type and file an issue on GitHub if it works.")
     app.addLabel('unknowntype-label2', '<filepath>')
-    app.addNamedButton('OK', 'unknowntype-ok', lambda _: app.hideSubWindow('unknowntype'))
+    app.addNamedButton(OK, 'unknowntype-ok', lambda _: app.hideSubWindow('unknowntype'))
     app.setResizable(False)
 
 
@@ -405,13 +407,13 @@ def detect_type(fn: str):
         return
 
     app.setOptionBox('TYPE', mount_type)
-    app.setEntry(mount_type + 'item', fn)
+    app.setEntry(mount_type + ITEM, fn)
     app.showFrame(mount_type)
 
 
-app.setSticky('ew')
+app.setSticky(EASTWEST)
 with app.labelFrame('Mount point', row=2, colspan=3):
-    app.setSticky('ew')
+    app.setSticky(EASTWEST)
     if windows:
         def rb_change(_):
             if app.getRadioButton('mountpoint-choice') == 'Drive letter':
@@ -438,14 +440,14 @@ with app.labelFrame('Mount point', row=2, colspan=3):
         app.addLabel('mountlabel', 'Mount point', row=2, column=0)
         app.addDirectoryEntry('mountpoint', row=2, column=1, colspan=2)
 
-    app.addButtons(['Mount', 'Unmount'], press, colspan=3)
-    app.disableButton('Unmount')
+    app.addButtons([MOUNT, UNMOUNT], press, colspan=3)
+    app.disableButton(UNMOUNT)
 app.hideLabelFrame('Mount point')
 
 # noinspection PyBroadException
 try:
     for t in types_list:
-        app.setEntryDropTarget(t + 'item', make_dnd_entry_check(t + 'item'))
+        app.setEntryDropTarget(t + ITEM, make_dnd_entry_check(t + ITEM))
     app.setEntryDropTarget(NAND + 'otp', make_dnd_entry_check(NAND + 'otp'))
     app.setEntryDropTarget(NAND + 'cid', make_dnd_entry_check(NAND + 'cid'))
     app.setEntryDropTarget(SD + 'movable', make_dnd_entry_check(SD + 'movable'))
@@ -465,9 +467,9 @@ if has_dnd:
     app.setOptionBoxDropTarget('TYPE', detect_type)
 
 with app.frame('default', row=1, colspan=3):
-    app.setSticky('ew')
+    app.setSticky(EASTWEST)
     with app.labelFrame('Getting started', colspan=3):
-        app.setSticky('ew')
+        app.setSticky(EASTWEST)
         if has_dnd:
             app.addLabel('d-label1', 'To get started, drag the file to the box above.', colspan=3)
             app.addLabel('d-label2', 'You can also click it to manually choose a type.', colspan=3)
@@ -484,7 +486,7 @@ if not b9_found or not seeddb_found:
                                   'Please click "Help & Extras" for more details.\n'
                                   'Types that require encryption have been disabled.')
             app.setLabelBg('no-b9', '#ff9999')
-            app.disableButton('Mount')
+            app.disableButton(MOUNT)
 
         if not seeddb_found:
             app.addHorizontalSeparator()
@@ -502,13 +504,13 @@ app.setResizable(False)
 # failed to mount subwindow
 with app.subWindow('mounterror', 'fuse-3ds Error', modal=True, blocking=True):
     app.addLabel('mounterror-label', 'Failed to mount. Please check the output.')
-    app.addNamedButton('OK', 'mounterror-ok', lambda _: app.hideSubWindow('mounterror'))
+    app.addNamedButton(OK, 'mounterror-ok', lambda _: app.hideSubWindow('mounterror'))
     app.setResizable(False)
 
 # exited with error subwindow
 with app.subWindow('exiterror', 'fuse-3ds Error', modal=True, blocking=True):
     app.addLabel('exiterror-label', 'The mount process exited with an error code (<errcode>). Please check the output.')
-    app.addNamedButton('OK', 'exiterror-ok', lambda _: app.hideSubWindow('exiterror'))
+    app.addNamedButton(OK, 'exiterror-ok', lambda _: app.hideSubWindow('exiterror'))
     app.setResizable(False)
 
 if windows:
@@ -516,28 +518,28 @@ if windows:
     with app.subWindow('mounterror-dir-win', 'fuse-3ds Error', modal=True, blocking=True):
         app.addLabel('mounterror-dir-label', 'Failed to mount to the given mount point.\n'
                                              'Please make sure the directory is empty or does not exist.')
-        app.addNamedButton('OK', 'mounterror-dir-ok', lambda _: app.hideSubWindow('mounterror-dir-win'))
+        app.addNamedButton(OK, 'mounterror-dir-ok', lambda _: app.hideSubWindow('mounterror-dir-win'))
         app.setResizable(False)
 
 with app.subWindow('extras', 'fuse-3ds Extras', modal=True, blocking=True):
-    app.setSticky('ew')
+    app.setSticky(EASTWEST)
     with app.labelFrame('Tutorial', colspan=3):
-        app.setSticky('ew')
+        app.setSticky(EASTWEST)
         app.addLabel('tutorial-label', 'View a tutorial on GBAtemp.', colspan=2)
         app.addNamedButton('Open', 'tutorial-btn', lambda _: webbrowser.open('https://gbatemp.net/threads/499994/'),
                            row='previous', column=2)
 
-    app.setSticky('ew')
+    app.setSticky(EASTWEST)
     with app.labelFrame('GitHub Repository', colspan=3):
-        app.setSticky('ew')
+        app.setSticky(EASTWEST)
         app.addLabel('repo-label', 'View the repository on GitHub.')
         app.addNamedButton('Open', 'repo-btn', lambda _: webbrowser.open('https://github.com/ihaveamac/fuse-3ds'),
                            row='previous', column=2)
 
     if windows:
-        app.setSticky('ew')
+        app.setSticky(EASTWEST)
         with app.labelFrame('Context Menu', colspan=3):
-            app.setSticky('ew')
+            app.setSticky(EASTWEST)
             app.addLabel('ctxmenu-label', 'Add an entry to the right-click menu.', colspan=2)
             app.addNamedButton('Add', 'ctxmenu-btn', lambda _: app.showSubWindow('ctxmenu-window'),
                                row='previous', column=2)
@@ -553,13 +555,13 @@ with app.subWindow('extras', 'fuse-3ds Extras', modal=True, blocking=True):
 with app.subWindow('unmounterror', 'fuse-3ds Error', modal=True, blocking=True):
     def unmount_ok(_):
         app.hideSubWindow('unmounterror')
-        app.enableButton('Unmount')
+        app.enableButton(UNMOUNT)
 
     app.addLabel('unmounterror-label', 'Failed to unmount. Please check the output.\n\n'
                                        'You can kill the process if it is not responding.\n'
                                        'This should be used as a last resort.'
                                        'The process should be unmounted normally.', colspan=2)
-    app.addNamedButton('OK', 'unmounterror-ok', unmount_ok)
+    app.addNamedButton(OK, 'unmounterror-ok', unmount_ok)
     app.addNamedButton('Kill process', 'unmounterror-kill', kill_process, row='previous', column=1)
     app.setResizable(False)
 
@@ -658,7 +660,7 @@ def main(_pyi=False, _allow_admin=False):
                 if mt is not None:
                     mount_type = mount_types_rv[mt]
                     to_use = mount_type
-                    app.setEntry(mount_type + 'item', fn)
+                    app.setEntry(mount_type + ITEM, fn)
                 else:
                     app.setLabel('unknowntype-label2', fn)
                     app.queueFunction(app.showSubWindow, 'unknowntype')
