@@ -5,16 +5,20 @@ Mounts a "title" directory, creating a virtual system of all the installed title
 import logging
 import os
 from errno import ENOENT
-from glob import glob
+from glob import iglob
 from stat import S_IFDIR
 from sys import exit, argv
-from typing import Dict
+from threading import Thread
+from typing import TYPE_CHECKING
 
 from pyctr.types.smdh import SMDH, SMDH_SIZE, InvalidSMDHError
 from pyctr.types.tmd import TitleMetadataReader
 
 from . import _common as _c
 from .ncch import NCCHContainerMount
+
+if TYPE_CHECKING:
+    from typing import AnyStr, Dict, List, Union
 
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
@@ -26,7 +30,7 @@ except Exception as e:
          "{}: {}".format(type(e).__name__, e))
 
 _region_order_check = ('English', 'Japanese', 'French', 'German', 'Italian', 'Spanish', 'Simplified Chinese', 'Korean',
-                       'Dutch', 'Portuguese', 'Russian', 'Traditional Chinese',)
+                       'Dutch', 'Portuguese', 'Russian', 'Traditional Chinese')
 
 
 class TitleDirectoryMount(LoggingMixIn, Operations):
@@ -35,7 +39,7 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
     def __init__(self, titles_dir: str, mount_all: bool = False, decompress_code: bool = False, dev: bool = False,
                  seeddb: str = None):
         self.titles_dir = titles_dir
-        self.files = {}
+        self._files = {}  # type: Dict[str, Dict[str, Union[AnyStr, int]]]
         self.dirs = {}  # type: Dict[str, NCCHContainerMount]
         self._real_dir_names = {}  # type: Dict[str, str]
 
@@ -44,19 +48,32 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
         self.seeddb = seeddb
         self.total_size = 0
 
+        print('',
+              '- The root will be populated with titles as they are found and parsed.',
+              '- Use -f to run in the foreground to see progress.', sep='\n')
+
         self.decompress_code = decompress_code
         if decompress_code:
-            print('Note: Code decompression takes a while if there are a lot of titles.',
-                  'The mount may take some time to appear if this mount is running in the background.',
-                  'Use -f to run in the foreground to see progress.', sep='\n')
+            print('',
+                  '- Note: Code decompression takes a while if there are a lot of titles.',
+                  '- Use -f to run in the foreground to see progress.', sep='\n')
 
         titles_stat = os.stat(titles_dir)
         self.g_stat = {'st_ctime': int(titles_stat.st_ctime), 'st_mtime': int(titles_stat.st_mtime),
                        'st_atime': int(titles_stat.st_atime)}
 
     def init(self, path):
-        print('Searching for all tmds...')
-        tmds = glob(os.path.join(self.titles_dir, '**/{}.tmd'.format('[0-9a-f]' * 8)), recursive=True)
+        t = Thread(target=self.find_titles, args=(path,), daemon=True)
+        t.start()
+
+    def find_titles(self, path):
+        print('Searching for all tmds...', end='\r')
+        tmds = []  # type: List[str]
+        for idx, p in enumerate(iglob(os.path.join(self.titles_dir, '**/{}.tmd'.format('[0-9a-f]' * 8)),
+                                      recursive=True), start=1):
+            tmds.append(p)
+            print('Searching for all tmds...', '{:>3}'.format(idx), end='\r')
+        print()
         tmd_count = len(tmds)
         for idx, tmd_path in enumerate(tmds, 1):
             print('Checking... {:>3} / {:>3} / {}'.format(idx, tmd_count, tmd_path), flush=True)
@@ -86,8 +103,8 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
                     print("Warning: TMD Content size and filesize of", chunk.id, "are different.")
                 file_ext = 'nds' if chunk.cindex == 0 and int(tmd.title_id, 16) >> 44 == 0x48 else 'ncch'
                 filename = '/{}.{:04x}.{}.{}'.format(tmd.title_id, chunk.cindex, chunk.id, file_ext)
-                self.files[filename] = {'size': chunk.size, 'index': chunk.cindex.to_bytes(2, 'big'),
-                                        'real_filepath': real_filename}
+                self._files[filename] = {'size': chunk.size, 'index': chunk.cindex.to_bytes(2, 'big'),
+                                         'real_filepath': real_filename}
 
                 dirname = '/{}.{:04x}.{}'.format(tmd.title_id, chunk.cindex, chunk.id)
                 try:
@@ -115,6 +132,7 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
                                 break
                             except (AttributeError, TypeError):
                                 pass
+                    dirname = dirname.rstrip('.')  # fix windows issue
                     self.dirs[dirname] = content_fuse
                     self._real_dir_names[dirname.lower()] = dirname
 
@@ -150,7 +168,7 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
         else:
             yield from ('.', '..')
             yield from (x[1:] for x in self.dirs)
-            # we do not show self.files, that's just used for internal handling
+            # we do not show self._files, that's just used for internal handling
 
     @_c.ensure_lower_path
     def read(self, path, size, offset, fh):
@@ -158,7 +176,7 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
         if first_dir in self._real_dir_names:
             return self.dirs[self._real_dir_names[first_dir]].read(_c.remove_first_dir(path), size, offset, fh)
         # file handling only to support the above.
-        fi = self.files[path]
+        fi = self._files[path]
         with open(fi['real_filepath'], 'rb') as f:
             f.seek(offset)
             return f.read(size)
@@ -186,7 +204,7 @@ def main(prog: str = None, args: list = None):
     opts = dict(_c.parse_fuse_opts(a.o))
 
     if a.do:
-        logging.basicConfig(level=logging.DEBUG)
+        logging.basicConfig(level=logging.DEBUG, filename=a.do)
 
     mount = TitleDirectoryMount(titles_dir=a.title_dir, mount_all=a.mount_all, decompress_code=a.decompress_code,
                                 dev=a.dev, seeddb=a.seeddb)

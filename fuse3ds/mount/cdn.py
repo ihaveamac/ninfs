@@ -222,7 +222,7 @@ def main(prog: str = None, args: list = None):
     opts = dict(_c.parse_fuse_opts(a.o))
 
     if a.do:
-        logging.basicConfig(level=logging.DEBUG)
+        logging.basicConfig(level=logging.DEBUG, filename=a.do)
 
     mount = CDNContentsMount(cdn_dir=a.cdn_dir, dev=a.dev, dec_key=a.dec_key, seeddb=a.seeddb)
     if _c.macos or _c.windows:

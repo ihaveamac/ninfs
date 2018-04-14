@@ -149,7 +149,7 @@ def main(prog: str = None, args: list = None):
     opts = dict(_c.parse_fuse_opts(a.o))
 
     if a.do:
-        logging.basicConfig(level=logging.DEBUG)
+        logging.basicConfig(level=logging.DEBUG, filename=a.do)
 
     cci_stat = os.stat(a.cci)
 

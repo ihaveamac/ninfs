@@ -258,13 +258,14 @@ def main(prog: str = None, args: list = None):
     opts = dict(_c.parse_fuse_opts(a.o))
 
     if a.do:
-        logging.basicConfig(level=logging.DEBUG)
+        logging.basicConfig(level=logging.DEBUG, filename=a.do)
 
     mount = SDFilesystemMount(sd_dir=a.sd_dir, movable=a.movable, dev=a.dev, readonly=a.ro)
     if _c.macos or _c.windows:
         opts['fstypename'] = 'SDCard'
         if _c.macos:
             opts['volname'] = "Nintendo 3DS SD Card ({})".format(mount.root_dir)
+            opts['noappledouble'] = True  # fixes an error. but this is probably not the best way to do it.
         else:
             # windows
             opts['volname'] = "Nintendo 3DS SD Card ({}…)".format(mount.root_dir[0:8])

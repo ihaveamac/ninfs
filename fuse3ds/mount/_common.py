@@ -33,7 +33,7 @@ if windows:
 default_argp = ArgumentParser(add_help=False)
 default_argp.add_argument('-f', '--fg', help='run in foreground', action='store_true')
 default_argp.add_argument('-d', help='debug output (fuse/winfsp log)', action='store_true')
-default_argp.add_argument('--do', help=SUPPRESS, action='store_true')  # debugging using python logging
+default_argp.add_argument('--do', help=SUPPRESS, default=None)  # debugging using python logging
 default_argp.add_argument('-o', metavar='OPTIONS', help='mount options')
 
 readonly_argp = ArgumentParser(add_help=False)

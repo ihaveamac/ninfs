@@ -129,13 +129,13 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                                             'enctype': 'normal', 'keyslot': self.reader.extra_keyslot,
                                             'iv': (self.reader.partition_id << 64 | (0x03 << 56))}
 
-            try:
-                romfs_vfp = _c.VirtualFileWrapper(self, '/romfs.bin', romfs_region.size)
-                romfs_fuse = RomFSMount(romfs_vfp, self._g_stat)
-                romfs_fuse.init(path)
-                self.romfs_fuse = romfs_fuse
-            except Exception as e:
-                print("Failed to mount RomFS: {}: {}".format(type(e).__name__, e))
+                try:
+                    romfs_vfp = _c.VirtualFileWrapper(self, '/romfs.bin', romfs_region.size)
+                    romfs_fuse = RomFSMount(romfs_vfp, self._g_stat)
+                    romfs_fuse.init(path)
+                    self.romfs_fuse = romfs_fuse
+                except Exception as e:
+                    print("Failed to mount RomFS: {}: {}".format(type(e).__name__, e))
 
     def flush(self, path, fh):
         return self.f.flush()
@@ -293,7 +293,7 @@ def main(prog: str = None, args: list = None):
     opts = dict(_c.parse_fuse_opts(a.o))
 
     if a.do:
-        logging.basicConfig(level=logging.DEBUG)
+        logging.basicConfig(level=logging.DEBUG, filename=a.do)
 
     ncch_stat = os.stat(a.ncch)
 

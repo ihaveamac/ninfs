@@ -35,7 +35,7 @@ A GUI is available for use. If you download the exe from the [latest release](ht
 
 Python does not have to be installed, but [WinFsp](http://www.secfs.net/winfsp/download/) is still required.
 
-<p align="center"><img src="https://github.com/ihaveamac/fuse-3ds/raw/master/resources/mainwindow.png"></p>
+<p align="center"><img src="https://github.com/ihaveamac/fuse-3ds/raw/master/resources/mainwindow-win.png"></p>
 
 #### Install with existing Python
 * Install the latest version of [Python 3](https://www.python.org/downloads/). The x86-64 version is preferred on 64-bit Windows.
