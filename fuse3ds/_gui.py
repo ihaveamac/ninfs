@@ -200,6 +200,10 @@ def press(button: str):
         mount_type = app.getOptionBox('TYPE')
         app.disableButton(MOUNT)
         item = app.getEntry(mount_type + ITEM)
+        if not item:
+            app.showSubWindow('noitemerror')
+            app.enableButton(MOUNT)
+            return
 
         if windows:
             if app.getRadioButton('mountpoint-choice') == 'Drive letter':
@@ -223,8 +227,16 @@ def press(button: str):
                     return
         else:
             mountpoint = app.getEntry('mountpoint')
+            if not mountpoint:
+                app.showSubWindow('nomperror')
+                app.enableButton(MOUNT)
+                return
 
-        if mount_type == NAND:
+        if mount_type == CDN:
+            key = app.getEntry(CDN + 'key')
+            if key:
+                extra_args.extend(('--dec-key', key))
+        elif mount_type == NAND:
             otp = app.getEntry(NAND + 'otp')
             cid = app.getEntry(NAND + 'cid')
             aw = app.getCheckBox(NAND + 'aw')
@@ -311,6 +323,9 @@ with app.labelFrame('Mount settings', row=1, colspan=3):
     with app.frame(CDN, row=1, colspan=3):
         app.addLabel(CDN + 'label1', DIRECTORY, row=0, column=0)
         app.addDirectoryEntry(CDN + ITEM, row=0, column=1, colspan=2)
+        app.addLabel(CDN + 'label2', 'Decrypted Titlekey*', row=3, column=0)
+        app.addEntry(CDN + 'key', row=3, column=1, colspan=2)
+        app.addLabel(CDN + 'label3', '*Not required if title has a cetk.', row=4, colspan=3)
     app.hideFrame(CDN)
 
     with app.frame(CIA, row=1, colspan=3):
@@ -550,6 +565,16 @@ with app.subWindow('extras', 'fuse-3ds Extras', modal=True, blocking=True):
             version, version_info, '64' if maxsize > 0xFFFFFFFF else '32', platform))
 
     app.setResizable(False)
+
+# file/directory not set error
+with app.subWindow('noitemerror', 'fuse-3ds Error', modal=True, blocking=True):
+    app.addLabel('Select a file or directory to mount.')
+    app.addNamedButton(OK, 'noitemerror-ok', lambda _: app.hideSubWindow('noitemerror'))
+
+# mountpoint not set error
+with app.subWindow('nomperror', 'fuse-3ds Error', modal=True, blocking=True):
+    app.addLabel('Select an empty directory to be the mount point.')
+    app.addNamedButton(OK, 'nomperror-ok', lambda _: app.hideSubWindow('nomperror'))
 
 # failed to unmount subwindow
 with app.subWindow('unmounterror', 'fuse-3ds Error', modal=True, blocking=True):

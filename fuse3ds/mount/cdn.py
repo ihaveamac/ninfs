@@ -73,12 +73,14 @@ class CDNContentsMount(LoggingMixIn, Operations):
 
         if dec_key:
             try:
-                self.titlekey = bytes.fromhex(dec_key)
-                if len(self.titlekey) != 16:
+                titlekey = bytes.fromhex(dec_key)
+                if len(titlekey) != 16:
                     exit('--dec-key input is not 32 hex characters.')
             except ValueError:
                 exit('Failed to convert --dec-key input to bytes. Non-hex character likely found, or is not '
                      '32 hex characters.')
+            # noinspection PyUnboundLocalVariable
+            self.crypto.set_normal_key(0x40, titlekey)
         else:
             with open(self.rp('cetk'), 'rb') as tik:
                 # read encrypted titlekey and common key index
