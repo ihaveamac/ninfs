@@ -1,6 +1,11 @@
 # not very good with gui development...
 # don't read this file, it sucks
 
+# TODO: remove this when 3.5 support is removed
+from sys import hexversion, exit
+if hexversion < 0x030601F0:  # disable for 3.5
+    exit('GUI is not available before Python 3.6.1.')
+
 import json
 import subprocess
 import webbrowser
@@ -10,7 +15,7 @@ from os import environ, kill, rmdir
 from os.path import abspath, isfile, isdir, ismount, dirname, join as pjoin
 from shutil import get_terminal_size
 from ssl import PROTOCOL_TLSv1_2, SSLContext
-from sys import argv, exit, executable, platform, version_info, maxsize
+from sys import argv, executable, platform, version_info, maxsize
 from time import sleep
 from traceback import print_exc
 from typing import TYPE_CHECKING

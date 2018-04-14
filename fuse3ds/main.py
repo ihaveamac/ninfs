@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 from importlib import import_module
-from sys import exit, argv, path, platform
 from os.path import basename, dirname, realpath
+from sys import exit, argv, path, platform, hexversion, version_info, stderr
 
 windows = platform in {'win32', 'cygwin'}
 
@@ -18,6 +18,16 @@ if _path not in path:
 from __init__ import __version__
 
 print('fuse-3ds {} - https://github.com/ihaveamac/fuse-3ds'.format(__version__))
+
+if hexversion < 0x030502F0:
+    exit('Python {0[0]}.{0[1]}.{0[2]} is not supported. Please use Python 3.6.1.'.format(version_info))
+
+if hexversion < 0x030601F0:
+    print('',
+          '* Warning: You are running Python {0[0]}.{0[1]}.{0[2]}.'.format(version_info),
+          '* This version will become unsupported in the future.',
+          '* Please upgrade to Python 3.6.1 or later.',
+          '', sep='\n', file=stderr)
 
 
 def exit_print_types():
