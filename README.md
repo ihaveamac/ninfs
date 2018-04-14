@@ -1,7 +1,5 @@
 # fuse-3ds
-fuse-3ds enables you to read and write files for the Nintendo 3DS without extracting or separate decryption.
-
-Since it acts like a virtual filesystem, you can browse it with a file manager (e.g. Windows/File Explorer and Finder) and use any tools to read from it. Certain ones like NAND and SD can also be written back to. All encryption is transparently handled by fuse-3ds.
+fuse-3ds is the best and most efficient way to extract data for the Nintendo 3DS. It works by presenting a virtual filesystem with the contents of your games, NAND, or SD card contents, and you can browse and copy out just the files that you need.
 
 ## Example uses
 * Mount a NAND backup and browse CTRNAND, TWLNAND, and others, and write back to them without having to extract and decrypt them first.
@@ -29,8 +27,8 @@ SeedDB is checked in order of:
 
 It can also be provided with the `--seeddb` argument.
 
-Python 3.5.2+, pycryptodomex, and fusepy are required. appJar is required for the GUI.
-* Note that Python 3.5 support may be dropped some time after Ubuntu 18.04 is released, raising the requirement to 3.6.1.
+Python 3.6.1+, pycryptodomex, and fusepy are required. appJar is required for the GUI.
+* Python 3.5.2+ is supported right now, but support will be removed after Ubuntu 18.04 is released.
 
 ### Windows
 A GUI is available for use. If you download the exe from the [latest release](https://github.com/ihaveamac/fuse-3ds/releases) and run it, a window will appear allowing you to choose mount options easily.

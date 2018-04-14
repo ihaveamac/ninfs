@@ -28,16 +28,6 @@ except Exception as e:
     exit("Failed to import the fuse module:\n"
          "{}: {}".format(type(e).__name__, e))
 
-try:
-    from Cryptodome.Cipher import AES
-    from Cryptodome.Util import Counter
-except ModuleNotFoundError:
-    exit("Cryptodome module not found, please install pycryptodomex for encryption support "
-         "(`{} install pycryptodomex`).".format(_c.python_cmd))
-except Exception as e:
-    exit("Failed to import the Cryptodome module:\n"
-         "{}: {}".format(type(e).__name__, e))
-
 
 class NCCHContainerMount(LoggingMixIn, Operations):
     fd = 0
