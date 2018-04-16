@@ -134,9 +134,6 @@ class CDNContentsMount(LoggingMixIn, Operations):
         return {**st, **self.g_stat, 'st_uid': uid, 'st_gid': gid}
 
     def open(self, path, flags):
-        # TODO: maybe this should actually open the file. this isn't so easy
-        #   because filenames are being changed in the mount. so right now,
-        #   files are opened each time read is called.
         self.fd += 1
         return self.fd
 

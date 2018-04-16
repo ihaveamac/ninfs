@@ -4,6 +4,7 @@ Mounts SD contents under `/Nintendo 3DS`, creating a virtual filesystem with dec
 
 import logging
 import os
+from contextlib import suppress
 from errno import EPERM, EACCES, EBADF
 from hashlib import sha256
 from struct import unpack
@@ -73,9 +74,11 @@ class SDFilesystemMount(LoggingMixIn, Operations):
 
     def __del__(self, *args):
         # putting the keys in a tuple so the dict can be modified
-        for f in tuple(self.fds):
-            self.fds[f].close()
-            del self.fds[f]
+        with suppress(AttributeError):
+            for f in tuple(self.fds):
+                with suppress(KeyError):
+                    self.fds[f].close()
+                    del self.fds[f]
 
     destroy = __del__
 

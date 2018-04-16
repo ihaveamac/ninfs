@@ -15,9 +15,9 @@ _path = dirname(realpath(__file__))
 if _path not in path:
     path.insert(0, _path)
 
-from __init__ import __version__
+from __init__ import __version__ as version
 
-print('fuse-3ds {} - https://github.com/ihaveamac/fuse-3ds'.format(__version__))
+print('fuse-3ds {} - https://github.com/ihaveamac/fuse-3ds'.format(version))
 
 if hexversion < 0x030502F0:
     exit('Python {0[0]}.{0[1]}.{0[2]} is not supported. Please use Python 3.6.1.'.format(version_info))
