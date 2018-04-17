@@ -3,7 +3,7 @@ fuse-3ds is the best and most efficient way to extract data for Nintendo 3DS gam
 
 Windows, macOS, and Linux are supported.
 
-<p align="center"><img src="resources/ciamount-mac.png" width="882" height="548"></p>
+<p align="center"><img src="resources/ciamount-mac.png" width="882"></p>
 
 ## Example uses
 * Mount a NAND backup and browse CTRNAND, TWLNAND, and others, and write back to them without having to extract and decrypt them first.
