@@ -8,22 +8,17 @@ from collections import OrderedDict
 from errno import ENOENT
 from math import ceil
 from stat import S_IFDIR, S_IFREG
-from sys import exit, argv
+from sys import argv
 from typing import BinaryIO, Dict
 
 from pyctr.crypto import CTRCrypto
 from pyctr.types.ncch import NCCHReader, FIXED_SYSTEM_KEY
 from pyctr.util import readbe, roundup
-
 from . import _common as _c
+# _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 from .exefs import ExeFSMount
 from .romfs import RomFSMount
-
-try:
-    from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
-except Exception as e:
-    exit("Failed to import the fuse module:\n"
-         "{}: {}".format(type(e).__name__, e))
 
 
 class NCCHContainerMount(LoggingMixIn, Operations):
@@ -35,7 +30,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
 
     def __init__(self, ncch_fp: BinaryIO, g_stat: os.stat_result, decompress_code: bool = True, dev: bool = False,
                  seeddb: str = None):
-        self.crypto = CTRCrypto(is_dev=dev)
+        self.crypto = CTRCrypto(dev=dev)
 
         self.decompress_code = decompress_code
         self.seeddb = seeddb
@@ -144,7 +139,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
         elif path.startswith('/romfs/'):
             return self.romfs_fuse.getattr(_c.remove_first_dir(path), fh)
         uid, gid, pid = fuse_get_context()
-        if path == '/' or path == '/romfs' or path == '/exefs':
+        if path in {'/', '/romfs', '/exefs'}:
             st = {'st_mode': (S_IFDIR | 0o555), 'st_nlink': 2}
         elif path in self.files:
             st = {'st_mode': (S_IFREG | 0o444), 'st_size': self.files[path]['size'], 'st_nlink': 1}
@@ -284,7 +279,7 @@ def main(prog: str = None, args: list = None):
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description="Mount Nintendo 3DS NCCH containers.",
                             parents=(_c.default_argp, _c.dev_argp, _c.seeddb_argp,
-                                     _c.main_positional_args('ncch', "NCCH file")))
+                                     _c.main_args('ncch', "NCCH file")))
 
     a = parser.parse_args(args)
     opts = dict(_c.parse_fuse_opts(a.o))

@@ -1,21 +1,27 @@
-import sys
 from argparse import ArgumentParser, SUPPRESS
 from errno import EROFS
-from io import BufferedIOBase
 from functools import wraps
+from io import BufferedIOBase
+from sys import exit, platform
 from typing import TYPE_CHECKING
-
-from fuse import Operations, FuseOSError
 
 if TYPE_CHECKING:
     from typing import BinaryIO, Generator, Tuple, Union
 else:
     BinaryIO = object  # so it doesn't affect anything at runtime
 
-windows = sys.platform in {'win32', 'cygwin'}
-macos = sys.platform == 'darwin'
+windows = platform in {'win32', 'cygwin'}
+macos = platform == 'darwin'
 
 python_cmd = 'py -3' if windows else 'python3'
+
+
+try:
+    from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
+except Exception as e:
+    exit('Failed to import the fuse module:\n'
+         '{}: {}'.format(type(e).__name__, e))
+
 
 # this is a temporary (hopefully) thing to check for the fusepy version on windows, since a newer commit on
 # a fork of it is currently required for windows.
@@ -26,8 +32,8 @@ if windows:
     import ctypes
     # noinspection PyProtectedMember
     if fuse_file_info._fields_[1][1] is not ctypes.c_int:  # checking fh_old type which is different for windows
-        sys.exit('Please update fusepy to use fuse-3ds. More information can be found at:\n'
-                 '  https://github.com/ihaveamac/fuse-3ds')
+        exit('Please update fusepy to use fuse-3ds. More information can be found at:\n'
+             '  https://github.com/ihaveamac/fuse-3ds')
     del fuse_file_info, ctypes
 
 default_argp = ArgumentParser(add_help=False)
@@ -46,7 +52,7 @@ seeddb_argp = ArgumentParser(add_help=False)
 seeddb_argp.add_argument('--seeddb', help="path to seeddb.bin")
 
 
-def main_positional_args(name: str, help: str) -> ArgumentParser:
+def main_args(name: str, help: str) -> ArgumentParser:
     parser = ArgumentParser(add_help=False)
     parser.add_argument(name, help=help)
     parser.add_argument('mount_point', help='mount point')

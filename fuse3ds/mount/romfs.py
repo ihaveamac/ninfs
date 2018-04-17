@@ -7,18 +7,13 @@ import logging
 import os
 from errno import ENOENT
 from stat import S_IFDIR, S_IFREG
-from sys import exit, argv
+from sys import argv
 from typing import BinaryIO
 
 from pyctr.types.romfs import RomFSReader, RomFSFileNotFoundError
-
 from . import _common as _c
-
-try:
-    from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
-except Exception as e:
-    exit("Failed to import the fuse module:\n"
-         "{}: {}".format(type(e).__name__, e))
+# _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 
 
 class RomFSMount(LoggingMixIn, Operations):
@@ -96,7 +91,7 @@ def main(prog: str = None, args: list = None):
     if args is None:
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS Read-only Filesystem (RomFS) files.',
-                            parents=(_c.default_argp, _c.main_positional_args('romfs', 'RomFS file')))
+                            parents=(_c.default_argp, _c.main_args('romfs', 'RomFS file')))
 
     a = parser.parse_args(args)
     opts = dict(_c.parse_fuse_opts(a.o))

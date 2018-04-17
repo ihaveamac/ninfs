@@ -3,13 +3,13 @@ from os import environ
 from os.path import isfile, getsize
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from typing import Dict
-
 from Cryptodome.Cipher import AES
 from Cryptodome.Util import Counter
 
 from . import util
+
+if TYPE_CHECKING:
+    from typing import Dict
 
 __all__ = ['CryptoError', 'KeyslotMissingError', 'BootromNotFoundError', 'CTRCrypto']
 
@@ -97,15 +97,16 @@ class CTRCrypto:
         (0x5E66998AB4E8931606850FD7A16DD755,) * 2
     )
 
-    def __init__(self, is_dev: int = 0, setup_b9_keys: bool = True):
+    def __init__(self, dev: int = 0, setup_b9_keys: bool = True):
         self.key_x = {}  # type: Dict[int, int]
-        self.key_y = {0x03: 0xE1A00005202DDD1DBD4DC4D30AB9DC76, 0x05: 0x4D804F4E9990194613A204AC584460BE}  # type: Dict[int, int]
+        self.key_y = {0x03: 0xE1A00005202DDD1DBD4DC4D30AB9DC76,
+                      0x05: 0x4D804F4E9990194613A204AC584460BE}  # type: Dict[int, int]
         self.key_normal = {}  # type: Dict[int, bytes]
 
-        self.is_dev = is_dev
+        self.dev = dev
 
         for keyslot, keys in base_key_x.items():
-            self.key_x[keyslot] = keys[is_dev]
+            self.key_x[keyslot] = keys[dev]
 
         if setup_b9_keys:
             self.setup_keys_from_boot9()
@@ -203,7 +204,7 @@ class CTRCrypto:
                        87, 128).to_bytes(0x10, 'big')
 
     def get_common_key(self, index: int) -> int:
-        return self.common_key_y[index][self.is_dev]
+        return self.common_key_y[index][self.dev]
 
     @staticmethod
     def keygen_manual(key_x: int, key_y: int) -> bytes:
@@ -245,7 +246,7 @@ class CTRCrypto:
             if isfile(p):
                 keyblob_offset = 0x5860
                 otp_key_offset = 0x56E0
-                if self.is_dev:
+                if self.dev:
                     keyblob_offset += 0x400
                     otp_key_offset += 0x20
                 if getsize(p) == 0x10000:

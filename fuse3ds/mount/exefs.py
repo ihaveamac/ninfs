@@ -7,29 +7,28 @@ import os
 from errno import ENOENT
 from hashlib import sha256
 from stat import S_IFDIR, S_IFREG
-from sys import exit, argv
-from typing import BinaryIO
+from sys import argv
+from typing import TYPE_CHECKING
 
-from pyctr.types.exefs import ExeFSReader, ExeFSEntry, CodeDecompressionError, decompress_code as _decompress_code
-
+from pyctr.types.exefs import ExeFSReader, ExeFSEntry, decompress_code as _decompress_code
 from . import _common as _c
+# _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 
-try:
-    from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
-except Exception as e:
-    exit("Failed to import the fuse module:\n"
-         "{}: {}".format(type(e).__name__, e))
+if TYPE_CHECKING:
+    from typing import BinaryIO, Dict
 
 
 class ExeFSMount(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, exefs_fp: BinaryIO, g_stat: os.stat_result, decompress_code: bool = False, strict: bool = False):
+    def __init__(self, exefs_fp: 'BinaryIO', g_stat: os.stat_result, decompress_code: bool = False, strict: bool = False):
         self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
                        'st_atime': int(g_stat.st_atime)}
 
         self.reader = ExeFSReader.load(exefs_fp, strict)
-        self.files = {'/' + x.name.replace('.', '', 1) + '.bin': x for x in self.reader.entries.values()}
+        self.files = {'/' + x.name.replace('.', '', 1) + '.bin': x
+                      for x in self.reader.entries.values()}  # type: Dict[str, ExeFSEntry]
         self.exefs_size = sum(x.size for x in self.reader.entries.values())
         self.code_dec = b''
         self.decompress_code = decompress_code
@@ -55,7 +54,7 @@ class ExeFSMount(LoggingMixIn, Operations):
                                                                   size=len(self.code_dec),
                                                                   hash=sha256(self.code_dec).digest())
                 print(' done!')
-            except CodeDecompressionError as e:
+            except Exception as e:
                 print('\nFailed to decompress .code: {}: {}'.format(type(e).__name__, e))
 
     @_c.ensure_lower_path
@@ -109,7 +108,7 @@ def main(prog: str = None, args: list = None):
     if args is None:
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS Executable Filesystem (ExeFS) files.',
-                            parents=(_c.default_argp, _c.main_positional_args('exefs', 'ExeFS file')))
+                            parents=(_c.default_argp, _c.main_args('exefs', 'ExeFS file')))
     parser.add_argument('--decompress-code', help='decompress the .code section', action='store_true')
 
     a = parser.parse_args(args)

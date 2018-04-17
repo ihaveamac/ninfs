@@ -14,15 +14,10 @@ from typing import BinaryIO, AnyStr
 from pyctr.crypto import CTRCrypto
 from pyctr.types.exefs import ExeFSReader, InvalidExeFSError
 from pyctr.util import readbe, readle, roundup
-
 from . import _common as _c
+# _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 from .exefs import ExeFSMount
-
-try:
-    from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
-except Exception as e:
-    exit("Failed to import the fuse module:\n"
-         "{}: {}".format(type(e).__name__, e))
 
 try:
     from Cryptodome.Cipher import AES
@@ -45,7 +40,7 @@ class NANDImageMount(LoggingMixIn, Operations):
 
     def __init__(self, nand_fp: BinaryIO, g_stat: os.stat_result, dev: bool = False, readonly: bool = False,
                  otp: bytes = None, cid: AnyStr = None):
-        self.crypto = CTRCrypto(is_dev=dev)
+        self.crypto = CTRCrypto(dev=dev)
 
         self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
                        'st_atime': int(g_stat.st_atime)}
@@ -422,7 +417,7 @@ def main(prog: str = None, args: list = None):
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS NAND images.',
                             parents=(_c.default_argp, _c.readonly_argp, _c.dev_argp,
-                                     _c.main_positional_args('nand', "NAND image")))
+                                     _c.main_args('nand', "NAND image")))
     parser.add_argument('--otp', help='path to otp (enc/dec); not needed if NAND image has essentials backup from '
                                       'GodMode9')
     parser.add_argument('--cid', help='NAND CID; not needed if NAND image has essentials backup from GodMode9')

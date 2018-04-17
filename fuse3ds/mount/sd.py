@@ -9,20 +9,19 @@ from errno import EPERM, EACCES, EBADF
 from hashlib import sha256
 from struct import unpack
 from sys import exit, argv
+from typing import TYPE_CHECKING
 
 from pyctr.crypto import CTRCrypto
 from pyctr.util import readbe
-
 from . import _common as _c
+# _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
+
+if TYPE_CHECKING:
+    from typing import Dict, BinaryIO
 
 if _c.windows:
     from ctypes import c_wchar_p, pointer, c_ulonglong, windll, wintypes
-
-try:
-    from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
-except Exception as e:
-    exit("Failed to import the fuse module:\n"
-         "{}: {}".format(type(e).__name__, e))
 
 try:
     from Cryptodome.Cipher import AES
@@ -44,7 +43,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         return hash_p1 ^ hash_p2
 
     def __init__(self, sd_dir: str, movable: str, dev: bool = False, readonly: bool = False):
-        self.crypto = CTRCrypto(is_dev=dev)
+        self.crypto = CTRCrypto(dev=dev)
 
         with open(movable, 'rb') as mv:
             mv.seek(0x110)
@@ -56,7 +55,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         if not os.path.isdir(sd_dir + '/' + self.root_dir):
             exit('Failed to find {} in the SD dir.'.format(self.root_dir))
 
-        self.fds = {}
+        self.fds = {}  # type: Dict[int, BinaryIO]
 
         print('Root dir: ' + self.root_dir)
 
@@ -250,7 +249,7 @@ def main(prog: str = None, args: list = None):
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS SD card contents.',
                             parents=(_c.default_argp, _c.readonly_argp, _c.dev_argp,
-                                     _c.main_positional_args(
+                                     _c.main_args(
                                          'sd_dir', "path to folder with SD contents (on SD: /Nintendo 3DS)")))
     parser.add_argument('--movable', metavar='MOVABLESED', help='path to movable.sed', required=True)
 

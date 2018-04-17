@@ -10,18 +10,13 @@ from sys import exit, argv
 from typing import TYPE_CHECKING, BinaryIO
 
 from pyctr.util import readle
-
 from . import _common as _c
+# _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 from .ncch import NCCHContainerMount
 
 if TYPE_CHECKING:
     from typing import Dict
-
-try:
-    from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
-except Exception as e:
-    exit("Failed to import the fuse module:\n"
-         "{}: {}".format(type(e).__name__, e))
 
 
 class CTRCartImageMount(LoggingMixIn, Operations):
@@ -140,7 +135,7 @@ def main(prog: str = None, args: list = None):
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS CTR Cart Image files.',
                             parents=(_c.default_argp, _c.dev_argp, _c.seeddb_argp,
-                                     _c.main_positional_args('cci', "CCI file")))
+                                     _c.main_args('cci', "CCI file")))
 
     a = parser.parse_args(args)
     opts = dict(_c.parse_fuse_opts(a.o))

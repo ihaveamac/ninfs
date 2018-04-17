@@ -11,18 +11,13 @@ from typing import TYPE_CHECKING
 
 from pyctr.crypto import CTRCrypto
 from pyctr.types.tmd import TitleMetadataReader, CHUNK_RECORD_SIZE
-
 from . import _common as _c
+# _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 from .ncch import NCCHContainerMount
 
 if TYPE_CHECKING:
     from typing import Dict
-
-try:
-    from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
-except Exception as e:
-    exit("Failed to import the fuse module:\n"
-         "{}: {}".format(type(e).__name__, e))
 
 
 class CDNContentsMount(LoggingMixIn, Operations):
@@ -35,7 +30,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
     def __init__(self, cdn_dir: str, dec_key: str = None, dev: bool = False, seeddb: str = None):
         self.cdn_dir = cdn_dir
 
-        self.crypto = CTRCrypto(is_dev=dev)
+        self.crypto = CTRCrypto(dev=dev)
 
         self.cdn_content_size = 0
         self.dev = dev
@@ -209,7 +204,7 @@ def main(prog: str = None, args: list = None):
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description="Mount Nintendo 3DS CDN contents.",
                             parents=(_c.default_argp, _c.dev_argp, _c.seeddb_argp,
-                                     _c.main_positional_args('cdn_dir', "directory with CDN contents")))
+                                     _c.main_args('cdn_dir', "directory with CDN contents")))
     parser.add_argument('--dec-key', help="decrypted titlekey")
 
     a = parser.parse_args(args)

@@ -7,24 +7,19 @@ import os
 from errno import ENOENT
 from glob import iglob
 from stat import S_IFDIR
-from sys import exit, argv
+from sys import argv
 from threading import Thread
 from typing import TYPE_CHECKING
 
 from pyctr.types.smdh import SMDH, SMDH_SIZE, InvalidSMDHError
 from pyctr.types.tmd import TitleMetadataReader
-
 from . import _common as _c
 from .ncch import NCCHContainerMount
+# _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 
 if TYPE_CHECKING:
     from typing import AnyStr, Dict, List, Union
-
-try:
-    from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
-except Exception as e:
-    exit("Failed to import the fuse module:\n"
-         "{}: {}".format(type(e).__name__, e))
 
 _region_order_check = ('English', 'Japanese', 'French', 'German', 'Italian', 'Spanish', 'Simplified Chinese', 'Korean',
                        'Dutch', 'Portuguese', 'Russian', 'Traditional Chinese')
@@ -189,7 +184,7 @@ def main(prog: str = None, args: list = None):
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description="Mount Nintendo 3DS NCCH files from installed NAND/SD titles.",
                             parents=(_c.default_argp, _c.dev_argp, _c.seeddb_argp,
-                                     _c.main_positional_args('title_dir', "title directory")))
+                                     _c.main_args('title_dir', "title directory")))
     parser.add_argument('--mount-all', help='mount all contents, not just the first', action='store_true')
     parser.add_argument('--decompress-code', help='decompress code of all mounted titles '
                                                   '(can be slow with lots of titles!)', action='store_true')

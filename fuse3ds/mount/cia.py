@@ -10,21 +10,16 @@ import os
 from errno import ENOENT
 from stat import S_IFDIR, S_IFREG
 from struct import unpack
-from sys import exit, argv
+from sys import argv
 from typing import BinaryIO, Dict
 
 from pyctr.crypto import CTRCrypto
 from pyctr.types.tmd import TitleMetadataReader, CHUNK_RECORD_SIZE
 from pyctr.util import readbe
-
 from . import _common as _c
+# _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 from .ncch import NCCHContainerMount
-
-try:
-    from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
-except Exception as e:
-    exit("Failed to import the fuse module:\n"
-         "{}: {}".format(type(e).__name__, e))
 
 
 # based on http://stackoverflow.com/questions/1766535/bit-hack-round-off-to-multiple-of-8/1766566#1766566
@@ -36,7 +31,7 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
     fd = 0
 
     def __init__(self, cia_fp: BinaryIO, g_stat: os.stat_result, dev: bool = False, seeddb: bool = None):
-        self.crypto = CTRCrypto(is_dev=dev)
+        self.crypto = CTRCrypto(dev=dev)
 
         self.dev = dev
         self.seeddb = seeddb
@@ -219,7 +214,7 @@ def main(prog: str = None, args: list = None):
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description="Mount Nintendo 3DS CTR Importable Archive files.",
                             parents=(_c.default_argp, _c.dev_argp, _c.seeddb_argp,
-                                     _c.main_positional_args('cia', "CIA file")))
+                                     _c.main_args('cia', "CIA file")))
 
     a = parser.parse_args(args)
     opts = dict(_c.parse_fuse_opts(a.o))

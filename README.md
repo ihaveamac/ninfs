@@ -1,6 +1,10 @@
 # fuse-3ds
 fuse-3ds is the best and most efficient way to extract data for the Nintendo 3DS. It works by presenting a virtual filesystem with the contents of your games, NAND, or SD card contents, and you can browse and copy out just the files that you need.
 
+Windows, macOS, and Linux are supported.
+
+<p align="center"><img src="resources/ciamount-mac.png" width="882" height="548"></p>
+
 ## Example uses
 * Mount a NAND backup and browse CTRNAND, TWLNAND, and others, and write back to them without having to extract and decrypt them first.
 * Browse decrypted SD card contents. Dump installed games and saves, or copy contents between two system's SD contents.
@@ -31,6 +35,8 @@ Python 3.6.1+, pycryptodomex, and fusepy are required. appJar is required for th
 * Python 3.5.2+ is supported right now, but support will be removed after Ubuntu 18.04 is released.
 
 ### Windows
+Windows 7 or later is required.
+
 A GUI is available for use. If you download the exe from the [latest release](https://github.com/ihaveamac/fuse-3ds/releases) and run it, a window will appear allowing you to choose mount options easily.
 
 Python does not have to be installed, but [WinFsp](http://www.secfs.net/winfsp/download/) is still required.
@@ -44,6 +50,8 @@ Python does not have to be installed, but [WinFsp](http://www.secfs.net/winfsp/d
   * At the moment, the [main fusepy repository](https://github.com/fusepy/fusepy) does not have full Windows support. This extra requirement will be removed once it is added and a new release is made.
 
 ### macOS
+OS X 10.11 El Capitan and later are supported. Older releases may work, but support is not guaranteed.
+
 * Install the latest version of Python 3. The recommended way is [Homebrew](https://brew.sh). You can also use an installer from [python.org](https://www.python.org/downloads/) or a tool like [pyenv](https://github.com/pyenv/pyenv).
 * Install the latest version of [FUSE for macOS](https://github.com/osxfuse/osxfuse/releases/latest).
 * Install fuse-3ds with `python3 -m pip install --upgrade https://github.com/ihaveamac/fuse-3ds/archive/master.zip`.
