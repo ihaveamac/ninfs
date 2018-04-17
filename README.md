@@ -1,5 +1,5 @@
 # fuse-3ds
-fuse-3ds is the best and most efficient way to extract data for the Nintendo 3DS. It works by presenting a virtual filesystem with the contents of your games, NAND, or SD card contents, and you can browse and copy out just the files that you need.
+fuse-3ds is the best and most efficient way to extract data for Nintendo 3DS games and NANDs. It works by presenting a virtual filesystem with the contents of your games, NAND, or SD card contents, and you can browse and copy out just the files that you need.
 
 Windows, macOS, and Linux are supported.
 
