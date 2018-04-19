@@ -13,8 +13,8 @@ Windows, macOS, and Linux are supported.
 ## Setup
 The ARM9 bootROM is required. You can dump it using boot9strap, which can be set up by [3DS Hacks Guide](https://3ds.hacks.guide). It is checked in order of:
 * `BOOT9_PATH` environment variable (if set)
-* `boot9.bin` (full) in current working directory
-* `boot9_prot.bin` (protected) in current working directory
+* `boot9.bin` (full) in current working directory (not detected by the gui)
+* `boot9_prot.bin` (protected) in current working directory (not detected by the gui)
 * `~/.3ds/boot9.bin` (full)
 * `~/.3ds/boot9_prot.bin` (protected)
 * `~/3ds/boot9.bin` (full)
@@ -25,7 +25,7 @@ The ARM9 bootROM is required. You can dump it using boot9strap, which can be set
 CCI, CDN, CIA, and NCCH mounting will need [SeedDB](https://github.com/ihaveamac/3DS-rom-tools/wiki/SeedDB-list) for mounting NCCH containers.  
 SeedDB is checked in order of:
 * `SEEDDB_PATH` environment variable (if set)
-* `seeddb.bin` in current working directory
+* `seeddb.bin` in current working directory (not detected by the gui)
 * `~/.3ds/seeddb.bin`
 * `~/3ds/seeddb.bin`
 
@@ -57,7 +57,7 @@ OS X 10.11 El Capitan and later are supported. Older releases may work, but supp
 * Install fuse-3ds with `python3 -m pip install --upgrade https://github.com/ihaveamac/fuse-3ds/archive/master.zip`.
 
 ### Linux
-* Most modern distributions should have Python 3.5.2 or later pre-installed, or included in its repositories. If not, you can use an extra repository (e.g. [deadsnakes's PPA](https://launchpad.net/%7Edeadsnakes/+archive/ubuntu/ppa) for Ubuntu), build from source, or use a tool like [pyenv](https://github.com/pyenv/pyenv).
+* Most modern distributions should have Python 3.5.2 or later pre-installed, or included in its repositories. If not, you can use an extra repository (e.g. [deadsnakes's PPA](https://launchpad.net/%7Edeadsnakes/+archive/ubuntu/ppa) for Ubuntu), [build from source](https://www.python.org/downloads/source/), or use a tool like [pyenv](https://github.com/pyenv/pyenv).
 * Most distributions should have fuse enabled/installed by default. Use your package manager if it isn't.
 * Install fuse-3ds with `python3 -m pip install --upgrade --user https://github.com/ihaveamac/fuse-3ds/archive/master.zip`.
   * `--user` is not needed if you are using a virtual environment.

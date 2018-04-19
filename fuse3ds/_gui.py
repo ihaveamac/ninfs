@@ -40,13 +40,12 @@ ITEM = 'item'
 EASTWEST = 'ew'
 OK = 'OK'
 
-b9_paths = ['boot9.bin', 'boot9_prot.bin',
-            config_dirs[0] + '/boot9.bin', config_dirs[0] + '/boot9_prot.bin',
-            config_dirs[1] + '/boot9.bin', config_dirs[1] + '/boot9_prot.bin']
+b9_paths = [pjoin(config_dirs[0] + '/boot9.bin'), pjoin(config_dirs[0] + '/boot9_prot.bin'),
+            pjoin(config_dirs[1] + '/boot9.bin'), pjoin(config_dirs[1] + '/boot9_prot.bin')]
 with suppress(KeyError):
     b9_paths.insert(0, environ['BOOT9_PATH'])
 
-seeddb_paths = ['seeddb.bin', config_dirs[0] + '/seeddb.bin', config_dirs[1] + '/seeddb.bin']
+seeddb_paths = [pjoin(config_dirs[0] + '/seeddb.bin'), pjoin(config_dirs[1] + '/seeddb.bin')]
 with suppress(KeyError):
     seeddb_paths.insert(0, environ['SEEDDB_PATH'])
 
@@ -322,34 +321,42 @@ with app.labelFrame('Mount settings', row=1, colspan=3):
     app.setSticky(EASTWEST)
     with app.frame(CCI, row=1, colspan=3):
         app.addLabel(CCI + 'label1', FILE, row=0, column=0)
-        app.addFileEntry(CCI + ITEM, row=0, column=1, colspan=2)
+        app.addFileEntry(CCI + ITEM, row=0, column=1, colspan=2).theButton.config(text='Browse...')
+        app.setEntryDefault(CCI + ITEM, 'Drag a file here or browse...')
     app.hideFrame(CCI)
 
     with app.frame(CDN, row=1, colspan=3):
         app.addLabel(CDN + 'label1', DIRECTORY, row=0, column=0)
-        app.addDirectoryEntry(CDN + ITEM, row=0, column=1, colspan=2)
+        app.addDirectoryEntry(CDN + ITEM, row=0, column=1, colspan=2).theButton.config(text='Browse...')
+        app.setEntryDefault(CDN + ITEM, 'Drag a directory here or browse...')
         app.addLabel(CDN + 'label2', 'Decrypted Titlekey*', row=3, column=0)
         app.addEntry(CDN + 'key', row=3, column=1, colspan=2)
+        app.setEntryDefault(CDN + 'key', 'Insert a decrypted titlekey')
         app.addLabel(CDN + 'label3', '*Not required if title has a cetk.', row=4, colspan=3)
     app.hideFrame(CDN)
 
     with app.frame(CIA, row=1, colspan=3):
         app.addLabel(CIA + 'label1', FILE, row=0, column=0)
-        app.addFileEntry(CIA + ITEM, row=0, column=1, colspan=2)
+        app.addFileEntry(CIA + ITEM, row=0, column=1, colspan=2).theButton.config(text='Browse...')
+        app.setEntryDefault(CIA + ITEM, 'Drag a file here or browse...')
     app.hideFrame(CIA)
 
     with app.frame(EXEFS, row=1, colspan=3):
         app.addLabel(EXEFS + 'label1', FILE, row=0, column=0)
-        app.addFileEntry(EXEFS + ITEM, row=0, column=1, colspan=2)
+        app.addFileEntry(EXEFS + ITEM, row=0, column=1, colspan=2).theButton.config(text='Browse...')
+        app.setEntryDefault(EXEFS + ITEM, 'Drag a file here or browse...')
     app.hideFrame(EXEFS)
 
     with app.frame(NAND, row=1, colspan=3):
         app.addLabel(NAND + 'label1', FILE, row=0, column=0)
-        app.addFileEntry(NAND + ITEM, row=0, column=1, colspan=2)
+        app.addFileEntry(NAND + ITEM, row=0, column=1, colspan=2).theButton.config(text='Browse...')
+        app.setEntryDefault(NAND + ITEM, 'Drag a file here or browse...')
         app.addLabel(NAND + 'label2', 'OTP file*', row=2, column=0)
-        app.addFileEntry(NAND + 'otp', row=2, column=1, colspan=2)
+        app.addFileEntry(NAND + 'otp', row=2, column=1, colspan=2).theButton.config(text='Browse...')
+        app.setEntryDefault(NAND + 'otp', 'Drag a file here or browse...')
         app.addLabel(NAND + 'label3', 'CID file*', row=3, column=0)
-        app.addFileEntry(NAND + 'cid', row=3, column=1, colspan=2)
+        app.addFileEntry(NAND + 'cid', row=3, column=1, colspan=2).theButton.config(text='Browse...')
+        app.setEntryDefault(NAND + 'cid', 'Drag a file here or browse...')
         app.addLabel(NAND + 'label4', '*Not required if backup has essential.exefs from GodMode9.', row=4, colspan=3)
         app.addLabel(NAND + 'label5', 'Options', row=5, column=0)
         app.addNamedCheckBox('Allow writing', NAND + 'aw', row=5, column=1, colspan=1)
@@ -357,31 +364,37 @@ with app.labelFrame('Mount settings', row=1, colspan=3):
 
     with app.frame(NCCH, row=1, colspan=3):
         app.addLabel(NCCH + 'label1', FILE, row=0, column=0)
-        app.addFileEntry(NCCH + ITEM, row=0, column=1, colspan=2)
+        app.addFileEntry(NCCH + ITEM, row=0, column=1, colspan=2).theButton.config(text='Browse...')
+        app.setEntryDefault(NCCH + ITEM, 'Drag a file here or browse...')
     app.hideFrame(NCCH)
 
     with app.frame(ROMFS, row=1, colspan=3):
         app.addLabel(ROMFS + 'label1', FILE, row=0, column=0)
-        app.addFileEntry(ROMFS + ITEM, row=0, column=1, colspan=2)
+        app.addFileEntry(ROMFS + ITEM, row=0, column=1, colspan=2).theButton.config(text='Browse...')
+        app.setEntryDefault(ROMFS + ITEM, 'Drag a file here or browse...')
     app.hideFrame(ROMFS)
 
     with app.frame(SD, row=1, colspan=3):
         app.addLabel(SD + 'label1', DIRECTORY, row=0, column=0)
-        app.addDirectoryEntry(SD + ITEM, row=0, column=1, colspan=2)
+        app.addDirectoryEntry(SD + ITEM, row=0, column=1, colspan=2).theButton.config(text='Browse...')
+        app.setEntryDefault(SD + ITEM, 'Drag a directory here or browse...')
         app.addLabel(SD + 'label2', 'movable.sed', row=2, column=0)
-        app.addFileEntry(SD + 'movable', row=2, column=1, colspan=2)
+        app.addFileEntry(SD + 'movable', row=2, column=1, colspan=2).theButton.config(text='Browse...')
+        app.setEntryDefault(SD + 'movable', 'Drag a file here or browse...')
         app.addLabel(SD + 'label3', 'Options', row=3, column=0)
         app.addNamedCheckBox('Allow writing', SD + 'aw', row=3, column=1, colspan=1)
     app.hideFrame(SD)
 
     with app.frame(THREEDSX, row=1, colspan=3):
         app.addLabel(THREEDSX + 'label1', FILE, row=0, column=0)
-        app.addFileEntry(THREEDSX + ITEM, row=0, column=1, colspan=2)
+        app.addFileEntry(THREEDSX + ITEM, row=0, column=1, colspan=2).theButton.config(text='Browse...')
+        app.setEntryDefault(THREEDSX + ITEM, 'Drag a file here or browse...')
     app.hideFrame(THREEDSX)
 
     with app.frame(TITLEDIR, row=1, colspan=3):
         app.addLabel(TITLEDIR + 'label1', DIRECTORY, row=0, column=0)
-        app.addDirectoryEntry(TITLEDIR + ITEM, row=0, column=1, colspan=2)
+        app.addDirectoryEntry(TITLEDIR + ITEM, row=0, column=1, colspan=2).theButton.config(text='Browse...')
+        app.setEntryDefault(TITLEDIR + ITEM, 'Drag a file here or browse...')
         app.addLabel(TITLEDIR + 'label3', 'Options', row=3, column=0)
         app.addNamedCheckBox('Decompress .code (slow!)', TITLEDIR + 'decompress', row=3, column=1, colspan=1)
         app.addNamedCheckBox('Mount all contents', TITLEDIR + 'mountall', row=3, column=2, colspan=1)
@@ -452,13 +465,14 @@ with app.labelFrame('Mount point', row=2, colspan=3):
             app.addOptionBox('mountpoint', ['WWWW'], row=0, column=1, colspan=2)  # putting "WWWW" to avoid a warning
         with app.frame('mountpoint-dir', row=1, colspan=3):
             app.addLabel('mountlabel2', 'Mount point', row=0, column=0)
-            app.addDirectoryEntry('mountpoint', row=0, column=1, colspan=2)
+            app.addDirectoryEntry('mountpoint', row=0, column=1, colspan=2).theButton.config(text='Browse...')
         app.hideFrame('mountpoint-dir')
         # noinspection PyUnboundLocalVariable
         update_drives()
     else:
         app.addLabel('mountlabel', 'Mount point', row=2, column=0)
-        app.addDirectoryEntry('mountpoint', row=2, column=1, colspan=2)
+        app.addDirectoryEntry('mountpoint', row=2, column=1, colspan=2).theButton.config(text='Browse...')
+    app.setEntryDefault('mountpoint', 'Drag a directory here or browse...')
 
     app.addButtons([MOUNT, UNMOUNT], press, colspan=3)
     app.disableButton(UNMOUNT)
@@ -501,19 +515,15 @@ app.hideFrame('default')  # to be shown later
 if not b9_found or not seeddb_found:
     with app.frame('FOOTER', row=3, colspan=3):
         if not b9_found:
-            app.addHorizontalSeparator()
-            app.addLabel('no-b9', 'boot9 was not found.\n'
-                                  'Please click "Help & Extras" for more details.\n'
-                                  'Types that require encryption have been disabled.')
+            app.addLabel('no-b9', 'boot9 was not found. Click for more details.', colspan=2)
             app.setLabelBg('no-b9', '#ff9999')
+            app.addNamedButton('Fix boot9 (NYI)', 'fix-b9', lambda: None, row='previous', column=2)
             app.disableButton(MOUNT)
 
         if not seeddb_found:
-            app.addHorizontalSeparator()
-            app.addLabel('no-seeddb', 'SeedDB was not found.\n'
-                                      'Please click "Help & Extras" for more details.\n'
-                                      'Titles that require seeds may fail.')
+            app.addLabel('no-seeddb', 'SeedDB was not found. Click for more details.', colspan=2)
             app.setLabelBg('no-seeddb', '#ffff99')
+            app.addNamedButton('Fix SeedDB (NYI)', 'fix-seeddb', lambda: None, row='previous', column=2)
 
 if windows:
     app.setFont(10)
