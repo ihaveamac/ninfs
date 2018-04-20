@@ -23,19 +23,6 @@ except Exception as e:
          '{}: {}'.format(type(e).__name__, e))
 
 
-# this is a temporary (hopefully) thing to check for the fusepy version on windows, since a newer commit on
-# a fork of it is currently required for windows.
-# I know this is a bad idea but I just don't want users complaining about it not working properly with their
-# existing fusepy installs. I hope I can remove this when the windows support is merged into upstream.
-if windows:
-    from fuse import fuse_file_info
-    import ctypes
-    # noinspection PyProtectedMember
-    if fuse_file_info._fields_[1][1] is not ctypes.c_int:  # checking fh_old type which is different for windows
-        exit('Please update fusepy to use fuse-3ds. More information can be found at:\n'
-             '  https://github.com/ihaveamac/fuse-3ds')
-    del fuse_file_info, ctypes
-
 default_argp = ArgumentParser(add_help=False)
 default_argp.add_argument('-f', '--fg', help='run in foreground', action='store_true')
 default_argp.add_argument('-d', help='debug output (fuse/winfsp log)', action='store_true')
