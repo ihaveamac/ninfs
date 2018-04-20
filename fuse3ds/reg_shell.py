@@ -16,31 +16,25 @@ base_del = r'''Windows Registry Editor Version 5.00
 '''
 
 
+def call_regedit(data: str):
+    # i know this is not very nice
+    t = NamedTemporaryFile('w', delete=False, encoding='cp1252', suffix='-fuse3ds.reg')
+    try:
+        t.write(data)
+        t.close()  # need to close so regedit can open it
+        p = Popen(['regedit.exe', t.name], shell=True)
+        p.wait()
+    finally:
+        t.close()  # just in case
+        remove(t.name)
+
+
 def add_reg(_pyi: bool):
     fmtmap = {'exec': executable.replace('\\', '\\\\'), 'extra': ''}
     if not _pyi:
         fmtmap['extra'] = r'\"{}\"'.format(dirname(abspath(__file__)).replace('\\', '\\\\'))
-    # i know this is not very nice
-    result = base.format_map(fmtmap).replace('\n', '\r\n')
-
-    t = NamedTemporaryFile(delete=False)
-    try:
-        t.write(result.encode('cp1252'))
-        t.close()  # need to close so regedit can open it
-        p = Popen(['regedit.exe', t.name], shell=True)
-        p.wait()
-    finally:
-        t.close()  # just in case
-        remove(t.name)
+    call_regedit(base.format_map(fmtmap))
 
 
 def del_reg():
-    t = NamedTemporaryFile(delete=False)
-    try:
-        t.write(base_del.encode('cp1252'))
-        t.close()  # need to close so regedit can open it
-        p = Popen(['regedit.exe', t.name], shell=True)
-        p.wait()
-    finally:
-        t.close()  # just in case
-        remove(t.name)
+    call_regedit(base_del)

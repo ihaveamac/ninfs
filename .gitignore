@@ -12,4 +12,4 @@ __pycache__/
 docs-build/
 *.txt
 pyctr-test.py
-build_exes.py
+build_*.py

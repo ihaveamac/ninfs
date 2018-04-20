@@ -11,9 +11,7 @@ with open('README.md', 'r', encoding='utf-8') as f:
     readme = f.read()
 
 install_requires = ['pycryptodomex', 'appJar']
-# this should be removed once windows support is in the original fusepy.
-if sys.platform not in {'win32', 'cygwin'}:
-    install_requires.append('fusepy')
+# fusepy should be added here once the main repo has a new release with Windows support.
 
 setup(
     name='fuse-3ds',

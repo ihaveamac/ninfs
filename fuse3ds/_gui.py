@@ -1,12 +1,6 @@
 # not very good with gui development...
 # don't read this file, it sucks
 
-# TODO: remove this when 3.5 support is removed
-from sys import hexversion, exit
-
-if hexversion < 0x030601F0:  # disable for 3.5
-    exit('GUI is not available before Python 3.6.1.')
-
 import json
 import subprocess
 import webbrowser
@@ -16,7 +10,7 @@ from os import environ, kill, rmdir
 from os.path import abspath, isfile, isdir, ismount, dirname, join as pjoin
 from shutil import get_terminal_size
 from ssl import PROTOCOL_TLSv1_2, SSLContext
-from sys import argv, executable, platform, version_info, maxsize
+from sys import argv, executable, exit, platform, version_info, maxsize
 from time import sleep
 from traceback import print_exc
 from typing import TYPE_CHECKING
@@ -107,8 +101,9 @@ if windows:
             webbrowser.open('https://github.com/ihaveamac/fuse-3ds')
         exit(1)
 
-    # https://stackoverflow.com/questions/827371/is-there-a-way-to-list-all-the-available-drive-letters-in-python
+
     def get_unused_drives():
+        # https://stackoverflow.com/questions/827371/is-there-a-way-to-list-all-the-available-drive-letters-in-python
         drives = []
         bitmask = windll.kernel32.GetLogicalDrives()
         for letter in ascii_uppercase:
@@ -118,12 +113,17 @@ if windows:
 
         return drives
 
+
     def update_drives():
         app.changeOptionBox('mountpoint', (x + ':' for x in get_unused_drives()))
 
 _used_pyinstaller = False
 process = None  # type: subprocess.Popen
 curr_mountpoint = None  # type: str
+
+pyver = f'{version_info[0]}.{version_info[1]}.{version_info[2]}'
+if version_info[3] != 'final':
+    pyver += f'{version_info[3][0]}{version_info[4]}'
 
 app = gui('fuse-3ds v' + version, showIcon=False, handleArgs=False)
 
@@ -167,7 +167,7 @@ def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = (
             try:
                 subprocess.check_call(['/usr/bin/open', '-a', 'Finder', mountpoint])
             except subprocess.CalledProcessError:
-                print('Failed to open Finder on {}'.format(mountpoint))
+                print(f'Failed to open Finder on {mountpoint}')
                 print_exc()
 
         if process.wait() != 0:
@@ -177,8 +177,8 @@ def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = (
             except subprocess.CalledProcessError:
                 print_exc()
             app.queueFunction(app.setLabel, 'exiterror-label',
-                              'The mount process exited with an error code ({}). '
-                              'Please check the output.'.format(process.returncode))
+                              f'The mount process exited with an error code ({process.returncode}). '
+                              f'Please check the output.')
             app.queueFunction(app.showSubWindow, 'exiterror')
 
         app.queueFunction(app.disableButton, UNMOUNT)
@@ -458,6 +458,7 @@ with app.labelFrame('Mount point', row=2, colspan=3):
                 app.hideFrame('mountpoint-drive')
                 app.showFrame('mountpoint-dir')
 
+
         app.addLabel('mountpoint-choice-label', 'Mount type', row=0)
         app.addRadioButton('mountpoint-choice', "Drive letter", row=0, column=1)
         app.addRadioButton('mountpoint-choice', "Directory", row=0, column=2)
@@ -495,7 +496,7 @@ except Exception as e:
     has_dnd = False
 
 app.setSticky('new')
-app.addOptionBox('TYPE', ('- Choose a type{} -'.format(' or drag a file/directory here' if has_dnd else ''),
+app.addOptionBox('TYPE', (f'- Choose a type{" or drag a file/directory here" if has_dnd else ""} -',
                           *types_list), row=0, colspan=2)
 app.setOptionBoxChangeFunction('TYPE', change_type)
 app.addButton('Help & Extras', press, row=0, column=2)
@@ -601,8 +602,9 @@ with app.subWindow('extras', 'fuse-3ds Extras', modal=True, blocking=True):
 
     with app.frame('extras-footer', colspan=3):
         app.addHorizontalSeparator()
-        app.addLabel('footer', 'fuse-3ds v{0} running on Python {1[0]}.{1[1]}.{1[2]} {2}-bit on {3}'.format(
-            version, version_info, '64' if maxsize > 0xFFFFFFFF else '32', platform))
+        app.addLabel('footer',
+                     f'fuse-3ds v{version} running on Python {pyver} {64 if maxsize > 0xFFFFFFFF else 32}-bit '
+                     f'on {platform}')
 
     app.setResizable(False)
 
@@ -623,6 +625,7 @@ with app.subWindow('unmounterror', 'fuse-3ds Error', modal=True, blocking=True):
     def unmount_ok(_):
         app.hideSubWindow('unmounterror')
         app.enableButton(UNMOUNT)
+
 
     app.addLabel('unmounterror-label', 'Failed to unmount. Please check the output.\n\n'
                                        'You can kill the process if it is not responding.\n'
@@ -683,7 +686,7 @@ def main(_pyi=False, _allow_admin=False):
     # this will check for the latest non-prerelease, once there is one.
     # noinspection PyBroadException
     try:
-        print('Checking for updates... (Currently running v{})'.format(version))
+        print(f'Checking for updates... (Currently running v{version})')
         ctx = SSLContext(PROTOCOL_TLSv1_2)
         with urlopen('https://api.github.com/repos/ihaveamac/fuse-3ds/releases', context=ctx) as u:  # type: HTTPResp
             res = json.loads(u.read().decode('utf-8'))  # type: List[Dict[str, Any]]
@@ -701,8 +704,7 @@ def main(_pyi=False, _allow_admin=False):
                     app.destroySubWindow('update')
 
                 with app.subWindow('update', 'fuse-3ds Update', modal=True):
-                    app.addLabel('update-label1', 'A new version of fuse-3ds is available. '
-                                                  'You have v{}.'.format(version))
+                    app.addLabel('update-label1', f'A new version of fuse-3ds is available. You have v{version}.')
                     app.addButtons(['Open release page', 'Close'], update_press)
                     with app.labelFrame(name):
                         app.addMessage('update-info', info)
@@ -711,7 +713,7 @@ def main(_pyi=False, _allow_admin=False):
 
                 app.queueFunction(app.showSubWindow, 'update')
             else:
-                print('No new version. (Latest is {})'.format(latest_ver))
+                print(f'No new version. (Latest is {latest_ver})')
 
     except Exception:
         print('Failed to check for update')
@@ -732,7 +734,8 @@ def main(_pyi=False, _allow_admin=False):
                     app.setLabel('unknowntype-label2', fn)
                     app.queueFunction(app.showSubWindow, 'unknowntype')
         except Exception as e:
-            print('Failed to get type of {}: {}: {}'.format(fn, type(e).__name__, e))
+            print('Failed to get type of', fn)
+            print_exc()
 
     # putting this here so i can use _pyi
     if windows:

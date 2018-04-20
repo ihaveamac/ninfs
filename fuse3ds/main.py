@@ -17,7 +17,8 @@ if _path not in path:
 
 from __init__ import __version__ as version
 
-print('fuse-3ds {} - https://github.com/ihaveamac/fuse-3ds'.format(version))
+# this should stay as str.format so it runs on older versions
+print('fuse-3ds v{} - https://github.com/ihaveamac/fuse-3ds'.format(version))
 
 if hexversion < 0x030502F0:
     exit('Python {0[0]}.{0[1]}.{0[2]} is not supported. Please use Python 3.6.1.'.format(version_info))
@@ -40,8 +41,7 @@ def exit_print_types():
 
 def mount(mount_type: str, return_doc: bool = False) -> int:
     if mount_type in {'gui', 'gui_i_want_to_be_an_admin_pls'}:
-        import _gui
-        return _gui.main(_allow_admin=mount_type == 'gui_i_want_to_be_an_admin_pls')
+        return gui(_allow_admin=mount_type == 'gui_i_want_to_be_an_admin_pls')
 
     # noinspection PyProtectedMember
     from pyctr.crypto import BootromNotFoundError
@@ -90,9 +90,13 @@ def main():
     exit(mount(basename(argv[0])[6:].lower()))
 
 
-def gui():
+def gui(_allow_admin: bool = False):
+    # TODO: remove this when 3.5 support is removed
+    if hexversion < 0x030601F0:  # disable for 3.5
+        exit('GUI is not available before Python 3.6.1.')
+
     import _gui
-    return _gui.main()
+    return _gui.main(_allow_admin=_allow_admin)
 
 
 if __name__ == '__main__':

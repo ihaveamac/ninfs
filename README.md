@@ -31,8 +31,9 @@ SeedDB is checked in order of:
 
 It can also be provided with the `--seeddb` argument.
 
-Python 3.6.1+, pycryptodomex, and fusepy are required. appJar is required for the GUI.
+Python 3.6.1+ and pycryptodomex are required. appJar is required for the GUI.
 * Python 3.5.2+ is supported right now, but support will be removed after Ubuntu 18.04 is released.
+* fusepy is pre-included until the [main fusepy repository](https://github.com/fusepy/fusepy) has full Windows support.
 
 ### Windows
 Windows 7 or later is required.
@@ -46,8 +47,7 @@ Python does not have to be installed, but [WinFsp](http://www.secfs.net/winfsp/d
 #### Install with existing Python
 * Install the latest version of [Python 3](https://www.python.org/downloads/). The x86-64 version is preferred on 64-bit Windows.
 * Install the latest version of [WinFsp](http://www.secfs.net/winfsp/download/).
-* Install fuse-3ds with `py -3 -m pip install --upgrade https://github.com/ihaveamac/fuse-3ds/archive/master.zip https://github.com/billziss-gh/fusepy/archive/windows.zip`.
-  * At the moment, the [main fusepy repository](https://github.com/fusepy/fusepy) does not have full Windows support. This extra requirement will be removed once it is added and a new release is made.
+* Install fuse-3ds with `py -3 -m pip install --upgrade https://github.com/ihaveamac/fuse-3ds/archive/master.zip`.
 
 ### macOS
 OS X 10.11 El Capitan and later are supported. Older releases may work, but support is not guaranteed.
@@ -415,6 +415,6 @@ optional arguments:
 ```
 
 # License/Credits
-`fuse3ds` is under the MIT license.
+`fuse3ds` is under the MIT license. fusepy is under the ISC license ([taken from `setup.py`](https://github.com/fusepy/fusepy/blob/b5f87a1855119d55c755c2c4c8b1da346365629d/setup.py)).
 
 Special thanks to @Stary2001 for help with NAND crypto (especially TWL), and @d0k3 for SD crypto.
