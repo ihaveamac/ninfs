@@ -1,12 +1,12 @@
 from functools import wraps
 from os import environ
-from os.path import isfile, getsize
+from os.path import isfile, getsize, join as pjoin
 from typing import TYPE_CHECKING
 
 from Cryptodome.Cipher import AES
 from Cryptodome.Util import Counter
 
-from . import util
+from .util import config_dirs, readbe
 
 if TYPE_CHECKING:
     from typing import Dict
@@ -45,9 +45,8 @@ _b9_extdata_keygen_iv = None  # type: bytes
 _otp_key = None  # type: bytes
 _otp_iv = None  # type: bytes
 
-b9_paths = ['boot9.bin', 'boot9_prot.bin',
-            util.config_dirs[0] + '/boot9.bin', util.config_dirs[0] + '/boot9_prot.bin',
-            util.config_dirs[1] + '/boot9.bin', util.config_dirs[1] + '/boot9_prot.bin']
+b9_paths = (['boot9.bin', 'boot9_prot.bin'] + [pjoin(x, 'boot9.bin') for x in config_dirs]
+            + [pjoin(x, 'boot9_prot.bin') for x in config_dirs])
 try:
     b9_paths.insert(0, environ['BOOT9_PATH'])
 except KeyError:
@@ -265,23 +264,23 @@ class CTRCrypto:
 
                     # Original NCCH
                     b9.seek(keyblob_offset + 0x170)
-                    _b9_key_x[0x2C] = util.readbe(b9.read(0x10))
+                    _b9_key_x[0x2C] = readbe(b9.read(0x10))
 
                     # SD key
                     b9.seek(keyblob_offset + 0x190)
-                    _b9_key_x[0x34] = util.readbe(b9.read(0x10))
+                    _b9_key_x[0x34] = readbe(b9.read(0x10))
                     _b9_key_x[0x35] = _b9_key_x[0x34]
 
                     # Common key
                     b9.seek(keyblob_offset + 0x1C0)
-                    _b9_key_x[0x3D] = util.readbe(b9.read(0x10))
+                    _b9_key_x[0x3D] = readbe(b9.read(0x10))
 
                     # NAND keys
                     b9.seek(keyblob_offset + 0x1F0)
-                    _b9_key_y[0x04] = util.readbe(b9.read(0x10))
+                    _b9_key_y[0x04] = readbe(b9.read(0x10))
                     b9.seek(0x10, 1)
-                    _b9_key_y[0x06] = util.readbe(b9.read(0x10))
-                    _b9_key_y[0x07] = util.readbe(b9.read(0x10))
+                    _b9_key_y[0x06] = readbe(b9.read(0x10))
+                    _b9_key_y[0x07] = readbe(b9.read(0x10))
 
                 self._copy_global_keys()
                 return

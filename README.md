@@ -15,10 +15,10 @@ The ARM9 bootROM is required. You can dump it using boot9strap, which can be set
 * `BOOT9_PATH` environment variable (if set)
 * `boot9.bin` (full) in current working directory (not detected by the gui)
 * `boot9_prot.bin` (protected) in current working directory (not detected by the gui)
-* `~/.3ds/boot9.bin` (full)
-* `~/.3ds/boot9_prot.bin` (protected)
 * `~/3ds/boot9.bin` (full)
 * `~/3ds/boot9_prot.bin` (protected)
+* `~/.3ds/boot9.bin` (full)
+* `~/.3ds/boot9_prot.bin` (protected)
 
 "`~`" means the user's home directory. "`~/3ds`" would mean `/Users/username/3ds` on macOS and `C:\Users\username\3ds` on Windows.
 
@@ -26,8 +26,8 @@ CCI, CDN, CIA, and NCCH mounting will need [SeedDB](https://github.com/ihaveamac
 SeedDB is checked in order of:
 * `SEEDDB_PATH` environment variable (if set)
 * `seeddb.bin` in current working directory (not detected by the gui)
-* `~/.3ds/seeddb.bin`
 * `~/3ds/seeddb.bin`
+* `~/.3ds/seeddb.bin`
 
 It can also be provided with the `--seeddb` argument.
 

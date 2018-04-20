@@ -34,8 +34,8 @@ setup(
     ],
     install_requires=install_requires,
     entry_points={'console_scripts': ['fuse3ds = fuse3ds.main:gui',
-                                      # not putting in gui_scripts since the cmd window
-                                      # is needed on windows atm.
+                                      # not putting in gui_scripts since the cmd window is required and trying to
+                                      # remove it breaks some other stuff with subprocess management ?!?
                                       'mount_cci = fuse3ds.main:main',
                                       'mount_cdn = fuse3ds.main:main',
                                       'mount_cia = fuse3ds.main:main',

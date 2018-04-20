@@ -3,6 +3,7 @@
 
 # TODO: remove this when 3.5 support is removed
 from sys import hexversion, exit
+
 if hexversion < 0x030601F0:  # disable for 3.5
     exit('GUI is not available before Python 3.6.1.')
 
@@ -39,13 +40,14 @@ FILE = 'File'
 ITEM = 'item'
 EASTWEST = 'ew'
 OK = 'OK'
+PREV = 'previous'
 
-b9_paths = [pjoin(config_dirs[0] + '/boot9.bin'), pjoin(config_dirs[0] + '/boot9_prot.bin'),
-            pjoin(config_dirs[1] + '/boot9.bin'), pjoin(config_dirs[1] + '/boot9_prot.bin')]
+b9_paths = ([pjoin(x, 'boot9.bin') for x in config_dirs]
+            + [pjoin(x, 'boot9_prot.bin') for x in config_dirs])  # type: List[str]
 with suppress(KeyError):
     b9_paths.insert(0, environ['BOOT9_PATH'])
 
-seeddb_paths = [pjoin(config_dirs[0] + '/seeddb.bin'), pjoin(config_dirs[1] + '/seeddb.bin')]
+seeddb_paths = [pjoin(x, 'seeddb.bin') for x in config_dirs]  # type: List[str]
 with suppress(KeyError):
     seeddb_paths.insert(0, environ['SEEDDB_PATH'])
 
@@ -517,13 +519,36 @@ if not b9_found or not seeddb_found:
         if not b9_found:
             app.addLabel('no-b9', 'boot9 was not found. Click for more details.', colspan=2)
             app.setLabelBg('no-b9', '#ff9999')
-            app.addNamedButton('Fix boot9 (NYI)', 'fix-b9', lambda: None, row='previous', column=2)
+            app.addNamedButton('Fix boot9', 'fix-b9', lambda _: app.showSubWindow('no-b9'), row=PREV, column=2)
             app.disableButton(MOUNT)
+
+            with app.subWindow('no-b9', 'fuse-3ds Error', modal=True):
+                app.addLabel('boot9 was not found. It is needed for encryption.\n'
+                             'Mount types that use encryption have been disabled.\n'
+                             '\n'
+                             'The following paths were checked for a boot9 dump:')
+                app.setSticky(EASTWEST)
+                app.addListBox('b9-paths', b9_paths)
+                app.setListBoxRows('b9-paths', len(b9_paths))
+                app.addNamedButton(OK, 'no-b9-ok', lambda _: app.hideSubWindow('no-b9'))
+                app.setResizable(False)
 
         if not seeddb_found:
             app.addLabel('no-seeddb', 'SeedDB was not found. Click for more details.', colspan=2)
             app.setLabelBg('no-seeddb', '#ffff99')
-            app.addNamedButton('Fix SeedDB (NYI)', 'fix-seeddb', lambda: None, row='previous', column=2)
+            app.addNamedButton('Fix SeedDB', 'fix-seeddb', lambda _: app.showSubWindow('no-seeddb'), row=PREV,
+                               column=2)
+
+            with app.subWindow('no-seeddb', 'fuse-3ds Error', modal=True):
+                app.addLabel('SeedDB was not found. It is needed for encryption\n'
+                             'of newer digital titles.\n'
+                             '\n'
+                             'The following paths were checked for SeedDB:')
+                app.setSticky(EASTWEST)
+                app.addListBox('seeddb-paths', seeddb_paths)
+                app.setListBoxRows('seeddb-paths', len(seeddb_paths))
+                app.addNamedButton(OK, 'no-seeddb-ok', lambda _: app.hideSubWindow('no-seeddb'))
+                app.setResizable(False)
 
 if windows:
     app.setFont(10)
@@ -557,14 +582,14 @@ with app.subWindow('extras', 'fuse-3ds Extras', modal=True, blocking=True):
         app.setSticky(EASTWEST)
         app.addLabel('tutorial-label', 'View a tutorial on GBAtemp.', colspan=2)
         app.addNamedButton('Open', 'tutorial-btn', lambda _: webbrowser.open('https://gbatemp.net/threads/499994/'),
-                           row='previous', column=2)
+                           row=PREV, column=2)
 
     app.setSticky(EASTWEST)
     with app.labelFrame('GitHub Repository', colspan=3):
         app.setSticky(EASTWEST)
         app.addLabel('repo-label', 'View the repository on GitHub.')
         app.addNamedButton('Open', 'repo-btn', lambda _: webbrowser.open('https://github.com/ihaveamac/fuse-3ds'),
-                           row='previous', column=2)
+                           row=PREV, column=2)
 
     if windows:
         app.setSticky(EASTWEST)
@@ -572,7 +597,7 @@ with app.subWindow('extras', 'fuse-3ds Extras', modal=True, blocking=True):
             app.setSticky(EASTWEST)
             app.addLabel('ctxmenu-label', 'Add an entry to the right-click menu.', colspan=2)
             app.addNamedButton('Add', 'ctxmenu-btn', lambda _: app.showSubWindow('ctxmenu-window'),
-                               row='previous', column=2)
+                               row=PREV, column=2)
 
     with app.frame('extras-footer', colspan=3):
         app.addHorizontalSeparator()
@@ -585,11 +610,13 @@ with app.subWindow('extras', 'fuse-3ds Extras', modal=True, blocking=True):
 with app.subWindow('noitemerror', 'fuse-3ds Error', modal=True, blocking=True):
     app.addLabel('Select a file or directory to mount.')
     app.addNamedButton(OK, 'noitemerror-ok', lambda _: app.hideSubWindow('noitemerror'))
+    app.setResizable(False)
 
 # mountpoint not set error
 with app.subWindow('nomperror', 'fuse-3ds Error', modal=True, blocking=True):
     app.addLabel('Select an empty directory to be the mount point.')
     app.addNamedButton(OK, 'nomperror-ok', lambda _: app.hideSubWindow('nomperror'))
+    app.setResizable(False)
 
 # failed to unmount subwindow
 with app.subWindow('unmounterror', 'fuse-3ds Error', modal=True, blocking=True):
@@ -602,7 +629,7 @@ with app.subWindow('unmounterror', 'fuse-3ds Error', modal=True, blocking=True):
                                        'This should be used as a last resort.'
                                        'The process should be unmounted normally.', colspan=2)
     app.addNamedButton(OK, 'unmounterror-ok', unmount_ok)
-    app.addNamedButton('Kill process', 'unmounterror-kill', kill_process, row='previous', column=1)
+    app.addNamedButton('Kill process', 'unmounterror-kill', kill_process, row=PREV, column=1)
     app.setResizable(False)
 
 
@@ -673,7 +700,7 @@ def main(_pyi=False, _allow_admin=False):
                         app.queueFunction(app.stop)
                     app.destroySubWindow('update')
 
-                with app.subWindow('update', 'fuse-3ds Update', modal=True, blocking=True):
+                with app.subWindow('update', 'fuse-3ds Update', modal=True):
                     app.addLabel('update-label1', 'A new version of fuse-3ds is available. '
                                                   'You have v{}.'.format(version))
                     app.addButtons(['Open release page', 'Close'], update_press)
@@ -717,7 +744,7 @@ def main(_pyi=False, _allow_admin=False):
             elif button == 'Remove entry':
                 del_reg()
 
-        with app.subWindow('ctxmenu-window', 'fuse-3ds', modal=True, blocking=True):
+        with app.subWindow('ctxmenu-window', 'fuse-3ds', modal=True):
             msg = ('A new entry can be added to the Windows context menu when you\n'
                    'right-click on a file, providing an easy way to mount various files\n'
                    'in Windows Explorer using fuse-3ds.\n'

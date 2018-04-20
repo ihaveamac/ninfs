@@ -20,4 +20,4 @@ def roundup(offset: int, alignment: int) -> int:
 
 
 _home = os.path.expanduser('~')
-config_dirs = (os.path.join(_home, '.3ds'), os.path.join(_home, '3ds'))
+config_dirs = (os.path.join(_home, '3ds'), os.path.join(_home, '.3ds'))
