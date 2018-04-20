@@ -21,7 +21,7 @@ from __init__ import __version__ as version
 print('fuse-3ds v{} - https://github.com/ihaveamac/fuse-3ds'.format(version))
 
 if hexversion < 0x030502F0:
-    exit('Python {0[0]}.{0[1]}.{0[2]} is not supported. Please use Python 3.6.1.'.format(version_info))
+    exit('Python {0[0]}.{0[1]}.{0[2]} is not supported. Please use Python 3.6.1 or later.'.format(version_info))
 
 if hexversion < 0x030601F0:
     print('',

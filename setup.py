@@ -15,7 +15,7 @@ install_requires = ['pycryptodomex', 'appJar']
 
 setup(
     name='fuse-3ds',
-    version='1.0b7.dev1',
+    version='1.0b7',
     packages=['fuse3ds', 'fuse3ds.pyctr', 'fuse3ds.pyctr.types', 'fuse3ds.mount'],
     url='https://github.com/ihaveamac/fuse-3ds',
     license='MIT',
