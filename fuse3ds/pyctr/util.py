@@ -1,5 +1,9 @@
 import math
 import os
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Tuple
 
 __all__ = ['readle', 'readbe', 'roundup', 'config_dirs']
 
@@ -20,4 +24,4 @@ def roundup(offset: int, alignment: int) -> int:
 
 
 _home = os.path.expanduser('~')
-config_dirs = (os.path.join(_home, '3ds'), os.path.join(_home, '.3ds'))
+config_dirs = (os.path.join(_home, '3ds'), os.path.join(_home, '.3ds'))  # type: Tuple[str, str]
