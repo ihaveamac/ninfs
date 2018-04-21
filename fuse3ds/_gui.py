@@ -2,7 +2,7 @@
 # don't read this file, it sucks
 
 import json
-import subprocess
+from subprocess import Popen, check_call, CalledProcessError
 import webbrowser
 from contextlib import suppress
 from glob import iglob
@@ -24,7 +24,7 @@ from fmt_detect import detect_format
 from pyctr.util import config_dirs
 
 if TYPE_CHECKING:
-    from http.client import HTTPResponse as HTTPResp
+    from http.client import HTTPResponse
     from typing import Any, Dict, List
 
 MOUNT = 'Mount'
@@ -42,12 +42,11 @@ LABEL1 = 'label1'
 LABEL2 = 'label2'
 LABEL3 = 'label3'
 
-b9_paths = ([pjoin(x, 'boot9.bin') for x in config_dirs]
-            + [pjoin(x, 'boot9_prot.bin') for x in config_dirs])  # type: List[str]
+b9_paths: 'List[str]' = ([pjoin(x, 'boot9.bin') for x in config_dirs] + [pjoin(x, 'boot9_prot.bin') for x in config_dirs])
 with suppress(KeyError):
     b9_paths.insert(0, environ['BOOT9_PATH'])
 
-seeddb_paths = [pjoin(x, 'seeddb.bin') for x in config_dirs]  # type: List[str]
+seeddb_paths: 'List[str]' = [pjoin(x, 'seeddb.bin') for x in config_dirs]
 with suppress(KeyError):
     seeddb_paths.insert(0, environ['SEEDDB_PATH'])
 
@@ -80,7 +79,7 @@ TITLEDIR = 'Titles directory ("title" from NAND or SD)'
 mount_types = {CCI: 'cci', CDN: 'cdn', CIA: 'cia', EXEFS: 'exefs', NAND: 'nand', NCCH: 'ncch', ROMFS: 'romfs', SD: 'sd',
                THREEDSX: 'threedsx', TITLEDIR: 'titledir'}
 
-mount_types_rv = {y: x for x, y in mount_types.items()}  # type: Dict[str, str]
+mount_types_rv: 'Dict[str, str]' = {y: x for x, y in mount_types.items()}
 
 types_list = (CCI, CDN, CIA, EXEFS, NAND, NCCH, ROMFS, SD, THREEDSX, TITLEDIR)
 
@@ -91,6 +90,7 @@ if windows:
     from ctypes import windll
     from signal import CTRL_BREAK_EVENT
     from string import ascii_uppercase
+    from subprocess import CREATE_NEW_PROCESS_GROUP
     from sys import stdout
 
     from reg_shell import add_reg, del_reg
@@ -127,8 +127,8 @@ if windows:
 
 _used_pyinstaller = False
 _ndw_resp = False
-process = None  # type: subprocess.Popen
-curr_mountpoint = None  # type: str
+process: Popen = None
+curr_mountpoint: str = None
 
 pyver = f'{version_info[0]}.{version_info[1]}.{version_info[2]}'
 if version_info[3] != 'final':
@@ -151,9 +151,8 @@ def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = (
         print('Running:', args)
         opts = {}
         if windows:
-            # noinspection PyUnresolvedReferences
-            opts['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
-        process = subprocess.Popen(args, **opts)
+            opts['creationflags'] = CREATE_NEW_PROCESS_GROUP
+        process = Popen(args, **opts)
 
         # check if the mount exists, or if the process exited before it
         check = isdir if windows else ismount
@@ -167,15 +166,15 @@ def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = (
         app.queueFunction(app.enableButton, UNMOUNT)
 
         if windows:
-            with suppress(subprocess.CalledProcessError):
+            with suppress(CalledProcessError):
                 # not using startfile since i've been getting fatal errors (PyEval_RestoreThread) on windows
                 #   for some reason
                 # also this error always appears when calling explorer, so i'm ignoring it
-                subprocess.check_call(['explorer', mountpoint.replace('/', '\\')])
+                check_call(['explorer', mountpoint.replace('/', '\\')])
         elif macos:
             try:
-                subprocess.check_call(['/usr/bin/open', '-a', 'Finder', mountpoint])
-            except subprocess.CalledProcessError:
+                check_call(['/usr/bin/open', '-a', 'Finder', mountpoint])
+            except CalledProcessError:
                 print(f'Failed to open Finder on {mountpoint}')
                 print_exc()
 
@@ -183,7 +182,7 @@ def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = (
             # just in case there are leftover mounts
             try:
                 stop_mount()
-            except subprocess.CalledProcessError:
+            except CalledProcessError:
                 print_exc()
             app.queueFunction(app.setLabel, 'exiterror-label',
                               f'The mount process exited with an error code ({process.returncode}). '
@@ -203,10 +202,10 @@ def stop_mount():
         else:
             # this is cheating...
             if platform == 'darwin':
-                subprocess.check_call(['diskutil', 'unmount', curr_mountpoint])
+                check_call(['diskutil', 'unmount', curr_mountpoint])
             else:
                 # assuming linux or bsd, which have fusermount
-                subprocess.check_call(['fusermount', '-u', curr_mountpoint])
+                check_call(['fusermount', '-u', curr_mountpoint])
 
 
 def press(button: str):
@@ -724,13 +723,14 @@ def main(_pyi=False, _allow_admin=False):
     try:
         print(f'Checking for updates... (Currently running v{version})')
         ctx = SSLContext(PROTOCOL_TLSv1_2)
-        with urlopen('https://api.github.com/repos/ihaveamac/fuse-3ds/releases', context=ctx) as u:  # type: HTTPResp
-            res = json.loads(u.read().decode('utf-8'))  # type: List[Dict[str, Any]]
-            latest_ver = res[0]['tag_name']  # type: str
+        u: HTTPResponse
+        with urlopen('https://api.github.com/repos/ihaveamac/fuse-3ds/releases', context=ctx) as u:
+            res: List[Dict[str, Any]] = json.loads(u.read().decode('utf-8'))
+            latest_ver: str = res[0]['tag_name']
             if parse_version(latest_ver) > parse_version(version):
-                name = res[0]['name']  # type: str
-                url = res[0]['html_url']  # type: str
-                info_all = res[0]['body']  # type: str
+                name: str = res[0]['name']
+                url: str = res[0]['html_url']
+                info_all: str = res[0]['body']
                 info = info_all[:info_all.find('------')].strip().replace('\r\n', '\n')
 
                 def update_press(button: str):
@@ -758,7 +758,7 @@ def main(_pyi=False, _allow_admin=False):
     to_use = 'default'
 
     if len(argv) > 1:
-        fn = abspath(argv[1])  # type: str
+        fn: str = abspath(argv[1])
         # noinspection PyBroadException
         try:
             with open(fn, 'rb') as f:
