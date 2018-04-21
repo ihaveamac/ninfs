@@ -110,7 +110,7 @@ if windows:
 
     def get_unused_drives():
         # https://stackoverflow.com/questions/827371/is-there-a-way-to-list-all-the-available-drive-letters-in-python
-        drives = []
+        drives: List[str] = []
         bitmask = windll.kernel32.GetLogicalDrives()
         for letter in ascii_uppercase:
             if not bitmask & 1:
@@ -126,6 +126,7 @@ if windows:
         app.setOptionBox('mountpoint', o[-1] + ':')
 
 _used_pyinstaller = False
+_ndw_resp = False
 process = None  # type: subprocess.Popen
 curr_mountpoint = None  # type: str
 
@@ -221,6 +222,11 @@ def press(button: str):
 
         if windows:
             if app.getRadioButton('mountpoint-choice') == 'Drive letter':
+                if mount_type == NAND:
+                    app.showSubWindow('nand-driveletter-warning')
+                    if not _ndw_resp:
+                        app.enableButton(MOUNT)
+                        return
                 mountpoint = app.getOptionBox('mountpoint')
             else:
                 mountpoint = app.getEntry('mountpoint')
@@ -305,6 +311,8 @@ def change_type(*_):
     for t in mount_types:
         if t == mount_type:
             app.showFrame(t)
+            if t == NAND:
+                app.setRadioButton('mountpoint-choice', 'Directory')
         else:
             app.hideFrame(t)
     if not b9_found and mount_type in {CCI, CDN, CIA, NAND, NCCH, SD, TITLEDIR}:
@@ -468,12 +476,14 @@ with app.labelFrame('Mount point', row=2, colspan=3):
 
 
         app.addLabel('mountpoint-choice-label', 'Mount type', row=0)
-        app.addRadioButton('mountpoint-choice', "Drive letter", row=0, column=1)
-        app.addRadioButton('mountpoint-choice', "Directory", row=0, column=2)
+        app.addRadioButton('mountpoint-choice', 'Drive letter', row=0, column=1)
+        app.addRadioButton('mountpoint-choice', 'Directory', row=0, column=2)
+
         app.setRadioButtonChangeFunction('mountpoint-choice', rb_change)
         with app.frame('mountpoint-drive', row=1, colspan=3):
             app.addLabel('mountlabel1', 'Drive letter', row=0, column=0)
             app.addOptionBox('mountpoint', ['WWWW'], row=0, column=1, colspan=2)  # putting "WWWW" to avoid a warning
+
         with app.frame('mountpoint-dir', row=1, colspan=3):
             app.addLabel('mountlabel2', 'Mount point', row=0, column=0)
             app.addDirectoryEntry('mountpoint', row=0, column=1, colspan=2).theButton.config(text=BROWSE)
@@ -504,8 +514,8 @@ except Exception as e:
     has_dnd = False
 
 app.setSticky('new')
-app.addOptionBox('TYPE', (f'- Choose a type{" or drag a file/directory here" if has_dnd else ""} -',
-                          *types_list), row=0, colspan=2)
+app.addOptionBox('TYPE', (f'- Choose a type{" or drag a file/directory here" if has_dnd else ""} -', *types_list),
+                 row=0, colspan=2)
 app.setOptionBoxChangeFunction('TYPE', change_type)
 app.addButton('Help & Extras', press, row=0, column=2)
 if has_dnd:
@@ -583,6 +593,24 @@ if windows:
         app.addLabel('mounterror-dir-label', 'Failed to mount to the given mount point.\n'
                                              'Please make sure the directory is empty or does not exist.')
         app.addNamedButton(OK, 'mounterror-dir-ok', lambda _: app.hideSubWindow('mounterror-dir-win'))
+        app.setResizable(False)
+
+    def _ndw_response(btn: str):
+        global _ndw_resp
+        _ndw_resp = btn == 'ndw-continue'
+        app.hideSubWindow('nand-driveletter-warning')
+
+    # drive-letter with nand warning
+    with app.subWindow('nand-driveletter-warning', 'fuse-3ds Warning', modal=True, blocking=True):
+        app.addLabel('You chose drive letter when using the NAND mount.\n'
+                     '\n'
+                     'Using a directory mount over a drive letter for NAND is highly\n'
+                     'recommended because some tools like OSFMount will not be\n'
+                     'able to read from files in a mount using a drive letter.\n'
+                     '\n'
+                     'Are you sure you want to continue?', colspan=2)
+        app.addNamedButton('Mount anyway', 'ndw-continue', _ndw_response)
+        app.addNamedButton('Cancel', 'ndw-cancel', _ndw_response, row=PV, column=1)
         app.setResizable(False)
 
 with app.subWindow('extras', 'fuse-3ds Extras', modal=True, blocking=True):
