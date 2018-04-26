@@ -34,7 +34,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
 
         self.decompress_code = decompress_code
         self.seeddb = seeddb
-        self.files = {}  # type: Dict[str, Dict]
+        self.files: Dict[str, Dict] = {}
 
         # get status change, modify, and file access times
         self._g_stat = g_stat
@@ -95,6 +95,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                                         'iv': (self.reader.partition_id << 64 | (0x02 << 56)),
                                         'keyslot_normal_range': [(0, 0x200)]}
 
+            # noinspection PyBroadException
             try:
                 # get code compression bit
                 decompress = False
@@ -106,7 +107,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                 exefs_fuse.init(path)
                 self.exefs_fuse = exefs_fuse
             except Exception as e:
-                print("Failed to mount ExeFS: {}: {}".format(type(e).__name__, e))
+                print(f'Failed to mount ExeFS: {type(e).__name__}: {e}')
             else:
                 if not self.reader.flags.no_crypto:
                     for n, ent in self.exefs_fuse.reader.entries.items():
@@ -121,13 +122,14 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                                             'enctype': 'normal', 'keyslot': self.reader.extra_keyslot,
                                             'iv': (self.reader.partition_id << 64 | (0x03 << 56))}
 
+                # noinspection PyBroadException
                 try:
                     romfs_vfp = _c.VirtualFileWrapper(self, '/romfs.bin', romfs_region.size)
                     romfs_fuse = RomFSMount(romfs_vfp, self._g_stat)
                     romfs_fuse.init(path)
                     self.romfs_fuse = romfs_fuse
                 except Exception as e:
-                    print("Failed to mount RomFS: {}: {}".format(type(e).__name__, e))
+                    print(f'Failed to mount RomFS: {type(e).__name__}: {e}')
 
     def flush(self, path, fh):
         return self.f.flush()
@@ -229,7 +231,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                         files_to_read[fname][1] += 0x200
                         added = True
                 if not added:
-                    files_to_read['raw{}'.format(chunk)] = [new_offset, 0x200]
+                    files_to_read[f'raw{chunk}'] = [new_offset, 0x200]
 
             for fname, info in files_to_read.items():
                 try:
@@ -256,7 +258,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                   'Please file an issue or contact the developer with the details below.',
                   '  https://github.com/ihaveamac/fuse-3ds/issues',
                   '--------------------------------------------------',
-                  '{!r}: {!r}'.format(path, pformat(fi)), sep='\n')
+                  f'{path!r}: {pformat(fi)!r}', sep='\n')
 
             data = b'g' * size
 
@@ -277,9 +279,9 @@ def main(prog: str = None, args: list = None):
     from argparse import ArgumentParser
     if args is None:
         args = argv[1:]
-    parser = ArgumentParser(prog=prog, description="Mount Nintendo 3DS NCCH containers.",
+    parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS NCCH containers.',
                             parents=(_c.default_argp, _c.dev_argp, _c.seeddb_argp,
-                                     _c.main_args('ncch', "NCCH file")))
+                                     _c.main_args('ncch', 'NCCH file')))
 
     a = parser.parse_args(args)
     opts = dict(_c.parse_fuse_opts(a.o))
@@ -294,9 +296,9 @@ def main(prog: str = None, args: list = None):
         if _c.macos or _c.windows:
             opts['fstypename'] = 'NCCH'
             if _c.macos:
-                opts['volname'] = "NCCH Container ({0.product_code}; {0.program_id:016X})".format(mount.reader)
+                opts['volname'] = f'NCCH Container ({mount.reader.product_code}; {mount.reader.program_id:016X})'
             elif _c.windows:
                 # volume label can only be up to 32 chars
-                opts['volname'] = "NCCH ({0.product_code})".format(mount.reader)
+                opts['volname'] = f'NCCH ({mount.reader.product_code})'
         FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
              fsname=os.path.realpath(a.ncch).replace(',', '_'), **opts)

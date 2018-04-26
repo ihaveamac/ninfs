@@ -83,7 +83,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
                       '/tmdchunks.bin': {'size': self.tmd.content_count * CHUNK_RECORD_SIZE, 'offset': 0xB04,
                                          'type': 'raw', 'real_filepath': self.rp('tmd')}}
 
-        self.dirs = {}  # type: Dict[str, NCCHContainerMount]
+        self.dirs: Dict[str, NCCHContainerMount] = {}
 
     def init(self, path):
         # read contents to generate virtual files
@@ -93,26 +93,27 @@ class CDNContentsMount(LoggingMixIn, Operations):
             elif os.path.isfile(self.rp(chunk.id.upper())):
                 real_filename = chunk.id.upper()
             else:
-                print("Content {0.cindex:04}:{0.id} not found, will not be included.".format(chunk))
+                print(f'Content {chunk.cindex:04}:{chunk.id} not found, will not be included.')
                 continue
             f_stat = os.stat(self.rp(real_filename))
             if chunk.size != f_stat.st_size:
-                print("Warning: TMD Content size and filesize of", chunk.id, "are different.")
+                print('Warning: TMD Content size and filesize of', chunk.id, 'are different.')
             self.cdn_content_size += chunk.size
             file_ext = 'nds' if chunk.cindex == 0 and int(self.title_id, 16) >> 44 == 0x48 else 'ncch'
-            filename = '/{:04x}.{}.{}'.format(chunk.cindex, chunk.id, file_ext)
+            filename = f'/{chunk.cindex:04x}.{chunk.id}.{file_ext}'
             self.files[filename] = {'size': chunk.size, 'index': chunk.cindex.to_bytes(2, 'big'),
                                     'type': 'enc' if chunk.type.encrypted else 'raw',
                                     'real_filepath': self.rp(real_filename)}
 
-            dirname = '/{:04x}.{}'.format(chunk.cindex, chunk.id)
+            dirname = f'/{chunk.cindex:04x}.{chunk.id}'
+            # noinspection PyBroadException
             try:
                 content_vfp = _c.VirtualFileWrapper(self, filename, chunk.size)
                 content_fuse = NCCHContainerMount(content_vfp, dev=self.dev, g_stat=f_stat, seeddb=self.seeddb)
                 content_fuse.init(path)
                 self.dirs[dirname] = content_fuse
             except Exception as e:
-                print("Failed to mount {}: {}: {}".format(filename, type(e).__name__, e))
+                print(f'Failed to mount {filename}: {type(e).__name__}: {e}')
 
     @_c.ensure_lower_path
     def getattr(self, path, fh=None):
@@ -183,7 +184,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
                       'Please file an issue or contact the developer with the details below.',
                       '  https://github.com/ihaveamac/fuse-3ds/issues',
                       '--------------------------------------------------',
-                      '{!r}: {!r}'.format(path, pformat(fi)), sep='\n')
+                      f'{path!r}: {pformat(fi)!r}', sep='\n')
 
                 data = b'g' * size
 
@@ -202,10 +203,10 @@ def main(prog: str = None, args: list = None):
     from argparse import ArgumentParser
     if args is None:
         args = argv[1:]
-    parser = ArgumentParser(prog=prog, description="Mount Nintendo 3DS CDN contents.",
+    parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS CDN contents.',
                             parents=(_c.default_argp, _c.dev_argp, _c.seeddb_argp,
-                                     _c.main_args('cdn_dir', "directory with CDN contents")))
-    parser.add_argument('--dec-key', help="decrypted titlekey")
+                                     _c.main_args('cdn_dir', 'directory with CDN contents')))
+    parser.add_argument('--dec-key', help='decrypted titlekey')
 
     a = parser.parse_args(args)
     opts = dict(_c.parse_fuse_opts(a.o))
@@ -216,6 +217,6 @@ def main(prog: str = None, args: list = None):
     mount = CDNContentsMount(cdn_dir=a.cdn_dir, dev=a.dev, dec_key=a.dec_key, seeddb=a.seeddb)
     if _c.macos or _c.windows:
         opts['fstypename'] = 'CDN'
-        opts['volname'] = "CDN Contents ({})".format(mount.title_id.upper())
+        opts['volname'] = f'CDN Contents ({mount.title_id.upper()})'
     FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
          fsname=os.path.realpath(a.cdn_dir).replace(',', '_'), **opts)

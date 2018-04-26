@@ -27,8 +27,8 @@ class ExeFSMount(LoggingMixIn, Operations):
                        'st_atime': int(g_stat.st_atime)}
 
         self.reader = ExeFSReader.load(exefs_fp, strict)
-        self.files = {'/' + x.name.replace('.', '', 1) + '.bin': x
-                      for x in self.reader.entries.values()}  # type: Dict[str, ExeFSEntry]
+        self.files: Dict[str, ExeFSEntry] = {'/' + x.name.replace('.', '', 1) + '.bin': x
+                                             for x in self.reader.entries.values()}
         self.exefs_size = sum(x.size for x in self.reader.entries.values())
         self.code_dec = b''
         self.decompress_code = decompress_code
@@ -47,6 +47,7 @@ class ExeFSMount(LoggingMixIn, Operations):
     def init(self, path):
         if self.decompress_code and '/code.bin' in self.files:
             print('ExeFS: Decompressing .code...', end='', flush=True)
+            # noinspection PyBroadException
             try:
                 item = self.files['/code.bin']
                 self.code_dec = _decompress_code(self.read('/code.bin', item.size, item.offset, 0))
@@ -55,7 +56,7 @@ class ExeFSMount(LoggingMixIn, Operations):
                                                                   hash=sha256(self.code_dec).digest())
                 print(' done!')
             except Exception as e:
-                print('\nFailed to decompress .code: {}: {}'.format(type(e).__name__, e))
+                print(f'\nFailed to decompress .code: {type(e).__name__}: {e}')
 
     @_c.ensure_lower_path
     def getattr(self, path, fh=None):
@@ -127,9 +128,9 @@ def main(prog: str = None, args: list = None):
             #   it will have to be done differently.
             path_to_show = os.path.realpath(a.exefs).rsplit('/', maxsplit=2)
             if _c.macos:
-                opts['volname'] = "Nintendo 3DS ExeFS ({}/{})".format(path_to_show[-2], path_to_show[-1])
+                opts['volname'] = f'Nintendo 3DS ExeFS ({path_to_show[-2]}/{path_to_show[-1]})'
             elif _c.windows:
                 # volume label can only be up to 32 chars
-                opts['volname'] = "Nintendo 3DS ExeFS"
+                opts['volname'] = 'Nintendo 3DS ExeFS'
         FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
              fsname=os.path.realpath(a.exefs).replace(',', '_'), **opts)

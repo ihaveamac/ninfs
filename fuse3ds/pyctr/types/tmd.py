@@ -40,11 +40,12 @@ class InvalidHashError(TitleMetadataError):
     """Hash mismatch in the Title Metadata."""
 
 
-# apparently typing.NamedTuple being subclassed this way does not properly support type hints in PyCharm...
-# maybe I should stop supporting 3.5
-class ContentTypeFlags(NamedTuple('_ContentTypeFlags',
-                       (('encrypted', bool), ('disc', bool), ('cfm', bool), ('optional', bool), ('shared', bool)))):
-    __slots__ = ()
+class ContentTypeFlags(NamedTuple):
+    encrypted: bool
+    disc: bool
+    cfm: bool
+    optional: bool
+    shared: bool
 
     def __index__(self) -> int:
         return self.encrypted | (self.disc << 1) | (self.cfm << 2) | (self.optional << 14) | (self.shared << 15)
@@ -56,34 +57,38 @@ class ContentTypeFlags(NamedTuple('_ContentTypeFlags',
 
     @classmethod
     def from_int(cls, flags: int) -> 'ContentTypeFlags':
-        # PyCharm's inspector is wrong here, cls returns ContentTypeFlags.
-        # noinspection PyTypeChecker
+        # noinspection PyArgumentList
         return cls(bool(flags & 1), bool(flags & 2), bool(flags & 4), bool(flags & 0x4000), bool(flags & 0x8000))
 
 
-class ContentInfoRecord(NamedTuple('_ContentInfoRecord',
-                                   (('index_offset', int), ('command_count', int), ('hash', bytes)))):
-    __slots__ = ()
+class ContentInfoRecord(NamedTuple):
+    index_offset: int
+    command_count: int
+    hash: bytes
 
     def __bytes__(self) -> bytes:
         return b''.join((self.index_offset.to_bytes(2, 'big'), self.command_count.to_bytes(2, 'big'), self.hash))
 
 
-class ContentChunkRecord(NamedTuple('_ContentChunkRecord',
-                                    (('id', str), ('cindex', int), ('type', ContentTypeFlags), ('size', int),
-                                     ('hash', bytes)))):
-    __slots__ = ()
+class ContentChunkRecord(NamedTuple):
+    id: str
+    cindex: int
+    type: ContentTypeFlags
+    size: int
+    hash: bytes
 
     def __bytes__(self) -> bytes:
-        return b''.join((bytes.fromhex(self.id), self.cindex.to_bytes(2, 'big'), self.type.to_bytes(2, 'big'),
+        return b''.join((bytes.fromhex(self.id), self.cindex.to_bytes(2, 'big'), int(self.type).to_bytes(2, 'big'),
                          self.size.to_bytes(8, 'big'), self.hash))
 
 
-class TitleVersion(NamedTuple('_TitleVersion', (('major', int), ('minor', int), ('micro', int)))):
-    __slots__ = ()
+class TitleVersion(NamedTuple):
+    major: int
+    minor: int
+    micro: int
 
     def __str__(self) -> str:
-        return '{0.major}.{0.minor}.{0.micro}'.format(self)
+        return f'{self.major}.{self.minor}.{self.micro}'
 
     def __index__(self) -> int:
         return (self.major << 10) | (self.minor << 4) | self.micro
@@ -95,8 +100,7 @@ class TitleVersion(NamedTuple('_TitleVersion', (('major', int), ('minor', int), 
 
     @classmethod
     def from_int(cls, ver: int) -> 'TitleVersion':
-        # PyCharm's inspector is wrong here, cls returns TitleVersion.
-        # noinspection PyTypeChecker
+        # noinspection PyArgumentList
         return cls((ver >> 10) & 0x3F, (ver >> 4) & 0x3F, ver & 0xF)
 
 
@@ -125,8 +129,8 @@ class TitleMetadataReader:
                      self.info_records, self.chunk_records))
 
     def __repr__(self) -> str:
-        return '<TitleMetadataReader title_id={0.title_id!r} title_version={0.title_version!r} ' \
-               'content_count={0.content_count!r}>'.format(self)
+        return (f'<TitleMetadataReader title_id={self.title_id!r} title_version={self.title_version!r} '
+                f'content_count={self.content_count!r}>')
 
     @classmethod
     def load(cls, fp: 'BinaryIO', verify_hashes: bool = True) -> 'TitleMetadataReader':
@@ -135,7 +139,7 @@ class TitleMetadataReader:
         try:
             sig_size, sig_padding = signature_types[sig_type]
         except KeyError:
-            raise InvalidSignatureTypeError("{:08X}".format(sig_type))
+            raise InvalidSignatureTypeError(f'{sig_type:08X}')
 
         # I may load the signature if I decide to have a function that returns the tmd in the original format.
         if fp.seekable():
@@ -160,7 +164,7 @@ class TitleMetadataReader:
         if verify_hashes:
             real_hash = sha256(content_info_records_raw)
             if content_info_records_hash != real_hash.digest():
-                raise InvalidHashError("Content Info Records hash is invalid")
+                raise InvalidHashError('Content Info Records hash is invalid')
 
         # the hashes of this is sort of based on assumption. I need to figure out how hashes in the info records
         #   work more. of course, in practice, not more than one info record is used, so this is not urgent.

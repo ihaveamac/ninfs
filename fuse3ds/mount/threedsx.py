@@ -27,7 +27,7 @@ class ThreeDSXMount(LoggingMixIn, Operations):
         self._g_stat = g_stat
         self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
                        'st_atime': int(g_stat.st_atime)}
-        self.romfs_fuse = None  # type: RomFSMount
+        self.romfs_fuse: RomFSMount = None
 
         self.f = threedsx_fp
         threedsx_fp.seek(0, 2)
@@ -39,7 +39,7 @@ class ThreeDSXMount(LoggingMixIn, Operations):
             exit('3DSX has no SMDH or RomFS.')
 
         smdh_offset, smdh_size, romfs_offset = unpack('<3I', threedsx_fp.read(12))  # type: int
-        self.files = {}  # type: Dict[str, Dict[str, int]]
+        self.files: Dict[str, Dict[str, int]] = {}
         if smdh_offset:  # unlikely, you can't add a romfs without this
             self.files['/icon.smdh'] = {'size': smdh_size, 'offset': smdh_offset}
         if romfs_offset:
@@ -61,7 +61,7 @@ class ThreeDSXMount(LoggingMixIn, Operations):
                 romfs_fuse.init(path)
                 self.romfs_fuse = romfs_fuse
             except Exception as e:
-                print("Failed to mount RomFS: {}: {}".format(type(e).__name__, e))
+                print(f'Failed to mount RomFS: {type(e).__name__}: {e}')
 
     def flush(self, path, fh):
         return self.f.flush()
@@ -135,9 +135,9 @@ def main(prog: str = None, args: list = None):
             #   it will have to be done differently.
             path_to_show = os.path.realpath(a.threedsx).rsplit('/', maxsplit=2)
             if _c.macos:
-                opts['volname'] = "3DSX Homebrew ({}/{})".format(path_to_show[-2], path_to_show[-1])
+                opts['volname'] = f'3DSX Homebrew ({path_to_show[-2]}/{path_to_show[-1]})'
             elif _c.windows:
                 # volume label can only be up to 32 chars
-                opts['volname'] = "3DSX Homebrew"
+                opts['volname'] = '3DSX Homebrew'
         FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
              fsname=os.path.realpath(a.threedsx).replace(',', '_'), **opts)

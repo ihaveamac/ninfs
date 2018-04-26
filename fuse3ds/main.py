@@ -20,15 +20,8 @@ from __init__ import __version__ as version
 # this should stay as str.format so it runs on older versions
 print('fuse-3ds v{} - https://github.com/ihaveamac/fuse-3ds'.format(version))
 
-if hexversion < 0x030502F0:
-    exit('Python {0[0]}.{0[1]}.{0[2]} is not supported. Please use Python 3.6.1 or later.'.format(version_info))
-
 if hexversion < 0x030601F0:
-    print('',
-          '* Warning: You are running Python {0[0]}.{0[1]}.{0[2]}.'.format(version_info),
-          '* This version will become unsupported in the future.',
-          '* Please upgrade to Python 3.6.1 or later.',
-          '', sep='\n', file=stderr)
+    exit('Python {0[0]}.{0[1]}.{0[2]} is not supported. Please use Python 3.6.1 or later.'.format(version_info))
 
 
 def exit_print_types():
@@ -91,10 +84,6 @@ def main():
 
 
 def gui(_allow_admin: bool = False):
-    # TODO: remove this when 3.5 support is removed
-    if hexversion < 0x030601F0:  # disable for 3.5
-        exit('GUI is not available before Python 3.6.1.')
-
     import _gui
     return _gui.main(_allow_admin=_allow_admin)
 

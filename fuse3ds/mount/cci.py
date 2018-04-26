@@ -50,7 +50,7 @@ class CTRCartImageMount(LoggingMixIn, Operations):
 
         self.f = cci_fp
 
-        self.dirs = {}  # type: Dict[str, NCCHContainerMount]
+        self.dirs: Dict[str, NCCHContainerMount] = {}
 
     def __del__(self, *args):
         try:
@@ -69,10 +69,11 @@ class CTRCartImageMount(LoggingMixIn, Operations):
 
         for idx, part in enumerate(ncsd_partitions):
             if part[0]:
-                filename = '/content{}.{}.ncch'.format(idx, ncsd_part_names[idx])
+                filename = f'/content{idx}.{ncsd_part_names[idx]}.ncch'
                 self.files[filename] = {'size': part[1], 'offset': part[0]}
 
-                dirname = '/content{}.{}'.format(idx, ncsd_part_names[idx])
+                dirname = f'/content{idx}.{ncsd_part_names[idx]}'
+                # noinspection PyBroadException
                 try:
                     content_vfp = _c.VirtualFileWrapper(self, filename, part[1])
                     content_fuse = NCCHContainerMount(content_vfp, g_stat=self._g_stat, dev=self.dev,
@@ -80,7 +81,7 @@ class CTRCartImageMount(LoggingMixIn, Operations):
                     content_fuse.init(path)
                     self.dirs[dirname] = content_fuse
                 except Exception as e:
-                    print("Failed to mount {}: {}: {}".format(filename, type(e).__name__, e))
+                    print(f'Failed to mount {filename}: {type(e).__name__}: {e}')
 
     @_c.ensure_lower_path
     def getattr(self, path, fh=None):
@@ -135,7 +136,7 @@ def main(prog: str = None, args: list = None):
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS CTR Cart Image files.',
                             parents=(_c.default_argp, _c.dev_argp, _c.seeddb_argp,
-                                     _c.main_args('cci', "CCI file")))
+                                     _c.main_args('cci', 'CCI file')))
 
     a = parser.parse_args(args)
     opts = dict(_c.parse_fuse_opts(a.o))
@@ -150,9 +151,9 @@ def main(prog: str = None, args: list = None):
         if _c.macos or _c.windows:
             opts['fstypename'] = 'CCI'
             if _c.macos:
-                opts['volname'] = "CTR Cart Image ({})".format(mount.media_id[::-1].hex().upper())
+                opts['volname'] = f'CTR Cart Image ({mount.media_id[::-1].hex().upper()})'
             elif _c.windows:
                 # volume label can only be up to 32 chars
-                opts['volname'] = "CCI ({})".format(mount.media_id[::-1].hex().upper())
+                opts['volname'] = f'CCI ({mount.media_id[::-1].hex().upper()})'
         FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
              fsname=os.path.realpath(a.cci).replace(',', '_'), **opts)

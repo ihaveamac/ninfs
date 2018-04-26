@@ -39,11 +39,11 @@ base_key_x = {
 # global values to be copied to new CTRCrypto instances after the first one
 _b9_key_x = {}
 _b9_key_y = {}
-_b9_extdata_otp = None  # type: bytes
-_b9_extdata_keygen = None  # type: bytes
-_b9_extdata_keygen_iv = None  # type: bytes
-_otp_key = None  # type: bytes
-_otp_iv = None  # type: bytes
+_b9_extdata_otp: bytes = None
+_b9_extdata_keygen: bytes = None
+_b9_extdata_keygen_iv: bytes = None
+_otp_key: bytes = None
+_otp_iv: bytes = None
 
 b9_paths = (['boot9.bin', 'boot9_prot.bin'] + [pjoin(x, 'boot9.bin') for x in config_dirs]
             + [pjoin(x, 'boot9_prot.bin') for x in config_dirs])
@@ -72,14 +72,14 @@ def rol(val: int, r_bits: int, max_bits: int) -> int:
 class CTRCrypto:
     """Class for 3DS crypto operations, including encryption and key generation."""
 
-    b9_keys_set = False  # type: bool
+    b9_keys_set: bool = False
 
-    _b9_extdata_otp = None  # type: bytes
-    _b9_extdata_keygen = None  # type: bytes
-    _b9_extdata_keygen_iv = None  # type: bytes
+    _b9_extdata_otp: bytes = None
+    _b9_extdata_keygen: bytes = None
+    _b9_extdata_keygen_iv: bytes = None
 
-    _otp_key = None  # type: bytes
-    _otp_iv = None  # type: bytes
+    _otp_key: bytes = None
+    _otp_iv: bytes = None
 
     common_key_y = (
         # eShop
@@ -97,10 +97,10 @@ class CTRCrypto:
     )
 
     def __init__(self, dev: int = 0, setup_b9_keys: bool = True):
-        self.key_x = {}  # type: Dict[int, int]
-        self.key_y = {0x03: 0xE1A00005202DDD1DBD4DC4D30AB9DC76,
-                      0x05: 0x4D804F4E9990194613A204AC584460BE}  # type: Dict[int, int]
-        self.key_normal = {}  # type: Dict[int, bytes]
+        self.key_x: Dict[int, int] = {}
+        self.key_y: Dict[int, int] = {0x03: 0xE1A00005202DDD1DBD4DC4D30AB9DC76,
+                                      0x05: 0x4D804F4E9990194613A204AC584460BE}
+        self.key_normal: Dict[int, bytes] = {}
 
         self.dev = dev
 
@@ -140,7 +140,7 @@ class CTRCrypto:
         try:
             key = self.key_normal[keyslot]
         except KeyError:
-            raise KeyslotMissingError("normal key for keyslot 0x{:02x} is not set up".format(keyslot))
+            raise KeyslotMissingError(f'normal key for keyslot 0x{keyslot:02x} is not set up')
 
         cipher = AES.new(key, AES.MODE_CBC, iv)
         return cipher.decrypt(data)
@@ -154,7 +154,7 @@ class CTRCrypto:
         try:
             key = self.key_normal[keyslot]
         except KeyError:
-            raise KeyslotMissingError("normal key for keyslot 0x{:02x} is not set up".format(keyslot))
+            raise KeyslotMissingError(f'normal key for keyslot 0x{keyslot:02x} is not set up')
 
         counter = Counter.new(128, initial_value=ctr)
         cipher = AES.new(key, AES.MODE_CTR, counter=counter)

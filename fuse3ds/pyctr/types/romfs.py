@@ -48,7 +48,7 @@ def _raise_if_closed(method):
         if self._reader.closed:
             self.closed = True
         if self.closed:
-            raise ValueError("I/O operation on closed file.")
+            raise ValueError('I/O operation on closed file.')
         return method(self, *args, **kwargs)
     return decorator
 
@@ -62,12 +62,12 @@ class _RomFSOpenFile(BufferedIOBase):
     def __init__(self, reader: 'RomFSReader', path: str):
         self._reader = reader
         self._path = path
-        self._info = reader.get_info_from_path(path)  # type: RomFSFileEntry
+        self._info: RomFSFileEntry = reader.get_info_from_path(path)
         if not isinstance(self._info, RomFSFileEntry):
             raise RomFSEntryError('not a file entry: ' + path)
 
     def __repr__(self) -> str:
-        return '<_RomFSOpenFile path={0._path!r} info={0._info!r} reader={0._reader!r}>'.format(self)
+        return f'<_RomFSOpenFile path={self._path!r} info={self._info!r} reader={self._reader!r}>'
 
     @_raise_if_closed
     def read(self, size: int = -1) -> bytes:
@@ -83,7 +83,7 @@ class _RomFSOpenFile(BufferedIOBase):
     def seek(self, seek: int, whence: int = 0) -> int:
         if whence == 0:
             if seek < 0:
-                raise ValueError("negative seek value {}".format(seek))
+                raise ValueError(f'negative seek value {seek}')
             self._seek = min(seek, self._info.size)
         elif whence == 1:
             self._seek = max(self._seek + seek, 0)
@@ -130,8 +130,8 @@ class RomFSReader:
             ivfc = magic + fp.read(0x54)  # IVFC_HEADER_SIZE - 4
             ivfc_magic_num = readle(ivfc[0x4:0x8])
             if ivfc_magic_num != IVFC_ROMFS_MAGIC_NUM:
-                raise InvalidIVFCError('IVFC magic number is invalid '
-                                       '({:#X} instead of {:#X})'.format(ivfc_magic_num, IVFC_ROMFS_MAGIC_NUM))
+                raise InvalidIVFCError(f'IVFC magic number is invalid '
+                                       f'({ivfc_magic_num:#X} instead of {IVFC_ROMFS_MAGIC_NUM:#X})')
             master_hash_size = readle(ivfc[0x8:0xC])
             lv3_block_size = readle(ivfc[0x4C:0x50])
             lv3_hash_block_size = 1 << lv3_block_size
@@ -182,11 +182,11 @@ class RomFSReader:
                     child_dir_name = fp.read(readle(child_dir_meta[0x14:0x18])).decode('utf-16le')
                     child_dir_name_meta = child_dir_name.lower() if case_insensitive else child_dir_name
                     if child_dir_name_meta in out['contents']:
-                        print("WARNING: Dirname collision! {}{}".format(current_path, child_dir_name))
+                        print(f'WARNING: Dirname collision! {current_path}{child_dir_name}')
                     out['contents'][child_dir_name_meta] = {'name': child_dir_name}
 
                     iterate_dir(out['contents'][child_dir_name_meta], child_dir_meta,
-                                '{}{}/'.format(current_path, child_dir_name))
+                                f'{current_path}{child_dir_name}/')
                     if next_sibling_dir == 0xFFFFFFFF:
                         break
                     fp.seek(lv3_offset + lv3_dirmeta.offset + next_sibling_dir)
@@ -201,7 +201,7 @@ class RomFSReader:
                     child_file_name = fp.read(readle(child_file_meta[0x1C:0x20])).decode('utf-16le')
                     child_file_name_meta = child_file_name.lower() if self.case_insensitive else child_file_name
                     if child_file_name_meta in out['contents']:
-                        print('WARNING: Filename collision! {}{}'.format(current_path, child_file_name))
+                        print(f'WARNING: Filename collision! {current_path}{child_file_name}')
                     out['contents'][child_file_name_meta] = {'name': child_file_name, 'type': 'file',
                                                              'offset': child_file_offset, 'size': child_file_size}
 

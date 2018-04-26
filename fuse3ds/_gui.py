@@ -42,7 +42,8 @@ LABEL1 = 'label1'
 LABEL2 = 'label2'
 LABEL3 = 'label3'
 
-b9_paths: 'List[str]' = ([pjoin(x, 'boot9.bin') for x in config_dirs] + [pjoin(x, 'boot9_prot.bin') for x in config_dirs])
+b9_paths: 'List[str]' = ([pjoin(x, 'boot9.bin') for x in config_dirs]
+                         + [pjoin(x, 'boot9_prot.bin') for x in config_dirs])
 with suppress(KeyError):
     b9_paths.insert(0, environ['BOOT9_PATH'])
 
@@ -99,7 +100,7 @@ if windows:
     if stdout is None:  # happens if pythonw is used on windows
         res = windll.user32.MessageBoxW(None, (
             'This is being run with the wrong Python executable.\n'
-            'This should be installed as a module, then run using the py launcher on Python 3.5.2 or later.\n\n'
+            'This should be installed as a module, then run using the py launcher on Python 3.6.1 or later.\n\n'
             'Click OK to open the fuse-3ds repository on GitHub:\n'
             'https://github.com/ihaveamac/fuse-3ds'),
                                         'fuse-3ds', 0x00000010 | 0x00000001)
@@ -346,8 +347,10 @@ with app.labelFrame('Mount settings', row=1, colspan=3):
         app.addLabel(CDN + LABEL1, DIRECTORY, row=0, column=0)
         app.addDirectoryEntry(CDN + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
         app.setEntryDefault(CDN + ITEM, DRAGDIR)
+
         app.addLabel(CDN + LABEL2, 'Decrypted Titlekey*', row=3, column=0)
         app.addEntry(CDN + 'key', row=3, column=1, colspan=2)
+
         app.setEntryDefault(CDN + 'key', 'Insert a decrypted titlekey')
         app.addLabel(CDN + LABEL3, '*Not required if title has a cetk.', row=4, colspan=3)
     app.hideFrame(CDN)
@@ -368,13 +371,16 @@ with app.labelFrame('Mount settings', row=1, colspan=3):
         app.addLabel(NAND + LABEL1, FILE, row=0, column=0)
         app.addFileEntry(NAND + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
         app.setEntryDefault(NAND + ITEM, DRAGFILE)
+
         app.addLabel(NAND + LABEL2, 'OTP file*', row=2, column=0)
         app.addFileEntry(NAND + 'otp', row=2, column=1, colspan=2).theButton.config(text=BROWSE)
         app.setEntryDefault(NAND + 'otp', DRAGFILE)
+
         app.addLabel(NAND + LABEL3, 'CID file*', row=3, column=0)
         app.addFileEntry(NAND + 'cid', row=3, column=1, colspan=2).theButton.config(text=BROWSE)
         app.setEntryDefault(NAND + 'cid', DRAGFILE)
         app.addLabel(NAND + 'label4', '*Not required if backup has essential.exefs from GodMode9.', row=4, colspan=3)
+
         app.addLabel(NAND + 'label5', 'Options', row=5, column=0)
         app.addNamedCheckBox('Allow writing', NAND + 'aw', row=5, column=1, colspan=1)
     app.hideFrame(NAND)
@@ -395,9 +401,11 @@ with app.labelFrame('Mount settings', row=1, colspan=3):
         app.addLabel(SD + LABEL1, DIRECTORY, row=0, column=0)
         app.addDirectoryEntry(SD + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
         app.setEntryDefault(SD + ITEM, DRAGDIR)
+
         app.addLabel(SD + LABEL2, 'movable.sed', row=2, column=0)
         app.addFileEntry(SD + 'movable', row=2, column=1, colspan=2).theButton.config(text=BROWSE)
         app.setEntryDefault(SD + 'movable', DRAGFILE)
+
         app.addLabel(SD + LABEL3, 'Options', row=3, column=0)
         app.addNamedCheckBox('Allow writing', SD + 'aw', row=3, column=1, colspan=1)
     app.hideFrame(SD)
@@ -412,6 +420,7 @@ with app.labelFrame('Mount settings', row=1, colspan=3):
         app.addLabel(TITLEDIR + LABEL1, DIRECTORY, row=0, column=0)
         app.addDirectoryEntry(TITLEDIR + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
         app.setEntryDefault(TITLEDIR + ITEM, DRAGFILE)
+
         app.addLabel(TITLEDIR + LABEL3, 'Options', row=3, column=0)
         app.addNamedCheckBox('Decompress .code (slow!)', TITLEDIR + 'decompress', row=3, column=1, colspan=1)
         app.addNamedCheckBox('Mount all contents', TITLEDIR + 'mountall', row=3, column=2, colspan=1)

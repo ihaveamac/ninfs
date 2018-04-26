@@ -4,8 +4,8 @@ import sys
 
 from setuptools import setup
 
-if sys.hexversion < 0x030502f0:
-    sys.exit('Python 3.5.2+ is required.')
+if sys.hexversion < 0x030601f0:
+    sys.exit('Python 3.6.1+ is required.')
 
 with open('README.md', 'r', encoding='utf-8') as f:
     readme = f.read()
@@ -27,7 +27,6 @@ setup(
         'Topic :: Utilities',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
     ],
     install_requires=install_requires,

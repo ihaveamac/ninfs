@@ -118,17 +118,17 @@ class ExeFSReader:
     """
 
     def __init__(self, entries: 'Iterable[ExeFSEntry]', strict: bool = False):
-        self.entries = {}  # type: Dict[str, ExeFSEntry]
+        self.entries: Dict[str, ExeFSEntry] = {}
         for x in entries:
             if x.offset % 0x200:
-                msg = '{0.name} has an offset not aligned to 0x200 ({0.offset:#x})'.format(x)
+                msg = f'{x.name} has an offset not aligned to 0x200 ({x.offset:#x})'
                 if strict:
                     raise InvalidExeFSError(msg)
-                print('Warning: {}.\n'
-                      'This ExeFS will not work on console.'.format(msg))
+                print(f'Warning: {msg}.\n'
+                      f'This ExeFS will not work on console.')
             for e in self.entries.values():
                 if e.offset + e.size > x.offset > e.offset:
-                    msg = '{0.name} overlaps with {1.name}'.format(x, e)
+                    msg = f'{x.name} overlaps with {e.name}'
                     if strict:
                         raise InvalidExeFSError(msg)
                     print('Warning:', msg)

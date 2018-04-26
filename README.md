@@ -32,7 +32,6 @@ SeedDB is checked in order of:
 It can also be provided with the `--seeddb` argument.
 
 Python 3.6.1+ and pycryptodomex are required. appJar is required for the GUI.
-* Python 3.5.2+ is supported right now, but support will be removed after Ubuntu 18.04 is released.
 * fusepy is pre-included until the [main fusepy repository](https://github.com/fusepy/fusepy) has full Windows support.
 
 ### Windows
@@ -57,7 +56,7 @@ OS X 10.11 El Capitan and later are supported. Older releases may work, but supp
 * Install fuse-3ds with `python3 -m pip install --upgrade https://github.com/ihaveamac/fuse-3ds/archive/master.zip`.
 
 ### Linux
-* Most modern distributions should have Python 3.5.2 or later pre-installed, or included in its repositories. If not, you can use an extra repository (e.g. [deadsnakes's PPA](https://launchpad.net/%7Edeadsnakes/+archive/ubuntu/ppa) for Ubuntu), [build from source](https://www.python.org/downloads/source/), or use a tool like [pyenv](https://github.com/pyenv/pyenv).
+* Recent distributions should have Python 3.6.1 or later pre-installed, or included in its repositories. If not, you can use an extra repository (e.g. [deadsnakes's PPA](https://launchpad.net/%7Edeadsnakes/+archive/ubuntu/ppa) for Ubuntu), [build from source](https://www.python.org/downloads/source/), or use a tool like [pyenv](https://github.com/pyenv/pyenv).
 * Most distributions should have fuse enabled/installed by default. Use your package manager if it isn't.
 * Install fuse-3ds with `python3 -m pip install --upgrade --user https://github.com/ihaveamac/fuse-3ds/archive/master.zip`.
   * `--user` is not needed if you are using a virtual environment.

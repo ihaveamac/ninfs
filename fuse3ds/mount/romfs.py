@@ -24,7 +24,7 @@ class RomFSMount(LoggingMixIn, Operations):
         self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
                        'st_atime': int(g_stat.st_atime)}
 
-        self.reader = None  # type: RomFSReader
+        self.reader: RomFSReader = None
         self.f = romfs_fp
 
     def __del__(self, *args):
@@ -109,9 +109,9 @@ def main(prog: str = None, args: list = None):
             #   it will have to be done differently.
             path_to_show = os.path.realpath(a.romfs).rsplit('/', maxsplit=2)
             if _c.macos:
-                opts['volname'] = "Nintendo 3DS RomFS ({}/{})".format(path_to_show[-2], path_to_show[-1])
+                opts['volname'] = f'Nintendo 3DS RomFS ({path_to_show[-2]}/{path_to_show[-1]})'
             elif _c.windows:
                 # volume label can only be up to 32 chars
-                opts['volname'] = "Nintendo 3DS RomFS"
+                opts['volname'] = 'Nintendo 3DS RomFS'
         FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
              fsname=os.path.realpath(a.romfs).replace(',', '_'), **opts)

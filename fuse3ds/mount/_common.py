@@ -15,12 +15,12 @@ macos = platform == 'darwin'
 
 python_cmd = 'py -3' if windows else 'python3'
 
-
+# noinspection PyBroadException
 try:
     from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 except Exception as e:
-    exit('Failed to import the fuse module:\n'
-         '{}: {}'.format(type(e).__name__, e))
+    exit(f'Failed to import the fuse module:\n'
+         f'{type(e).__name__}: {e}')
 
 
 default_argp = ArgumentParser(add_help=False)
@@ -33,10 +33,10 @@ readonly_argp = ArgumentParser(add_help=False)
 readonly_argp.add_argument('-r', '--ro', help='mount read-only', action='store_true')
 
 dev_argp = ArgumentParser(add_help=False)
-dev_argp.add_argument('--dev', help="use dev keys", action='store_const', const=1, default=0)
+dev_argp.add_argument('--dev', help='use dev keys', action='store_const', const=1, default=0)
 
 seeddb_argp = ArgumentParser(add_help=False)
-seeddb_argp.add_argument('--seeddb', help="path to seeddb.bin")
+seeddb_argp.add_argument('--seeddb', help='path to seeddb.bin')
 
 
 def main_args(name: str, help: str) -> ArgumentParser:
@@ -92,7 +92,7 @@ def _raise_if_closed(method):
     @wraps(method)
     def decorator(self, *args, **kwargs):
         if self.closed:
-            raise ValueError("I/O operation on closed file.")
+            raise ValueError('I/O operation on closed file.')
         return method(self, *args, **kwargs)
     return decorator
 
@@ -122,7 +122,7 @@ class VirtualFileWrapper(BufferedIOBase, BinaryIO):
     def seek(self, seek: int, whence: int = 0) -> int:
         if whence == 0:
             if seek < 0:
-                raise ValueError("negative seek value {}".format(seek))
+                raise ValueError(f'negative seek value {seek}')
             self._seek = min(seek, self.size)
         elif whence == 1:
             self._seek = max(self._seek + seek, 0)

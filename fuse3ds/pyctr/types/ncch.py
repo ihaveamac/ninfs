@@ -38,7 +38,7 @@ def get_seed(f: 'BinaryIO', program_id: int) -> bytes:
         entry = f.read(0x20)
         if entry[0:8] == tid_bytes:
             return entry[0x8:0x18]
-    raise NCCHSeedError("missing seed for {:016X} from seeddb.bin".format(program_id))
+    raise NCCHSeedError(f'missing seed for {program_id:016X} from seeddb.bin')
 
 
 seeddb_paths = ['seeddb.bin', config_dirs[0] + '/seeddb.bin', config_dirs[1] + '/seeddb.bin']
@@ -83,7 +83,7 @@ class NCCHReader:
         if original or not self.flags.uses_seed:
             return self._key_y
         if self.flags.uses_seed and not self.seed_set_up:
-            raise NCCHSeedError("NCCH uses seed crypto, but seed is not set up")
+            raise NCCHSeedError('NCCH uses seed crypto, but seed is not set up')
         else:
             return self._seeded_key_y
 
@@ -96,16 +96,16 @@ class NCCHReader:
 
     def setup_seed(self, seed: bytes):
         if not self.flags.uses_seed:
-            raise NCCHSeedError("NCCH does not use seed crypto")
+            raise NCCHSeedError('NCCH does not use seed crypto')
         seed_verify_hash = sha256(seed + self.program_id.to_bytes(0x8, 'little')).digest()
         if seed_verify_hash[0x0:0x4] != self._seed_verify:
-            raise NCCHSeedError("given seed does not match with seed verify hash in header")
+            raise NCCHSeedError('given seed does not match with seed verify hash in header')
         self._seeded_key_y = sha256(self._key_y + seed).digest()[0:16]
         self.seed_set_up = True
 
     def load_seed_from_seeddb(self, path: str = None):
         if not self.flags.uses_seed:
-            raise NCCHSeedError("NCCH does not use seed crypto")
+            raise NCCHSeedError('NCCH does not use seed crypto')
         if path:
             paths = (path,)
         else:
@@ -127,9 +127,9 @@ class NCCHReader:
         header_len = len(header)
 
         if header_len != 0x200:
-            raise InvalidNCCHError("given NCCH header is not 0x200")
+            raise InvalidNCCHError('given NCCH header is not 0x200')
         if header[0x100:0x104] != b'NCCH':
-            raise InvalidNCCHError("NCCH magic not found in given header")
+            raise InvalidNCCHError('NCCH magic not found in given header')
 
         key_y = header[0x0:0x10]
         content_size = readle(header[0x104:0x108]) * NCCH_MEDIA_UNIT

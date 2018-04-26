@@ -23,15 +23,17 @@ if TYPE_CHECKING:
 if _c.windows:
     from ctypes import c_wchar_p, pointer, c_ulonglong, windll, wintypes
 
+# noinspection PyBroadException
 try:
     from Cryptodome.Cipher import AES
     from Cryptodome.Util import Counter
 except ModuleNotFoundError:
-    exit("Cryptodome module not found, please install pycryptodomex for encryption support "
-         "(`{} install pycryptodomex`).".format(_c.python_cmd))
+    exit(
+        f'Cryptodome module not found, please install pycryptodomex for encryption support '
+        f'(`{_c.python_cmd} install pycryptodomex`).')
 except Exception as e:
-    exit("Failed to import the Cryptodome module:\n"
-         "{}: {}".format(type(e).__name__, e))
+    exit(f'Failed to import the Cryptodome module:\n'
+         f'{type(e).__name__}: {e}')
 
 
 class SDFilesystemMount(LoggingMixIn, Operations):
@@ -50,12 +52,12 @@ class SDFilesystemMount(LoggingMixIn, Operations):
             key_y = mv.read(0x10)
         key_hash = sha256(key_y).digest()
         hash_parts = unpack('<IIII', key_hash[0:16])
-        self.root_dir = '{0[0]:08x}{0[1]:08x}{0[2]:08x}{0[3]:08x}'.format(hash_parts)
+        self.root_dir = f'{hash_parts[0]:08x}{hash_parts[1]:08x}{hash_parts[2]:08x}{hash_parts[3]:08x}'
 
         if not os.path.isdir(sd_dir + '/' + self.root_dir):
-            exit('Failed to find {} in the SD dir.'.format(self.root_dir))
+            exit(f'Failed to find {self.root_dir} in the SD dir.')
 
-        self.fds = {}  # type: Dict[int, BinaryIO]
+        self.fds: Dict[int, BinaryIO] = {}
 
         print('Root dir: ' + self.root_dir)
 
@@ -263,11 +265,11 @@ def main(prog: str = None, args: list = None):
     if _c.macos or _c.windows:
         opts['fstypename'] = 'SDCard'
         if _c.macos:
-            opts['volname'] = "Nintendo 3DS SD Card ({})".format(mount.root_dir)
+            opts['volname'] = f'Nintendo 3DS SD Card ({mount.root_dir})'
             opts['noappledouble'] = True  # fixes an error. but this is probably not the best way to do it.
         else:
             # windows
-            opts['volname'] = "Nintendo 3DS SD Card ({}…)".format(mount.root_dir[0:8])
+            opts['volname'] = f'Nintendo 3DS SD Card ({mount.root_dir[0:8]}…)'
             opts['case_insensitive'] = False
     FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=a.ro, nothreads=True, debug=a.d,
          fsname=os.path.realpath(a.sd_dir).replace(',', '_'), **opts)

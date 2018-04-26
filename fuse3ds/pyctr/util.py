@@ -1,5 +1,5 @@
-import math
 import os
+from math import ceil
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -20,8 +20,8 @@ def readbe(b: bytes) -> int:
 
 def roundup(offset: int, alignment: int) -> int:
     """Round up a number to a provided alignment."""
-    return int(math.ceil(offset / alignment) * alignment)
+    return int(ceil(offset / alignment) * alignment)
 
 
 _home = os.path.expanduser('~')
-config_dirs = (os.path.join(_home, '3ds'), os.path.join(_home, '.3ds'))  # type: Tuple[str, str]
+config_dirs: 'Tuple[str, str]' = (os.path.join(_home, '3ds'), os.path.join(_home, '.3ds'))

@@ -31,9 +31,9 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
     def __init__(self, titles_dir: str, mount_all: bool = False, decompress_code: bool = False, dev: bool = False,
                  seeddb: str = None):
         self.titles_dir = titles_dir
-        self._files = {}  # type: Dict[str, Dict[str, Union[AnyStr, int]]]
-        self.dirs = {}  # type: Dict[str, NCCHContainerMount]
-        self._real_dir_names = {}  # type: Dict[str, str]
+        self._files: Dict[str, Dict[str, Union[AnyStr, int]]] = {}
+        self.dirs: Dict[str, NCCHContainerMount] = {}
+        self._real_dir_names: Dict[str, str] = {}
 
         self.mount_all = mount_all
         self.dev = dev
@@ -60,19 +60,20 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
 
     def find_titles(self, path):
         print('Searching for all tmds...', end='\r')
-        tmds = []  # type: List[str]
-        for idx, p in enumerate(iglob(os.path.join(self.titles_dir, '**/{}.tmd'.format('[0-9a-f]' * 8)),
+        tmds: List[str] = []
+        for idx, p in enumerate(iglob(os.path.join(self.titles_dir, f'**/{"[0-9a-f]" * 8}.tmd'),
                                       recursive=True), start=1):
             tmds.append(p)
-            print('Searching for all tmds...', '{:>3}'.format(idx), end='\r')
+            print('Searching for all tmds...', f'{idx:>3}', end='\r')
         print()
         tmd_count = len(tmds)
         for idx, tmd_path in enumerate(tmds, 1):
-            print('Checking... {:>3} / {:>3} / {}'.format(idx, tmd_count, tmd_path), flush=True)
+            print(f'Checking... {idx:>3} / {tmd_count:>3} / {tmd_path}', flush=True)
+            # noinspection PyBroadException
             try:
                 tmd = TitleMetadataReader.from_file(tmd_path)
             except Exception as e:
-                print('Failed to read {}: {}: {}'.format(tmd_path, type(e).__name__, e))
+                print(f'Failed to read {tmd_path}: {type(e).__name__}: {e}')
                 continue
 
             self.total_size = 0
@@ -85,27 +86,26 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
                 elif os.path.isfile(os.path.join(content_path, chunk.id.upper() + '.APP')):
                     real_filename = os.path.join(content_path, chunk.id.upper() + '.APP')
                 else:
-                    print("Content {0.title_id}:{1.cindex:04}:{1.id} not found, "
-                          "will not be included.".format(tmd, chunk))
+                    print(f'Content {tmd.title_id}:{chunk.cindex:04}:{chunk.id} not found, will not be included.')
                     if self.mount_all is False:
                         break
                     continue
                 f_stat = os.stat(real_filename)
                 if chunk.size != f_stat.st_size:
-                    print("Warning: TMD Content size and filesize of", chunk.id, "are different.")
+                    print('Warning: TMD Content size and filesize of', chunk.id, 'are different.')
                 file_ext = 'nds' if chunk.cindex == 0 and int(tmd.title_id, 16) >> 44 == 0x48 else 'ncch'
-                filename = '/{}.{:04x}.{}.{}'.format(tmd.title_id, chunk.cindex, chunk.id, file_ext)
+                filename = f'/{tmd.title_id}.{chunk.cindex:04x}.{chunk.id}.{file_ext}'
                 self._files[filename] = {'size': chunk.size, 'index': chunk.cindex.to_bytes(2, 'big'),
                                          'real_filepath': real_filename}
 
-                dirname = '/{}.{:04x}.{}'.format(tmd.title_id, chunk.cindex, chunk.id)
+                dirname = f'/{tmd.title_id}.{chunk.cindex:04x}.{chunk.id}'
                 try:
                     content_vfp = _c.VirtualFileWrapper(self, filename, chunk.size)
                     content_fuse = NCCHContainerMount(content_vfp, decompress_code=self.decompress_code, dev=self.dev,
                                                       g_stat=f_stat, seeddb=self.seeddb)
                     content_fuse.init(path)
                 except Exception as e:
-                    print("Failed to mount {}: {}: {}".format(real_filename, type(e).__name__, e))
+                    print(f'Failed to mount {real_filename}: {type(e).__name__}: {e}')
                 else:
                     self.total_size += chunk.size
                     try:
@@ -116,7 +116,7 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
                         if e.args[0] == ENOENT:
                             pass
                         else:
-                            print('Unexpected Exception when loading SMDH: {}: {}'.format(type(e).__name__, e))
+                            print(f'Unexpected Exception when loading SMDH: {type(e).__name__}: {e}')
                     else:
                         for x in _region_order_check:
                             try:
@@ -182,9 +182,9 @@ def main(prog: str = None, args: list = None):
     from argparse import ArgumentParser
     if args is None:
         args = argv[1:]
-    parser = ArgumentParser(prog=prog, description="Mount Nintendo 3DS NCCH files from installed NAND/SD titles.",
+    parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS NCCH files from installed NAND/SD titles.',
                             parents=(_c.default_argp, _c.dev_argp, _c.seeddb_argp,
-                                     _c.main_args('title_dir', "title directory")))
+                                     _c.main_args('title_dir', 'title directory')))
     parser.add_argument('--mount-all', help='mount all contents, not just the first', action='store_true')
     parser.add_argument('--decompress-code', help='decompress code of all mounted titles '
                                                   '(can be slow with lots of titles!)', action='store_true')
@@ -201,9 +201,9 @@ def main(prog: str = None, args: list = None):
         opts['fstypename'] = 'Titles'
         if _c.macos:
             path_to_show = os.path.realpath(a.title_dir).rsplit('/', maxsplit=2)
-            opts['volname'] = "Nintendo 3DS Titles Directory ({}/{})".format(path_to_show[-2], path_to_show[-1])
+            opts['volname'] = f'Nintendo 3DS Titles Directory ({path_to_show[-2]}/{path_to_show[-1]})'
         elif _c.windows:
             # volume label can only be up to 32 chars
-            opts['volname'] = "Nintendo 3DS Titles Directory"
+            opts['volname'] = 'Nintendo 3DS Titles Directory'
     FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
          fsname=os.path.realpath(a.title_dir).replace(',', '_'), **opts)

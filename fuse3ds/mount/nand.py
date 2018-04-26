@@ -19,15 +19,17 @@ from . import _common as _c
 from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 from .exefs import ExeFSMount
 
+# noinspection PyBroadException
 try:
     from Cryptodome.Cipher import AES
     from Cryptodome.Util import Counter
 except ModuleNotFoundError:
-    exit("Cryptodome module not found, please install pycryptodomex for encryption support "
-         "(`{} install pycryptodomex`).".format(_c.python_cmd))
+    exit(
+        f'Cryptodome module not found, please install pycryptodomex for encryption support '
+        f'(`{_c.python_cmd} install pycryptodomex`).')
 except Exception as e:
-    exit("Failed to import the Cryptodome module:\n"
-         "{}: {}".format(type(e).__name__, e))
+    exit(f'Failed to import the Cryptodome module:\n'
+         f'{type(e).__name__}: {e}')
 
 # ncsd image doesn't have the actual size
 nand_size = {0x200000: 0x3AF00000, 0x280000: 0x4D800000}
@@ -178,16 +180,16 @@ class NANDImageMount(LoggingMixIn, Operations):
         for idx, part in enumerate(ncsd_partitions):
             if ncsd_part_fstype[idx] == 0:
                 continue
-            print('ncsd idx:{0} fstype:{1} crypttype:{2} offset:{3[0]:08x} size:{3[1]:08x} '
-                  .format(idx, ncsd_part_fstype[idx], ncsd_part_crypttype[idx], part), end='')
+            print(f'ncsd idx:{idx} fstype:{ncsd_part_fstype[idx]} crypttype:{ncsd_part_crypttype[idx]} '
+                  f'offset:{part[0]:08x} size:{part[1]:08x} ', end='')
             if idx == 0:
                 self.files['/twl_full.img'] = {'size': part[1], 'offset': part[0], 'keyslot': 0x03, 'type': 'enc'}
                 print('/twl_full.img')
                 twl_part_fstype = 0
                 for t_idx, t_part in enumerate(twl_partitions):
                     if t_part[0] != 0:
-                        print('twl  idx:{0}                      offset:{1[0]:08x} size:{1[1]:08x} '
-                              .format(t_idx, t_part), end='')
+                        print(f'twl  idx:{t_idx}                      offset:{t_part[0]:08x} size:{t_part[1]:08x} ',
+                              end='')
                         if twl_part_fstype == 0:
                             self.files['/twln.img'] = {'size': t_part[1], 'offset': t_part[0], 'keyslot': 0x03,
                                                        'type': 'enc'}
@@ -199,18 +201,18 @@ class NANDImageMount(LoggingMixIn, Operations):
                             print('/twlp.img')
                             twl_part_fstype += 1
                         else:
-                            self.files['/twl_unk{}.img'.format(twl_part_fstype)] = {'size': t_part[1],
-                                                                                    'offset': t_part[0],
-                                                                                    'keyslot': 0x03, 'type': 'enc'}
-                            print('/twl_unk{}.img'.format(twl_part_fstype))
+                            self.files[f'/twl_unk{twl_part_fstype}.img'] = {'size': t_part[1],
+                                                                            'offset': t_part[0],
+                                                                            'keyslot': 0x03, 'type': 'enc'}
+                            print(f'/twl_unk{twl_part_fstype}.img')
                             twl_part_fstype += 1
 
             else:
                 if ncsd_part_fstype[idx] == 3:
                     # boot9 hardcoded this keyslot, i'll do this properly later
-                    self.files['/firm{}.bin'.format(firm_idx)] = {'size': part[1], 'offset': part[0], 'keyslot': 0x06,
-                                                                  'type': 'enc'}
-                    print('/firm{}.bin'.format(firm_idx))
+                    self.files[f'/firm{firm_idx}.bin'] = {'size': part[1], 'offset': part[0], 'keyslot': 0x06,
+                                                          'type': 'enc'}
+                    print(f'/firm{firm_idx}.bin')
                     firm_idx += 1
 
                 elif ncsd_part_fstype[idx] == 1 and ncsd_part_crypttype[idx] >= 2:
@@ -227,19 +229,19 @@ class NANDImageMount(LoggingMixIn, Operations):
                     ctr_part_fstype = 0
                     for c_idx, c_part in enumerate(ctr_partitions):
                         if c_part[0] != 0:
-                            print('ctr  idx:{0}                      offset:{1:08x} size:{2[1]:08x} '
-                                  .format(c_idx, part[0] + c_part[0], c_part), end='')
+                            print(f'ctr  idx:{c_idx}                      offset:{part[0] + c_part[0]:08x} '
+                                  f'size:{c_part[1]:08x} ', end='')
                             if ctr_part_fstype == 0:
                                 self.files['/ctrnand_fat.img'] = {'size': c_part[1], 'offset': part[0] + c_part[0],
                                                                   'keyslot': ctrnand_keyslot, 'type': 'enc'}
                                 print('/ctrnand_fat.img')
                                 ctr_part_fstype += 1
                             else:
-                                self.files['/ctr_unk{}.img'.format(ctr_part_fstype)] = {'size': c_part[1],
-                                                                                        'offset': part[0] + c_part[0],
-                                                                                        'keyslot': ctrnand_keyslot,
-                                                                                        'type': 'enc'}
-                                print('/ctr_unk{}.img'.format(ctr_part_fstype))
+                                self.files[f'/ctr_unk{ctr_part_fstype}.img'] = {'size': c_part[1],
+                                                                                'offset': part[0] + c_part[0],
+                                                                                'keyslot': ctrnand_keyslot,
+                                                                                'type': 'enc'}
+                                print(f'/ctr_unk{ctr_part_fstype}.img')
                                 ctr_part_fstype += 1
 
                 elif ncsd_part_fstype[idx] == 4:
@@ -267,7 +269,7 @@ class NANDImageMount(LoggingMixIn, Operations):
                 self.exefs_fuse.init('/')
                 self._essentials_mounted = True
             except Exception as e:
-                print("Failed to mount essential.exefs: {}: {}".format(type(e).__name__, e))
+                print(f'Failed to mount essential.exefs: {type(e).__name__}: {e}')
 
     def __del__(self, *args):
         try:
@@ -341,7 +343,7 @@ class NANDImageMount(LoggingMixIn, Operations):
                   'Please file an issue or contact the developer with the details below.',
                   '  https://github.com/ihaveamac/fuse-3ds/issues',
                   '--------------------------------------------------',
-                  '{!r}: {!r}'.format(path, pformat(fi)), sep='\n')
+                  f'{path!r}: {pformat(fi)!r}', sep='\n')
 
             data = b'g' * size
 
@@ -417,7 +419,7 @@ def main(prog: str = None, args: list = None):
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS NAND images.',
                             parents=(_c.default_argp, _c.readonly_argp, _c.dev_argp,
-                                     _c.main_args('nand', "NAND image")))
+                                     _c.main_args('nand', 'NAND image')))
     parser.add_argument('--otp', help='path to otp (enc/dec); not needed if NAND image has essentials backup from '
                                       'GodMode9')
     parser.add_argument('--cid', help='NAND CID; not needed if NAND image has essentials backup from GodMode9')
@@ -430,7 +432,7 @@ def main(prog: str = None, args: list = None):
 
     nand_stat = os.stat(a.nand)
 
-    with open(a.nand, 'r{}b'.format('' if a.ro else '+')) as f:
+    with open(a.nand, f'r{"" if a.ro else "+"}b') as f:
         # noinspection PyTypeChecker
         mount = NANDImageMount(nand_fp=f, dev=a.dev, g_stat=nand_stat, readonly=a.ro, otp=a.otp, cid=a.cid)
         if _c.macos or _c.windows:
@@ -439,9 +441,9 @@ def main(prog: str = None, args: list = None):
             #   it will have to be done differently.
             if _c.macos:
                 path_to_show = os.path.realpath(a.nand).rsplit('/', maxsplit=2)
-                opts['volname'] = "Nintendo 3DS NAND ({}/{})".format(path_to_show[-2], path_to_show[-1])
+                opts['volname'] = f'Nintendo 3DS NAND ({path_to_show[-2]}/{path_to_show[-1]})'
             elif _c.windows:
                 # volume label can only be up to 32 chars
-                opts['volname'] = "Nintendo 3DS NAND"
+                opts['volname'] = 'Nintendo 3DS NAND'
         FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=a.ro, nothreads=True, debug=a.d,
              fsname=os.path.realpath(a.nand).replace(',', '_'), **opts)

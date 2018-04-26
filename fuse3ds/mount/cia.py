@@ -88,7 +88,7 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
             if meta_size == 0x3AC0:
                 self.files['/icon.bin'] = {'size': 0x36C0, 'offset': meta_offset + 0x400, 'type': 'raw'}
 
-        self.dirs = {}  # type: Dict[str, NCCHContainerMount]
+        self.dirs: Dict[str, NCCHContainerMount] = {}
 
         self.f = cia_fp
 
@@ -105,20 +105,21 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
         current_offset = self.content_offset
         for chunk in self.tmd.chunk_records:
             file_ext = 'nds' if chunk.cindex == b'\0\0' and readbe(self.title_id) >> 44 == 0x48 else 'ncch'
-            filename = '/{:04x}.{}.{}'.format(chunk.cindex, chunk.id, file_ext)
+            filename = f'/{chunk.cindex:04x}.{chunk.id}.{file_ext}'
             self.files[filename] = {'size': chunk.size, 'offset': current_offset,
                                     'index': chunk.cindex.to_bytes(2, 'big'),
                                     'type': 'enc' if chunk.type.encrypted else 'raw'}
             current_offset += new_offset(chunk.size)
 
-            dirname = '/{:04x}.{}'.format(chunk.cindex, chunk.id)
+            dirname = f'/{chunk.cindex:04x}.{chunk.id}'
+            # noinspection PyBroadException
             try:
                 content_vfp = _c.VirtualFileWrapper(self, filename, chunk.size)
                 content_fuse = NCCHContainerMount(content_vfp, dev=self.dev, g_stat=self._g_stat, seeddb=self.seeddb)
                 content_fuse.init(path)
                 self.dirs[dirname] = content_fuse
             except Exception as e:
-                print("Failed to mount {}: {}: {}".format(filename, type(e).__name__, e))
+                print(f'Failed to mount {filename}: {type(e).__name__}: {e}')
 
     def flush(self, path, fh):
         return self.f.flush()
@@ -193,7 +194,7 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
                   'Please file an issue or contact the developer with the details below.',
                   '  https://github.com/ihaveamac/fuse-3ds/issues',
                   '--------------------------------------------------',
-                  '{!r}: {!r}'.format(path, pformat(fi)), sep='\n')
+                  f'{path!r}: {pformat(fi)!r}', sep='\n')
 
             data = b'g' * size
 
@@ -229,9 +230,9 @@ def main(prog: str = None, args: list = None):
         if _c.macos or _c.windows:
             opts['fstypename'] = 'CIA'
             if _c.macos:
-                opts['volname'] = "CTR Importable Archive ({})".format(mount.title_id.upper())
+                opts['volname'] = f'CTR Importable Archive ({mount.title_id.upper()})'
             elif _c.windows:
                 # volume label can only be up to 32 chars
-                opts['volname'] = "CIA ({})".format(mount.title_id.upper())
+                opts['volname'] = f'CIA ({mount.title_id.upper()})'
         FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
              fsname=os.path.realpath(a.cia).replace(',', '_'), **opts)

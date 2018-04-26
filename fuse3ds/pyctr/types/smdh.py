@@ -44,19 +44,19 @@ class SMDH:
     # TODO: support other settings
 
     def __init__(self, names: 'Dict[str, AppTitle]'):
-        self.names = MappingProxyType({n: names.get(n, None) for n in region_names})  # type: Dict[str, AppTitle]
+        self.names: Dict[str, AppTitle] = MappingProxyType({n: names.get(n, None) for n in region_names})
 
     @classmethod
     def load(cls, fp: 'BinaryIO') -> 'SMDH':
         """Load an SMDH from a file-like object."""
         smdh = fp.read(SMDH_SIZE)
         if len(smdh) != SMDH_SIZE:
-            raise InvalidSMDHError('invalid size (expected: {:#6x}, got: {:#6x}'.format(SMDH_SIZE, len(smdh)))
+            raise InvalidSMDHError(f'invalid size (expected: {SMDH_SIZE:#6x}, got: {len(smdh):#6x}')
         if smdh[0:4] != b'SMDH':
             raise InvalidSMDHError('SMDH magic not found')
 
         app_structs = smdh[8:0x2008]
-        names = {}  # type: Dict[str, AppTitle]
+        names: Dict[str, AppTitle] = {}
         # due to region_names only being 12 elements, this will only process 12. the other 4 are unused.
         for app_title, region in zip((app_structs[x:x + 0x200] for x in range(0, 0x200, 0x2000)), region_names):
             names[region] = AppTitle(app_title[0:0x80].decode('utf-16le').strip('\0'),
