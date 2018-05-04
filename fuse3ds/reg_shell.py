@@ -3,7 +3,9 @@ from os import remove
 from os.path import abspath, dirname
 from subprocess import Popen
 from tempfile import NamedTemporaryFile
+import winreg
 
+# these do not use winreg due to administrator access being required.
 base = r'''Windows Registry Editor Version 5.00
 
 [HKEY_CLASSES_ROOT\*\shell\Mount with fuse-3ds\command]
@@ -17,7 +19,7 @@ base_del = r'''Windows Registry Editor Version 5.00
 
 
 def call_regedit(data: str):
-    # i know this is not very nice
+    # this does not use winreg due to administrator access being required.
     t = NamedTemporaryFile('w', delete=False, encoding='cp1252', suffix='-fuse3ds.reg')
     try:
         t.write(data)
@@ -38,3 +40,11 @@ def add_reg(_pyi: bool):
 
 def del_reg():
     call_regedit(base_del)
+
+
+# I'm wondering how I could properly check if this is running as admin, instead of always checking if UAC is disabled
+#   if IsUserAnAdmin is 1.
+def uac_enabled() -> bool:
+    key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System', 0,
+                         winreg.KEY_READ)
+    return bool(winreg.QueryValueEx(key, 'EnableLUA')[0])

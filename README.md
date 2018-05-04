@@ -63,7 +63,7 @@ OS X 10.11 El Capitan and later are supported. Older releases may work, but supp
 
 ## Usage
 ### Graphical user interface
-A GUI can be used by specifying the type to be `gui` (e.g. Windows: `py -3 -mfuse3ds gui`, \*nix: `python3 -mfuse3ds gui`).
+A GUI can be used by specifying the type to be `gui` (e.g. Windows: `py -3 -mfuse3ds gui`, \*nix: `python3 -mfuse3ds gui`). The GUI controls mounting and unmounting.
 
 ### Command line
 The main way to run a mount script after installing is using "`mount_<type>`" (e.g. `mount_cci game.3ds mountpoint`).
@@ -71,6 +71,13 @@ The main way to run a mount script after installing is using "`mount_<type>`" (e
 If it doesn't work, the other way is to use `<python-cmd> -mfuse3ds <type>` (e.g. Windows: `py -3 -mfuse3ds cci game.3ds mountpoint`, \*nix: `python3 -mfuse3ds cci game.3ds mountpoint`).
 
 Windows users can use a drive letter like `F:` as a mountpoint, or use `*` and a drive letter will be automatically chosen.
+
+#### Unmounting
+* Windows: Press <kbd>Ctrl</kbd> + <kbd>C</kbd> in the command prompt/PowerShell window.
+* macOS: Two methods:
+  * Right-click on the mount and choose "Eject “_drive name_”".
+  * Run from terminal: `diskutil unmount /path/to/mount`
+* Linux: Run from terminal: `fusermount -u /path/to/mount`
 
 ### Examples
 * Mount a 3DS game card dump:  

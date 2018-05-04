@@ -2,14 +2,14 @@
 # don't read this file, it sucks
 
 import json
-from subprocess import Popen, check_call, CalledProcessError
 import webbrowser
 from contextlib import suppress
 from glob import iglob
 from os import environ, kill, rmdir
-from os.path import abspath, isfile, isdir, ismount, dirname, join as pjoin
+from os.path import abspath, dirname, expanduser, isfile, isdir, ismount, join as pjoin
 from shutil import get_terminal_size
 from ssl import PROTOCOL_TLSv1_2, SSLContext
+from subprocess import Popen, check_call, CalledProcessError
 from sys import argv, executable, exit, platform, version_info, maxsize
 from time import sleep
 from traceback import print_exc
@@ -27,20 +27,26 @@ if TYPE_CHECKING:
     from http.client import HTTPResponse
     from typing import Any, Dict, List
 
+ITEM = 'item'
+EASTWEST = 'ew'
+PV = 'previous'
+LABEL1 = 'label1'
+LABEL2 = 'label2'
+LABEL3 = 'label3'
+MOUNTPOINT = 'mountpoint'
+
 MOUNT = 'Mount'
 UNMOUNT = 'Unmount'
 DIRECTORY = 'Directory'
 FILE = 'File'
-ITEM = 'item'
-EASTWEST = 'ew'
 OK = 'OK'
-PV = 'previous'
+
 DRAGFILE = 'Drag a file here or browse...'
 DRAGDIR = 'Drag a directory here or browse...'
 BROWSE = 'Browse...'
-LABEL1 = 'label1'
-LABEL2 = 'label2'
-LABEL3 = 'label3'
+ALLOW_OTHER = 'Allow access by other users (-o allow_other)'
+ALLOW_ROOT = 'Allow access by root (-o allow_root)'
+ALLOW_NONE = "Don't allow other users"
 
 b9_paths: 'List[str]' = ([pjoin(x, 'boot9.bin') for x in config_dirs]
                          + [pjoin(x, 'boot9_prot.bin') for x in config_dirs])
@@ -94,7 +100,7 @@ if windows:
     from subprocess import CREATE_NEW_PROCESS_GROUP
     from sys import stdout
 
-    from reg_shell import add_reg, del_reg
+    from reg_shell import add_reg, del_reg, uac_enabled
 
     # unlikely, but this causes issues
     if stdout is None:  # happens if pythonw is used on windows
@@ -123,8 +129,9 @@ if windows:
 
     def update_drives():
         o = get_unused_drives()
-        app.changeOptionBox('mountpoint', (x + ':' for x in o))
-        app.setOptionBox('mountpoint', o[-1] + ':')
+        app.changeOptionBox(MOUNTPOINT, (x + ':' for x in o))
+        app.setOptionBox(MOUNTPOINT, o[-1] + ':')
+
 
 _used_pyinstaller = False
 _ndw_resp = False
@@ -134,6 +141,7 @@ curr_mountpoint: str = None
 pyver = f'{version_info[0]}.{version_info[1]}.{version_info[2]}'
 if version_info[3] != 'final':
     pyver += f'{version_info[3][0]}{version_info[4]}'
+pybits = 64 if maxsize > 0xFFFFFFFF else 32
 
 app = gui('fuse-3ds v' + version, showIcon=False, handleArgs=False)
 
@@ -195,7 +203,6 @@ def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = (
 
 
 def stop_mount():
-    global process
     if process is not None and process.poll() is None:
         print('Stopping')
         if windows:
@@ -227,9 +234,9 @@ def press(button: str):
                     if not _ndw_resp:
                         app.enableButton(MOUNT)
                         return
-                mountpoint = app.getOptionBox('mountpoint')
+                mountpoint = app.getOptionBox(MOUNTPOINT)
             else:
-                mountpoint = app.getEntry('mountpoint')
+                mountpoint = app.getEntry(MOUNTPOINT)
                 try:
                     # winfsp won't work on an existing directory
                     # so we try to use rmdir, which will delete it, only if it's empty
@@ -246,7 +253,7 @@ def press(button: str):
                     app.enableButton(MOUNT)
                     return
         else:
-            mountpoint = app.getEntry('mountpoint')
+            mountpoint = app.getEntry(MOUNTPOINT)
             if not mountpoint:
                 app.showSubWindow('nomperror')
                 app.enableButton(MOUNT)
@@ -280,6 +287,15 @@ def press(button: str):
             if mount_all:
                 extra_args.append('--mount-all')
 
+        if app.getCheckBox('debug'):
+            extra_args.extend(('--do', app.getEntry('debug')))
+
+        allow_user = app.getRadioButton('allowuser')
+        if allow_user == ALLOW_ROOT:
+            extra_args.extend(('-o', 'allow_root'))
+        elif allow_user == ALLOW_OTHER:
+            extra_args.extend(('-o', 'allow_other'))
+
         app.thread(run_mount, mount_types[mount_type], item, mountpoint, extra_args)
 
     elif button == UNMOUNT:
@@ -311,7 +327,7 @@ def change_type(*_):
     for t in mount_types:
         if t == mount_type:
             app.showFrame(t)
-            if t == NAND:
+            if t == NAND and windows:
                 app.setRadioButton('mountpoint-choice', 'Directory')
         else:
             app.hideFrame(t)
@@ -473,35 +489,73 @@ def detect_type(fn: str):
 app.setSticky(EASTWEST)
 with app.labelFrame('Mount point', row=2, colspan=3):
     app.setSticky(EASTWEST)
-    if windows:
-        def rb_change(_):
-            if app.getRadioButton('mountpoint-choice') == 'Drive letter':
-                app.hideFrame('mountpoint-dir')
-                app.showFrame('mountpoint-drive')
+    with app.frame('mountpoint-root', colspan=3):
+        if windows:
+            def rb_change(_):
+                if app.getRadioButton('mountpoint-choice') == 'Drive letter':
+                    app.hideFrame('mountpoint-dir')
+                    app.showFrame('mountpoint-drive')
+                else:
+                    app.hideFrame('mountpoint-drive')
+                    app.showFrame('mountpoint-dir')
+
+
+            app.addLabel('mountpoint-choice-label', 'Mount type', row=0)
+            app.addRadioButton('mountpoint-choice', 'Drive letter', row=0, column=1)
+            app.addRadioButton('mountpoint-choice', 'Directory', row=0, column=2)
+
+            app.setRadioButtonChangeFunction('mountpoint-choice', rb_change)
+            with app.frame('mountpoint-drive', row=1, colspan=3):
+                app.addLabel('mountlabel1', 'Drive letter', row=0, column=0)
+                # putting "WWWW" to avoid a warning
+                app.addOptionBox(MOUNTPOINT, ['WWWW'], row=0, column=1, colspan=2)
+
+            with app.frame('mountpoint-dir', row=1, colspan=3):
+                app.addLabel('mountlabel2', 'Mount point', row=0, column=0)
+                app.addDirectoryEntry(MOUNTPOINT, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
+            app.hideFrame('mountpoint-dir')
+            # noinspection PyUnboundLocalVariable
+            update_drives()
+        else:
+            app.addLabel('mountlabel', 'Mount point', row=2, column=0)
+            app.addDirectoryEntry(MOUNTPOINT, row=2, column=1, colspan=2).theButton.config(text=BROWSE)
+        app.setEntryDefault(MOUNTPOINT, DRAGDIR)
+
+
+        def toggle_advanced_opts(_):
+            if app.getCheckBox('advopt'):
+                app.showLabelFrame('Advanced options')
             else:
-                app.hideFrame('mountpoint-drive')
-                app.showFrame('mountpoint-dir')
+                app.hideLabelFrame('Advanced options')
 
 
-        app.addLabel('mountpoint-choice-label', 'Mount type', row=0)
-        app.addRadioButton('mountpoint-choice', 'Drive letter', row=0, column=1)
-        app.addRadioButton('mountpoint-choice', 'Directory', row=0, column=2)
+        def choose_debug_location(_):
+            path: str = app.saveBox(fileName='fuse3ds.log', dirName=pjoin(expanduser('~'), 'Desktop'), fileTypes=(),
+                                    fileExt='.log')
+            app.setEntry('debug', path)
 
-        app.setRadioButtonChangeFunction('mountpoint-choice', rb_change)
-        with app.frame('mountpoint-drive', row=1, colspan=3):
-            app.addLabel('mountlabel1', 'Drive letter', row=0, column=0)
-            app.addOptionBox('mountpoint', ['WWWW'], row=0, column=1, colspan=2)  # putting "WWWW" to avoid a warning
 
-        with app.frame('mountpoint-dir', row=1, colspan=3):
-            app.addLabel('mountlabel2', 'Mount point', row=0, column=0)
-            app.addDirectoryEntry('mountpoint', row=0, column=1, colspan=2).theButton.config(text=BROWSE)
-        app.hideFrame('mountpoint-dir')
-        # noinspection PyUnboundLocalVariable
-        update_drives()
-    else:
-        app.addLabel('mountlabel', 'Mount point', row=2, column=0)
-        app.addDirectoryEntry('mountpoint', row=2, column=1, colspan=2).theButton.config(text=BROWSE)
-    app.setEntryDefault('mountpoint', DRAGDIR)
+        app.addNamedCheckBox('Show advanced options', 'advopt', column=1, colspan=2)
+        app.setCheckBoxChangeFunction('advopt', toggle_advanced_opts)
+
+    app.setSticky(EASTWEST)
+    with app.labelFrame('Advanced options', colspan=3):
+        app.setSticky(EASTWEST)
+
+        if not windows:
+            app.addLabel('allowuser-label', 'External user access')
+            app.addRadioButton('allowuser', ALLOW_NONE, row=PV, column=1, colspan=2)
+            app.addRadioButton('allowuser', ALLOW_ROOT, column=1, colspan=2)
+            app.addRadioButton('allowuser', ALLOW_OTHER, column=1, colspan=2)
+
+        app.addLabel('debug-label1', 'Debug output')
+        app.addNamedCheckBox('Enable debug output', 'debug', row=PV, column=1, colspan=2)
+        app.addLabel('debug-label2', 'Debug log file')
+        app.addNamedButton('Choose log location...', 'debug', choose_debug_location, row=PV, column=1, colspan=2)
+        app.addEntry('debug', column=1, colspan=2)
+        app.setEntryDefault('debug', 'Choose where to save above...')
+
+    app.hideLabelFrame('Advanced options')
 
     app.addButtons([MOUNT, UNMOUNT], press, colspan=3)
     app.disableButton(UNMOUNT)
@@ -514,7 +568,7 @@ try:
     app.setEntryDropTarget(NAND + 'otp', make_dnd_entry_check(NAND + 'otp'))
     app.setEntryDropTarget(NAND + 'cid', make_dnd_entry_check(NAND + 'cid'))
     app.setEntryDropTarget(SD + 'movable', make_dnd_entry_check(SD + 'movable'))
-    app.setEntryDropTarget('mountpoint', make_dnd_entry_check('mountpoint'))
+    app.setEntryDropTarget(MOUNTPOINT, make_dnd_entry_check(MOUNTPOINT))
     has_dnd = True
 except Exception as e:
     print('Warning: Failed to enable Drag & Drop, will not be used.')
@@ -647,7 +701,7 @@ with app.subWindow('extras', 'fuse-3ds Extras', modal=True, blocking=True):
     with app.frame('extras-footer', colspan=3):
         app.addHorizontalSeparator()
         app.addLabel('footer',
-                     f'fuse-3ds v{version} running on Python {pyver} {64 if maxsize > 0xFFFFFFFF else 32}-bit '
+                     f'fuse-3ds v{version} running on Python {pyver} {pybits}-bit '
                      f'on {platform}')
 
     app.setResizable(False)
@@ -688,7 +742,7 @@ def main(_pyi=False, _allow_admin=False):
     try:
         # attempt importing all the fusepy stuff used in the mount scripts
         # if it fails, libfuse probably couldn't be found
-        from fuse import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
+        import fuse
     except EnvironmentError:
         # TODO: probably check if this was really "Unable to find libfuse" (this is aliased to OSError)
         if windows:
@@ -717,7 +771,8 @@ def main(_pyi=False, _allow_admin=False):
         return 1
 
     if windows and not _allow_admin:
-        if windll.shell32.IsUserAnAdmin():
+        isadmin: int = windll.shell32.IsUserAnAdmin()
+        if isadmin and uac_enabled():
             windll.user32.MessageBoxW(None, (
                 'This should not be run as administrator.\n'
                 'The mount point may not be accessible by your account normally, '
@@ -732,8 +787,8 @@ def main(_pyi=False, _allow_admin=False):
     try:
         print(f'Checking for updates... (Currently running v{version})')
         ctx = SSLContext(PROTOCOL_TLSv1_2)
-        u: HTTPResponse
         with urlopen('https://api.github.com/repos/ihaveamac/fuse-3ds/releases', context=ctx) as u:
+            u: HTTPResponse
             res: List[Dict[str, Any]] = json.loads(u.read().decode('utf-8'))
             latest_ver: str = res[0]['tag_name']
             if parse_version(latest_ver) > parse_version(version):
