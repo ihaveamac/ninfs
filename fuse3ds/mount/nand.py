@@ -317,6 +317,11 @@ class NANDImageMount(LoggingMixIn, Operations):
             return self.exefs_fuse.read(_c.remove_first_dir(path), size, offset, fh)
         fi = self.files[path]
         real_offset = fi['offset'] + offset
+        if fi['offset'] + offset > fi['offset'] + fi['size']:
+            return b''
+        if offset + size > fi['size']:
+            size = fi['size'] - offset
+
         if fi['type'] == 'raw':
             self.f.seek(real_offset)
             data = self.f.read(size)

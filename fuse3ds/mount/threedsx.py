@@ -100,6 +100,10 @@ class ThreeDSXMount(LoggingMixIn, Operations):
 
         fi = self.files[path]
         real_offset = fi['offset'] + offset
+        if fi['offset'] + offset > fi['offset'] + fi['size']:
+            return b''
+        if offset + size > fi['size']:
+            size = fi['size'] - offset
         self.f.seek(real_offset)
         return self.f.read(size)
 
