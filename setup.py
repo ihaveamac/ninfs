@@ -10,9 +10,6 @@ if sys.hexversion < 0x030601f0:
 with open('README.md', 'r', encoding='utf-8') as f:
     readme = f.read()
 
-install_requires = ['pycryptodomex', 'appJar']
-# fusepy should be added here once the main repo has a new release with Windows support.
-
 setup(
     name='fuse-3ds',
     version='1.0b8.dev1',
@@ -28,8 +25,11 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
     ],
-    install_requires=install_requires,
+    install_requires=['pycryptodomex'],
+    # fusepy should be added here once the main repo has a new release with Windows support.
+    extras_require={'gui': ['appJar']},
     entry_points={'console_scripts': ['fuse3ds = fuse3ds.main:gui',
                                       # not putting in gui_scripts since the cmd window is required and trying to
                                       # remove it breaks some other stuff with subprocess management ?!?

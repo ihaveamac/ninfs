@@ -16,7 +16,12 @@ from traceback import print_exc
 from typing import TYPE_CHECKING
 from urllib.request import urlopen
 
-from appJar import gui
+try:
+    from appJar import gui
+except ModuleNotFoundError:
+    exit('Could not import appJar. If you installed via pip, make sure you installed with the gui.\n'
+         'Read the README at the GitHub repository.')
+
 from pkg_resources import parse_version
 
 from __init__ import __version__ as version
