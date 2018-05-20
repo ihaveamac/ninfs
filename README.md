@@ -37,7 +37,7 @@ Python 3.6.1+ and pycryptodomex are required. appJar is required for the GUI.
 ### Windows
 Windows 7 or later is required.
 
-A GUI is available for use. If you download the exe from the [latest release](https://github.com/ihaveamac/fuse-3ds/releases) and run it, a window will appear allowing you to choose mount options easily.
+A standalone executable with a GUI is available for use. If you download the exe from the [latest release](https://github.com/ihaveamac/fuse-3ds/releases) and run it, a window will appear allowing you to choose mount options easily.
 
 Python does not have to be installed, but [WinFsp](http://www.secfs.net/winfsp/download/) is still required.
 
@@ -47,6 +47,7 @@ Python does not have to be installed, but [WinFsp](http://www.secfs.net/winfsp/d
 * Install the latest version of [Python 3](https://www.python.org/downloads/). The x86-64 version is preferred on 64-bit Windows.
 * Install the latest version of [WinFsp](http://www.secfs.net/winfsp/download/).
 * Install fuse-3ds with `py -3 -m pip install --upgrade https://github.com/ihaveamac/fuse-3ds/archive/master.zip`.
+  * With GUI support: `py -3 -m pip install --upgrade https://github.com/ihaveamac/fuse-3ds/archive/master.zip#egg=fuse-3ds[gui]`
 
 ### macOS
 OS X 10.11 El Capitan and later are supported. Older releases may work, but support is not guaranteed.
@@ -54,16 +55,18 @@ OS X 10.11 El Capitan and later are supported. Older releases may work, but supp
 * Install the latest version of Python 3. The recommended way is [Homebrew](https://brew.sh). You can also use an installer from [python.org](https://www.python.org/downloads/) or a tool like [pyenv](https://github.com/pyenv/pyenv).
 * Install the latest version of [FUSE for macOS](https://github.com/osxfuse/osxfuse/releases/latest).
 * Install fuse-3ds with `python3 -m pip install --upgrade https://github.com/ihaveamac/fuse-3ds/archive/master.zip`.
+  * With GUI support: `python3 -m pip install --upgrade https://github.com/ihaveamac/fuse-3ds/archive/master.zip#egg=fuse-3ds[gui]`
 
 ### Linux
 * Recent distributions should have Python 3.6.1 or later pre-installed, or included in its repositories. If not, you can use an extra repository (e.g. [deadsnakes's PPA](https://launchpad.net/%7Edeadsnakes/+archive/ubuntu/ppa) for Ubuntu), [build from source](https://www.python.org/downloads/source/), or use a tool like [pyenv](https://github.com/pyenv/pyenv).
 * Most distributions should have fuse enabled/installed by default. Use your package manager if it isn't.
 * Install fuse-3ds with `python3 -m pip install --upgrade --user https://github.com/ihaveamac/fuse-3ds/archive/master.zip`.
   * `--user` is not needed if you are using a virtual environment.
+  * With GUI support: `python3 -m pip install --upgrade --user https://github.com/ihaveamac/fuse-3ds/archive/master.zip#egg=fuse-3ds[gui]`
 
 ## Usage
 ### Graphical user interface
-A GUI can be used by specifying the type to be `gui` (e.g. Windows: `py -3 -mfuse3ds gui`, \*nix: `python3 -mfuse3ds gui`). The GUI controls mounting and unmounting.
+A GUI can be used, if fuse-3ds was installed with GUI support, by specifying the type to be `gui` (e.g. Windows: `py -3 -mfuse3ds gui`, \*nix: `python3 -mfuse3ds gui`). The GUI controls mounting and unmounting.
 
 ### Command line
 The main way to run a mount script after installing is using "`mount_<type>`" (e.g. `mount_cci game.3ds mountpoint`).
