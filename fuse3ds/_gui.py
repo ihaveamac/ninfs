@@ -295,11 +295,12 @@ def press(button: str):
         if app.getCheckBox('debug'):
             extra_args.extend(('--do', app.getEntry('debug')))
 
-        allow_user = app.getRadioButton('allowuser')
-        if allow_user == ALLOW_ROOT:
-            extra_args.extend(('-o', 'allow_root'))
-        elif allow_user == ALLOW_OTHER:
-            extra_args.extend(('-o', 'allow_other'))
+        if not windows:
+            allow_user = app.getRadioButton('allowuser')
+            if allow_user == ALLOW_ROOT:
+                extra_args.extend(('-o', 'allow_root'))
+            elif allow_user == ALLOW_OTHER:
+                extra_args.extend(('-o', 'allow_other'))
 
         app.thread(run_mount, mount_types[mount_type], item, mountpoint, extra_args)
 
