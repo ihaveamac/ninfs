@@ -291,6 +291,10 @@ def press(button: str):
                 extra_args.append('--decompress-code')
             if mount_all:
                 extra_args.append('--mount-all')
+        elif mount_type == EXEFS:
+            decompress = app.getCheckBox(EXEFS + 'decompress')
+            if decompress:
+                extra_args.append('--decompress-code')
 
         if app.getCheckBox('debug'):
             extra_args.extend(('--do', app.getEntry('debug')))
@@ -387,6 +391,9 @@ with app.labelFrame('Mount settings', row=1, colspan=3):
         app.addLabel(EXEFS + LABEL1, FILE, row=0, column=0)
         app.addFileEntry(EXEFS + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
         app.setEntryDefault(EXEFS + ITEM, DRAGFILE)
+
+        app.addLabel(EXEFS + LABEL3, 'Options', row=3, column=0)
+        app.addNamedCheckBox('Decompress .code', EXEFS + 'decompress', row=3, column=1, colspan=1)
     app.hideFrame(EXEFS)
 
     with app.frame(NAND, row=1, colspan=3):
