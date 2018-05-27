@@ -15,6 +15,8 @@ if TYPE_CHECKING:
     from Cryptodome.Cipher._mode_cbc import CbcMode
     # noinspection PyProtectedMember
     from Cryptodome.Cipher._mode_ctr import CtrMode
+    # noinspection PyProtectedMember
+    from Cryptodome.Cipher._mode_ecb import EcbMode
     from typing import Dict, Union
 
 __all__ = ['CryptoError', 'KeyslotMissingError', 'BootromNotFoundError', 'CTRCrypto']
@@ -187,6 +189,15 @@ class CTRCrypto:
             return _TWLCryptoWrapper(cipher)
         else:
             return cipher
+
+    def create_ecb_cipher(self, keyslot: int) -> 'EcbMode':
+        """Create AES-ECB cipher with the given keyslot."""
+        try:
+            key = self.key_normal[keyslot]
+        except KeyError:
+            raise KeyslotMissingError(f'normal key for keyslot 0x{keyslot:02x} is not set up')
+
+        return AES.new(key, AES.MODE_ECB)
 
     def set_keyslot(self, xy: str, keyslot: int, key: 'Union[int, bytes]'):
         """Sets a keyslot to the specified key."""

@@ -114,7 +114,7 @@ class NANDImageMount(LoggingMixIn, Operations):
         nand_fp.seek(0x12C00)
         keysect_enc = nand_fp.read(0x200)
         if len(set(keysect_enc)) != 1:
-            keysect_dec = AES.new(self.crypto.key_normal[0x11], AES.MODE_ECB).decrypt(keysect_enc)
+            keysect_dec = self.crypto.create_ecb_cipher(0x11).decrypt(keysect_enc)
             # i'm cheating here by putting the decrypted version in memory and
             #   not reading from the image every time. but it's not AES-CTR so
             #   fuck that.
@@ -372,7 +372,7 @@ class NANDImageMount(LoggingMixIn, Operations):
             keysect = bytearray(fi['content'])
             keysect[offset:offset + len(data)] = data
             final = bytes(keysect)
-            cipher_keysect = AES.new(self.crypto.key_normal[0x11], AES.MODE_ECB)
+            cipher_keysect = self.crypto.create_ecb_cipher(0x11)
             self.f.seek(fi['offset'])
             self.f.write(cipher_keysect.encrypt(final))
             # noinspection PyTypeChecker
