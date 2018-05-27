@@ -19,18 +19,6 @@ from . import _common as _c
 from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 from .exefs import ExeFSMount
 
-# noinspection PyBroadException
-try:
-    from Cryptodome.Cipher import AES
-    from Cryptodome.Util import Counter
-except ModuleNotFoundError:
-    exit(
-        f'Cryptodome module not found, please install pycryptodomex for encryption support '
-        f'(`{_c.python_cmd} install pycryptodomex`).')
-except Exception as e:
-    exit(f'Failed to import the Cryptodome module:\n'
-         f'{type(e).__name__}: {e}')
-
 # ncsd image doesn't have the actual size
 nand_size = {0x200000: 0x3AF00000, 0x280000: 0x4D800000}
 

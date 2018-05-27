@@ -23,18 +23,6 @@ if TYPE_CHECKING:
 if _c.windows:
     from ctypes import c_wchar_p, pointer, c_ulonglong, windll, wintypes
 
-# noinspection PyBroadException
-try:
-    from Cryptodome.Cipher import AES
-    from Cryptodome.Util import Counter
-except ModuleNotFoundError:
-    exit(
-        f'Cryptodome module not found, please install pycryptodomex for encryption support '
-        f'(`{_c.python_cmd} install pycryptodomex`).')
-except Exception as e:
-    exit(f'Failed to import the Cryptodome module:\n'
-         f'{type(e).__name__}: {e}')
-
 
 class SDFilesystemMount(LoggingMixIn, Operations):
     @_c.ensure_lower_path
