@@ -241,8 +241,17 @@ def press(button: str):
         if windows:
             if app.getRadioButton('mountpoint-choice') == 'Drive letter':
                 if mount_type == NAND:
-                    app.showSubWindow('nand-driveletter-warning')
-                    if not _ndw_resp:
+                    res = app.okBox(
+                        'fuse-3ds Warning',
+                        'You chose drive letter when using the NAND mount.\n'
+                        '\n'
+                        'Using a directory mount over a drive letter for NAND is highly\n'
+                        'recommended because some tools like OSFMount will not be\n'
+                        'able to read from files in a mount using a drive letter.\n'
+                        '\n'
+                        'Are you sure you want to continue?'
+                    )
+                    if not res:
                         app.enableButton(MOUNT)
                         return
                 mountpoint = app.getOptionBox(MOUNTPOINT)
@@ -657,20 +666,20 @@ elif macos:
 app.setResizable(False)
 
 # failed to mount subwindow
-with app.subWindow('mounterror', 'fuse-3ds Error', modal=True, blocking=True):
+with app.subWindow('mounterror', 'fuse-3ds Error', modal=True, blocking=False):
     app.addLabel('mounterror-label', 'Failed to mount. Please check the output.')
     app.addNamedButton(OK, 'mounterror-ok', lambda _: app.hideSubWindow('mounterror'))
     app.setResizable(False)
 
 # exited with error subwindow
-with app.subWindow('exiterror', 'fuse-3ds Error', modal=True, blocking=True):
+with app.subWindow('exiterror', 'fuse-3ds Error', modal=True, blocking=False):
     app.addLabel('exiterror-label', 'The mount process exited with an error code (<errcode>). Please check the output.')
     app.addNamedButton(OK, 'exiterror-ok', lambda _: app.hideSubWindow('exiterror'))
     app.setResizable(False)
 
 if windows:
     # failed to mount to directory subwindow
-    with app.subWindow('mounterror-dir-win', 'fuse-3ds Error', modal=True, blocking=True):
+    with app.subWindow('mounterror-dir-win', 'fuse-3ds Error', modal=True, blocking=False):
         app.addLabel('mounterror-dir-label', 'Failed to mount to the given mount point.\n'
                                              'Please make sure the directory is empty or does not exist.')
         app.addNamedButton(OK, 'mounterror-dir-ok', lambda _: app.hideSubWindow('mounterror-dir-win'))
@@ -681,20 +690,7 @@ if windows:
         _ndw_resp = btn == 'ndw-continue'
         app.hideSubWindow('nand-driveletter-warning')
 
-    # drive-letter with nand warning
-    with app.subWindow('nand-driveletter-warning', 'fuse-3ds Warning', modal=True, blocking=True):
-        app.addLabel('You chose drive letter when using the NAND mount.\n'
-                     '\n'
-                     'Using a directory mount over a drive letter for NAND is highly\n'
-                     'recommended because some tools like OSFMount will not be\n'
-                     'able to read from files in a mount using a drive letter.\n'
-                     '\n'
-                     'Are you sure you want to continue?', colspan=2)
-        app.addNamedButton('Mount anyway', 'ndw-continue', _ndw_response)
-        app.addNamedButton('Cancel', 'ndw-cancel', _ndw_response, row=PV, column=1)
-        app.setResizable(False)
-
-with app.subWindow('extras', 'fuse-3ds Extras', modal=True, blocking=True):
+with app.subWindow('extras', 'fuse-3ds Extras', modal=True, blocking=False):
     app.setSticky(EASTWEST)
     with app.labelFrame('Tutorial', colspan=3):
         app.setSticky(EASTWEST)
@@ -726,19 +722,19 @@ with app.subWindow('extras', 'fuse-3ds Extras', modal=True, blocking=True):
     app.setResizable(False)
 
 # file/directory not set error
-with app.subWindow('noitemerror', 'fuse-3ds Error', modal=True, blocking=True):
+with app.subWindow('noitemerror', 'fuse-3ds Error', modal=True, blocking=False):
     app.addLabel('Select a file or directory to mount.')
     app.addNamedButton(OK, 'noitemerror-ok', lambda _: app.hideSubWindow('noitemerror'))
     app.setResizable(False)
 
 # mountpoint not set error
-with app.subWindow('nomperror', 'fuse-3ds Error', modal=True, blocking=True):
+with app.subWindow('nomperror', 'fuse-3ds Error', modal=True, blocking=False):
     app.addLabel('Select an empty directory to be the mount point.')
     app.addNamedButton(OK, 'nomperror-ok', lambda _: app.hideSubWindow('nomperror'))
     app.setResizable(False)
 
 # failed to unmount subwindow
-with app.subWindow('unmounterror', 'fuse-3ds Error', modal=True, blocking=True):
+with app.subWindow('unmounterror', 'fuse-3ds Error', modal=True, blocking=False):
     def unmount_ok(_):
         app.hideSubWindow('unmounterror')
         app.enableButton(UNMOUNT)
