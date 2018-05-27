@@ -73,7 +73,8 @@ class CDNContentsMount(LoggingMixIn, Operations):
 
             # decrypt titlekey
             self.crypto.set_keyslot('y', 0x3D, self.crypto.get_common_key(common_key_index))
-            titlekey = self.crypto.cbc_decrypt(0x3D, bytes.fromhex(self.title_id) + (b'\0' * 8), enc_titlekey)
+            titlekey = self.crypto.create_cbc_cipher(0x3D,
+                                                     bytes.fromhex(self.title_id) + (b'\0' * 8)).decrypt(enc_titlekey)
             self.crypto.set_normal_key(0x40, titlekey)
 
         # create virtual files
@@ -175,7 +176,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
                 # read to block size
                 f.seek(offset - before)
                 # adding 0x10 to the size fixes some kind of decryption bug
-                data = self.crypto.cbc_decrypt(0x40, iv, f.read(size + 0x10))[before:real_size + before]
+                data = self.crypto.create_cbc_cipher(0x40, iv).decrypt(f.read(size + 0x10))[before:real_size + before]
 
             else:
                 from pprint import pformat

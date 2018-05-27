@@ -193,7 +193,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
             after = (offset + size) % 16
             data = (b'\0' * before) + data + (b'\0' * after)
             iv = fi['iv'] + (offset >> 4)
-            data = self.crypto.aes_ctr(fi['keyslot'], iv, data)[before:size + before]
+            data = self.crypto.create_ctr_cipher(fi['keyslot'], iv).decrypt(data)[before:size + before]
 
         elif fi['enctype'] == 'exefs':
             # thanks Stary2001
@@ -210,7 +210,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                 for r in fi['keyslot_normal_range']:
                     if r[0] <= self.f.tell() - fi['offset'] < r[1]:
                         keyslot = fi['keyslot']
-                data += self.crypto.aes_ctr(keyslot, iv, self.f.read(0x200))
+                data += self.crypto.create_ctr_cipher(keyslot, iv).decrypt(self.f.read(0x200))
 
             data = data[before:size + before]
 

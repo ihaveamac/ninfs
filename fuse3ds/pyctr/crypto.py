@@ -13,6 +13,8 @@ from .util import config_dirs, readbe, readle
 if TYPE_CHECKING:
     # noinspection PyProtectedMember
     from Cryptodome.Cipher._mode_cbc import CbcMode
+    # noinspection PyProtectedMember
+    from Cryptodome.Cipher._mode_ctr import CtrMode
     from typing import Dict, Union
 
 __all__ = ['CryptoError', 'KeyslotMissingError', 'BootromNotFoundError', 'CTRCrypto']
@@ -78,6 +80,25 @@ def _requires_bootrom(method):
 def rol(val: int, r_bits: int, max_bits: int) -> int:
     return (val << r_bits % max_bits) & (2 ** max_bits - 1) |\
            ((val & (2 ** max_bits - 1)) >> (max_bits - (r_bits % max_bits)))
+
+
+class _TWLCryptoWrapper:
+    def __init__(self, cipher: 'CbcMode'):
+        self._cipher = cipher
+
+    def encrypt(self, data: bytes) -> bytes:
+        data_len = len(data)
+        data_rev = bytearray(data_len)
+        for i in range(0, data_len, 0x10):
+            data_rev[i:i + 0x10] = data[i:i + 0x10][::-1]
+
+        data_out = bytearray(self._cipher.encrypt(bytes(data_rev)))
+
+        for i in range(0, data_len, 0x10):
+            data_out[i:i + 0x10] = data_out[i:i + 0x10][::-1]
+        return bytes(data_out[0:data_len])
+
+    decrypt = encrypt
 
 
 class CTRCrypto:
@@ -149,41 +170,23 @@ class CTRCrypto:
 
         return AES.new(key, AES.MODE_CBC, iv)
 
-    def cbc_decrypt(self, keyslot: int, iv: bytes, data: bytes) -> bytes:
-        """Do AES-CBC crypto with the given keyslot and data."""
-        # TODO: remove this
-        return self.create_cbc_cipher(keyslot, iv).decrypt(data)
-
-    def aes_ctr(self, keyslot: int, ctr: int, data: bytes) -> bytes:
+    def create_ctr_cipher(self, keyslot: int, ctr: int) -> 'Union[CtrMode, _TWLCryptoWrapper]':
         """
-        Do AES-CTR crypto with the given keyslot and data.
+        Create AES-CTR cipher with the given keyslot.
 
         Normal and DSi crypto will be automatically chosen depending on keyslot.
         """
-        # TODO: make create_ctr_cipher
         try:
             key = self.key_normal[keyslot]
         except KeyError:
             raise KeyslotMissingError(f'normal key for keyslot 0x{keyslot:02x} is not set up')
 
-        counter = Counter.new(128, initial_value=ctr)
-        cipher = AES.new(key, AES.MODE_CTR, counter=counter)
+        cipher = AES.new(key, AES.MODE_CTR, counter=Counter.new(128, initial_value=ctr))
+
         if keyslot < 0x04:
-            # setup for DSi crypto
-            data_len = len(data)
-            data_rev = bytearray(data_len)
-            for i in range(0, data_len, 0x10):
-                data_rev[i:i + 0x10] = data[i:i + 0x10][::-1]
-
-            data_out = bytearray(cipher.encrypt(bytes(data_rev)))
-
-            for i in range(0, data_len, 0x10):
-                data_out[i:i + 0x10] = data_out[i:i + 0x10][::-1]
-            return bytes(data_out[0:data_len])
-
+            return _TWLCryptoWrapper(cipher)
         else:
-            # normal crypto for 3DS
-            return cipher.encrypt(data)
+            return cipher
 
     def set_keyslot(self, xy: str, keyslot: int, key: 'Union[int, bytes]'):
         """Sets a keyslot to the specified key."""

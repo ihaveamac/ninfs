@@ -142,15 +142,14 @@ class SDFilesystemMount(LoggingMixIn, Operations):
 
     # open = os.open
     def open(self, path, flags):
-        fd = os.open(path, flags)
-        mode = 'rb+'  # maybe generate the right mode? I don't think it matters
-        self.fds[fd] = os.fdopen(fd, mode)
-        return fd
+        f = open(path, 'rb+', buffering=-1)
+        self.fds[f.fileno()] = f
+        return f.fileno()
 
     def read(self, path, size, offset, fh):
         f = self.fds[fh]
         # special check for special files
-        if os.path.basename(path).startswith('.') or 'Nintendo DSiWare' in path:
+        if os.path.basename(path).startswith('.') or 'nintendo dsiware' in path:
             f.seek(offset)
             return f.read(size)
 
@@ -158,7 +157,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         f.seek(offset - before)
         data = f.read(size + before)
         iv = self.path_to_iv(path) + (offset >> 4)
-        return self.crypto.aes_ctr(0x34, iv, data)[before:]
+        return self.crypto.create_ctr_cipher(0x34, iv).decrypt(data)[before:]
 
     def readdir(self, path, fh):
         yield from ('.', '..')
@@ -240,7 +239,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
 
         before = offset % 16
         iv = self.path_to_iv(path) + (offset >> 4)
-        out_data = self.crypto.aes_ctr(0x34, iv, (b'\0' * before) + data)[before:]
+        out_data = self.crypto.create_ctr_cipher(0x34, iv).decrypt((b'\0' * before) + data)[before:]
         f.seek(offset)
         return f.write(out_data)
 

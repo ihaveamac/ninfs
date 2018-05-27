@@ -71,7 +71,7 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
 
         # decrypt titlekey
         self.crypto.set_keyslot('y', 0x3D, self.crypto.get_common_key(common_key_index))
-        titlekey = self.crypto.cbc_decrypt(0x3D, tik_title_id + (b'\0' * 8), enc_titlekey)
+        titlekey = self.crypto.create_cbc_cipher(0x3D, tik_title_id + (b'\0' * 8)).decrypt(enc_titlekey)
         self.crypto.set_normal_key(0x40, titlekey)
 
         # create virtual files
@@ -190,7 +190,7 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
             # read to block size
             self.f.seek(real_offset - before)
             # adding 0x10 to the size fixes some kind of decryption bug
-            data = self.crypto.cbc_decrypt(0x40, iv, self.f.read(size + 0x10))[before:real_size + before]
+            data = self.crypto.create_cbc_cipher(0x40, iv).decrypt(self.f.read(size + 0x10))[before:real_size + before]
 
         else:
             from pprint import pformat

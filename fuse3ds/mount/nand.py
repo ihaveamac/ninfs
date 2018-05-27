@@ -101,8 +101,6 @@ class NANDImageMount(LoggingMixIn, Operations):
         self.ctr_twl = readle(sha1(cid).digest()[0:16])
 
         self.crypto.setup_keys_from_otp(otp)
-        print(f'{self.crypto.key_x[0x03]:032x}')
-        print(self.crypto.key_normal[0x03].hex())
 
         nand_fp.seek(0, 2)
         raw_nand_size = nand_fp.tell()
@@ -130,7 +128,7 @@ class NANDImageMount(LoggingMixIn, Operations):
                             readle(ncsd_part_raw[i + 4:i + 8]) * 0x200] for i in range(0, 0x40, 0x8)]
 
         # including padding for crypto
-        twl_mbr = self.crypto.aes_ctr(0x03, self.ctr_twl + 0x1B, ncsd_header[0xB0:0x100])[0xE:0x50]
+        twl_mbr = self.crypto.create_ctr_cipher(0x03, self.ctr_twl + 0x1B).decrypt(ncsd_header[0xB0:0x100])[0xE:0x50]
         twl_partitions = [[readle(twl_mbr[i + 8:i + 12]) * 0x200,
                            readle(twl_mbr[i + 12:i + 16]) * 0x200] for i in range(0, 0x40, 0x10)]
 
@@ -184,7 +182,8 @@ class NANDImageMount(LoggingMixIn, Operations):
                     print('/ctrnand_full.img')
                     nand_fp.seek(part[0])
                     iv = self.ctr + (part[0] >> 4)
-                    ctr_mbr = self.crypto.aes_ctr(ctrnand_keyslot, iv, nand_fp.read(0x200))[0x1BE:0x1FE]
+                    ctr_mbr = self.crypto.create_ctr_cipher(ctrnand_keyslot, iv).decrypt(
+                        nand_fp.read(0x200))[0x1BE:0x1FE]
                     ctr_partitions = [[readle(ctr_mbr[i + 8:i + 12]) * 0x200,
                                        readle(ctr_mbr[i + 12:i + 16]) * 0x200]
                                       for i in range(0, 0x40, 0x10)]
@@ -296,7 +295,7 @@ class NANDImageMount(LoggingMixIn, Operations):
             after = (offset + size) % 16
             data = (b'\0' * before) + data + (b'\0' * after)
             iv = (self.ctr if fi['keyslot'] > 0x03 else self.ctr_twl) + (real_offset >> 4)
-            data = self.crypto.aes_ctr(fi['keyslot'], iv, data)[before:len(data) - after]
+            data = self.crypto.create_ctr_cipher(fi['keyslot'], iv).decrypt(data)[before:len(data) - after]
 
         elif fi['type'] in {'keysect', 'twlmbr', 'info'}:
             # being lazy here since twlmbr starts at a weird offset. i'll do
@@ -354,7 +353,8 @@ class NANDImageMount(LoggingMixIn, Operations):
             else:
                 after = 0  # not needed for ctr
             iv = (self.ctr_twl if twl else self.ctr) + (real_offset >> 4)
-            out_data = self.crypto.aes_ctr(fi['keyslot'], iv, (b'\0' * before) + data + (b'\0' * after))
+            out_data = self.crypto.create_ctr_cipher(fi['keyslot'], iv).encrypt(
+                (b'\0' * before) + data + (b'\0' * after))
             self.f.seek(real_offset)
             self.f.write(out_data[before:])
 
@@ -363,7 +363,8 @@ class NANDImageMount(LoggingMixIn, Operations):
             twlmbr[offset:offset + len(data)] = data
             final = bytes(twlmbr)
             self.f.seek(fi['offset'])
-            self.f.write(self.crypto.aes_ctr(fi['keyslot'], self.ctr_twl + 0x1B, bytes(0xE) + final)[0xE:0x50])
+            self.f.write(self.crypto.create_ctr_cipher(fi['keyslot'], self.ctr_twl + 0x1B).encrypt(
+                (b'\0' * 0xE) + final)[0xE:0x50])
             # noinspection PyTypeChecker
             fi['content'] = final
 
