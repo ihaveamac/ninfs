@@ -100,42 +100,9 @@ class NANDImageMount(LoggingMixIn, Operations):
         self.ctr = readbe(sha256(cid).digest()[0:16])
         self.ctr_twl = readle(sha1(cid).digest()[0:16])
 
-        cipher_otp = AES.new(self.crypto.otp_key, AES.MODE_CBC, self.crypto.otp_iv)
-        if otp[0:4][::-1] == b'\xDE\xAD\xB0\x0F':
-            otp_enc = cipher_otp.encrypt(otp)
-            otp_keysect_hash = sha256(otp_enc[0:0x90]).digest()
-        else:
-            otp_keysect_hash = sha256(otp[0:0x90]).digest()
-            otp = cipher_otp.decrypt(otp)
-
-        # generate twl keys
-        # TODO: put this in CTRCrypto
-        twl_cid_lo, twl_cid_hi = readle(otp[0x08:0xC]), readle(otp[0xC:0x10])
-        twl_cid_lo ^= 0xB358A6AF
-        twl_cid_lo |= 0x80000000
-        twl_cid_hi ^= 0x08C267B7
-        twl_cid_lo = twl_cid_lo.to_bytes(4, 'little')
-        twl_cid_hi = twl_cid_hi.to_bytes(4, 'little')
-
-        twl_key_x = readle(twl_cid_lo + b'NINTENDO' + twl_cid_hi)
-        self.crypto.set_keyslot('x', 0x03, twl_key_x)
-
-        # only keys for slots 0x04-0x07 are used, and keyX for all of them are
-        #   the same, so this only uses the data needed for this key
-        # thanks Stary2001 (from 3ds_tools)
-        tmp_otp_data = otp[0x90:0xAC] + self.crypto.b9_extdata_otp
-        console_key_xy = sha256(tmp_otp_data).digest()
-        console_key_x = readbe(console_key_xy[0:16])
-        console_key_y = readbe(console_key_xy[16:32])
-        console_normalkey = self.crypto.keygen_manual(console_key_x, console_key_y)
-
-        cipher_keygen = AES.new(console_normalkey, AES.MODE_CBC, self.crypto.b9_extdata_keygen_iv)
-        key_x = readbe(cipher_keygen.encrypt(self.crypto.b9_extdata_keygen))
-
-        self.crypto.set_keyslot('x', 0x04, key_x)
-        self.crypto.set_keyslot('x', 0x05, key_x)
-        self.crypto.set_keyslot('x', 0x06, key_x)
-        self.crypto.set_keyslot('x', 0x07, key_x)
+        self.crypto.setup_keys_from_otp(otp)
+        print(f'{self.crypto.key_x[0x03]:032x}')
+        print(self.crypto.key_normal[0x03].hex())
 
         nand_fp.seek(0, 2)
         raw_nand_size = nand_fp.tell()
@@ -148,17 +115,12 @@ class NANDImageMount(LoggingMixIn, Operations):
 
         nand_fp.seek(0x12C00)
         keysect_enc = nand_fp.read(0x200)
-        if keysect_enc != b'\0' * 0x200 and keysect_enc != b'\xFF' * 0x200:
-            keysect_x = otp_keysect_hash[0:16]
-            keysect_y = otp_keysect_hash[16:32]
-            # TODO: put this in CTRCrypto
-            self.keysect_key = self.crypto.keygen_manual(readbe(keysect_x), readbe(keysect_y))
-            cipher_keysect = AES.new(self.keysect_key, AES.MODE_ECB)
-            keysect_dec = cipher_keysect.decrypt(keysect_enc)
+        if len(set(keysect_enc)) != 1:
+            keysect_dec = AES.new(self.crypto.key_normal[0x11], AES.MODE_ECB).decrypt(keysect_enc)
             # i'm cheating here by putting the decrypted version in memory and
             #   not reading from the image every time. but it's not AES-CTR so
             #   fuck that.
-            self.files['/sector0x96.bin'] = {'size': 0x200, 'offset': 0x12C00, 'keyslot': 0xFF, 'type': 'keysect',
+            self.files['/sector0x96.bin'] = {'size': 0x200, 'offset': 0x12C00, 'keyslot': 0x11, 'type': 'keysect',
                                              'content': keysect_dec}
 
         ncsd_part_fstype = ncsd_header[0x10:0x18]
@@ -409,7 +371,7 @@ class NANDImageMount(LoggingMixIn, Operations):
             keysect = bytearray(fi['content'])
             keysect[offset:offset + len(data)] = data
             final = bytes(keysect)
-            cipher_keysect = AES.new(self.keysect_key, AES.MODE_ECB)
+            cipher_keysect = AES.new(self.crypto.key_normal[0x11], AES.MODE_ECB)
             self.f.seek(fi['offset'])
             self.f.write(cipher_keysect.encrypt(final))
             # noinspection PyTypeChecker

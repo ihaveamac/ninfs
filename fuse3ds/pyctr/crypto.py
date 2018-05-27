@@ -1,4 +1,5 @@
 from functools import wraps
+from hashlib import sha256
 from os import environ
 from os.path import isfile, getsize, join as pjoin
 from typing import TYPE_CHECKING
@@ -6,16 +7,27 @@ from typing import TYPE_CHECKING
 from Cryptodome.Cipher import AES
 from Cryptodome.Util import Counter
 
-from .util import config_dirs, readbe
+from .common import PyCTRError
+from .util import config_dirs, readbe, readle
 
 if TYPE_CHECKING:
-    from typing import Dict
+    # noinspection PyProtectedMember
+    from Cryptodome.Cipher._mode_cbc import CbcMode
+    from typing import Dict, Union
 
 __all__ = ['CryptoError', 'KeyslotMissingError', 'BootromNotFoundError', 'CTRCrypto']
 
 
-class CryptoError(Exception):
+class CryptoError(PyCTRError):
     """Generic exception for cryptography operations."""
+
+
+class OTPLengthError(CryptoError):
+    """OTP is the wrong length."""
+
+
+class CorruptOTPError(CryptoError):
+    """OTP hash does not match."""
 
 
 class KeyslotMissingError(CryptoError):
@@ -41,7 +53,6 @@ _b9_key_x = {}
 _b9_key_y = {}
 _b9_extdata_otp: bytes = None
 _b9_extdata_keygen: bytes = None
-_b9_extdata_keygen_iv: bytes = None
 _otp_key: bytes = None
 _otp_iv: bytes = None
 
@@ -57,7 +68,7 @@ def _requires_bootrom(method):
     @wraps(method)
     def wrapper(self, *args, **kwargs):
         if not self.b9_keys_set:
-            raise KeyslotMissingError("bootrom is required to set up keys")
+            raise KeyslotMissingError('bootrom is required to set up keys, see setup_keys_from_boot9')
         return method(self, *args, **kwargs)
     return wrapper
 
@@ -76,7 +87,6 @@ class CTRCrypto:
 
     _b9_extdata_otp: bytes = None
     _b9_extdata_keygen: bytes = None
-    _b9_extdata_keygen_iv: bytes = None
 
     _otp_key: bytes = None
     _otp_iv: bytes = None
@@ -122,11 +132,6 @@ class CTRCrypto:
 
     @property
     @_requires_bootrom
-    def b9_extdata_keygen_iv(self) -> bytes:
-        return self._b9_extdata_keygen_iv
-
-    @property
-    @_requires_bootrom
     def otp_key(self) -> bytes:
         return self._otp_key
 
@@ -135,15 +140,19 @@ class CTRCrypto:
     def otp_iv(self) -> bytes:
         return self._otp_iv
 
-    def aes_cbc_decrypt(self, keyslot: int, iv: bytes, data: bytes) -> bytes:
-        """Do AES-CBC crypto with the given keyslot and data."""
+    def create_cbc_cipher(self, keyslot: int, iv: bytes) -> 'CbcMode':
+        """Create AES-CBC cipher with the given keyslot."""
         try:
             key = self.key_normal[keyslot]
         except KeyError:
             raise KeyslotMissingError(f'normal key for keyslot 0x{keyslot:02x} is not set up')
 
-        cipher = AES.new(key, AES.MODE_CBC, iv)
-        return cipher.decrypt(data)
+        return AES.new(key, AES.MODE_CBC, iv)
+
+    def cbc_decrypt(self, keyslot: int, iv: bytes, data: bytes) -> bytes:
+        """Do AES-CBC crypto with the given keyslot and data."""
+        # TODO: remove this
+        return self.create_cbc_cipher(keyslot, iv).decrypt(data)
 
     def aes_ctr(self, keyslot: int, ctr: int, data: bytes) -> bytes:
         """
@@ -151,6 +160,7 @@ class CTRCrypto:
 
         Normal and DSi crypto will be automatically chosen depending on keyslot.
         """
+        # TODO: make create_ctr_cipher
         try:
             key = self.key_normal[keyslot]
         except KeyError:
@@ -175,13 +185,15 @@ class CTRCrypto:
             # normal crypto for 3DS
             return cipher.encrypt(data)
 
-    def set_keyslot(self, xy: str, keyslot: int, key: int):
+    def set_keyslot(self, xy: str, keyslot: int, key: 'Union[int, bytes]'):
         """Sets a keyslot to the specified key."""
         to_use = None
         if xy == 'x':
             to_use = self.key_x
         elif xy == 'y':
             to_use = self.key_y
+        if isinstance(key, bytes):
+            key = int.from_bytes(key, 'big' if keyslot > 0x03 else 'little')
         to_use[keyslot] = key
         try:
             self.key_normal[keyslot] = self.keygen(keyslot)
@@ -223,19 +235,20 @@ class CTRCrypto:
         self._otp_iv = _otp_iv
         self._b9_extdata_otp = _b9_extdata_otp
         self._b9_extdata_keygen = _b9_extdata_keygen
-        self._b9_extdata_keygen_iv = _b9_extdata_keygen_iv
 
         self.b9_keys_set = True
 
     def setup_keys_from_boot9(self, path: str = None):
         """Set up certain keys from the ARM9 bootROM."""
-        global _otp_key, _otp_iv, _b9_extdata_otp, _b9_extdata_keygen, _b9_extdata_keygen_iv
+        global _otp_key, _otp_iv, _b9_extdata_otp, _b9_extdata_keygen
         if self.b9_keys_set:
             return
 
         if _b9_key_x:
             self._copy_global_keys()
             return
+
+        # TODO: set up all relevant keys
 
         if path:
             paths = (path,)
@@ -258,9 +271,8 @@ class CTRCrypto:
                     _otp_iv = b9.read(0x10)
 
                     b9.seek(keyblob_offset)
-                    _b9_extdata_otp = b9.read(0x24)
-                    _b9_extdata_keygen = b9.read(0x10)
-                    _b9_extdata_keygen_iv = b9.read(0x10)
+                    _b9_extdata_keygen = b9.read(0x200)
+                    _b9_extdata_otp = _b9_extdata_keygen[0:0x24]
 
                     # Original NCCH
                     b9.seek(keyblob_offset + 0x170)
@@ -288,7 +300,99 @@ class CTRCrypto:
         # if keys are not set...
         raise BootromNotFoundError(paths)
 
-    def setup_keys_from_otp(self, path: str):
-        """Set up console-unique keys from an OTP dump."""
-        # TODO: setup_keys_from_otp
-        raise NotImplementedError('setup_keys_from_otp')
+    @_requires_bootrom
+    def setup_keys_from_otp(self, otp: bytes):
+        """Set up console-unique keys from an OTP dump. Encrypted and decrypted are supported."""
+        otp_len = len(otp)
+        if otp_len != 0x100:
+            raise OTPLengthError(otp_len)
+
+        cipher_otp = AES.new(self.otp_key, AES.MODE_CBC, self.otp_iv)
+        if otp[0:4] == b'\x0f\xb0\xad\xde':
+            # decrypted otp
+            otp_enc: bytes = cipher_otp.encrypt(otp)
+            otp_dec = otp
+        else:
+            # encrypted otp
+            otp_enc = otp
+            otp_dec: bytes = cipher_otp.decrypt(otp)
+
+        otp_hash: bytes = otp_dec[0xE0:0x100]
+        otp_hash_digest: bytes = sha256(otp_dec[0:0xE0]).digest()
+        if otp_hash_digest != otp_hash:
+            raise CorruptOTPError(f'expected: {otp_hash.hex()}; result: {otp_hash_digest.hex()}')
+
+        otp_keysect_hash: bytes = sha256(otp_enc[0:0x90]).digest()
+
+        self.set_keyslot('x', 0x11, otp_keysect_hash[0:0x10])
+        self.set_keyslot('y', 0x11, otp_keysect_hash[0:0x10])
+
+        # most otp code from https://github.com/Stary2001/3ds_tools/blob/master/three_ds/aesengine.py
+
+        twl_cid_lo, twl_cid_hi = readle(otp_dec[0x08:0xC]), readle(otp_dec[0xC:0x10])
+        twl_cid_lo ^= 0xB358A6AF
+        twl_cid_lo |= 0x80000000
+        twl_cid_hi ^= 0x08C267B7
+        twl_cid_lo = twl_cid_lo.to_bytes(4, 'little')
+        twl_cid_hi = twl_cid_hi.to_bytes(4, 'little')
+        self.set_keyslot('x', 0x03, twl_cid_lo + b'NINTENDO' + twl_cid_hi)
+
+        console_key_xy: bytes = sha256(otp_dec[0x90:0xAC] + self.b9_extdata_otp).digest()
+        self.set_keyslot('x', 0x3F, console_key_xy[0:0x10])
+        self.set_keyslot('y', 0x3F, console_key_xy[0x10:0x20])
+
+        extdata_off = 0
+
+        def gen(n: int) -> bytes:
+            nonlocal extdata_off
+            extdata_off += 36
+            iv = self.b9_extdata_keygen[extdata_off:extdata_off+16]
+            extdata_off += 16
+
+            data = self.create_cbc_cipher(0x3F, iv).encrypt(self.b9_extdata_keygen[extdata_off:extdata_off + 64])
+
+            extdata_off += n
+            return data
+
+        a = gen(64)
+        for i in range(0x4, 0x8):
+            self.set_keyslot('x', i, a[0:16])
+
+        for i in range(0x8, 0xc):
+            self.set_keyslot('x', i, a[16:32])
+
+        for i in range(0xc, 0x10):
+            self.set_keyslot('x', i, a[32:48])
+
+        self.set_keyslot('x', 0x10, a[48:64])
+
+        b = gen(16)
+        off = 0
+        for i in range(0x14, 0x18):
+            self.set_keyslot('x', i, b[off:off + 16])
+            off += 16
+
+        c = gen(64)
+        for i in range(0x18, 0x1c):
+            self.set_keyslot('x', i, c[0:16])
+
+        for i in range(0x1c, 0x20):
+            self.set_keyslot('x', i, c[16:32])
+
+        for i in range(0x20, 0x24):
+            self.set_keyslot('x', i, c[32:48])
+
+        self.set_keyslot('x', 0x24, c[48:64])
+
+        d = gen(16)
+        off = 0
+
+        for i in range(0x28, 0x2c):
+            self.set_keyslot('x', i, d[off:off + 16])
+            off += 16
+
+    @_requires_bootrom
+    def setup_keys_from_otp_file(self, path: str):
+        """Set up console-unique keys from an OTP file. Encrypted and decrypted are supported."""
+        with open(path, 'rb') as f:
+            self.setup_keys_from_otp(f.read(0x100))
