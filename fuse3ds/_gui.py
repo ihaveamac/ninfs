@@ -191,6 +191,12 @@ def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = (
             except CalledProcessError:
                 print(f'Failed to open Finder on {mountpoint}')
                 print_exc()
+        else:  # probably linux
+            try:
+                check_call(['xdg-open', mountpoint])
+            except CalledProcessError:
+                print(f'Failed to open the file manager on {mountpoint}')
+                print_exc()
 
         if process.wait() != 0:
             # just in case there are leftover mounts
