@@ -42,7 +42,7 @@ def get_seed(f: 'BinaryIO', program_id: int) -> bytes:
     raise NCCHSeedError(f'missing seed for {program_id:016X} from seeddb.bin')
 
 
-seeddb_paths = ['seeddb.bin'] + [pjoin(x, 'seeddb.bin') for x in config_dirs]
+seeddb_paths = [pjoin(x, 'seeddb.bin') for x in config_dirs]
 try:
     seeddb_paths.insert(0, environ['SEEDDB_PATH'])
 except KeyError:

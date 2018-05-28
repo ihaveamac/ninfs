@@ -67,7 +67,7 @@ _b9_extdata_keygen: bytes = None
 _otp_key: bytes = None
 _otp_iv: bytes = None
 
-b9_paths: 'List[str]' = ['boot9.bin', 'boot9_prot.bin']
+b9_paths: 'List[str]' = []
 for p in config_dirs:
     b9_paths.append(pjoin(p, 'boot9.bin'))
     b9_paths.append(pjoin(p, 'boot9_prot.bin'))
