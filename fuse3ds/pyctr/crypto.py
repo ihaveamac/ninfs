@@ -1,7 +1,7 @@
 from functools import wraps
 from hashlib import sha256
 from os import environ
-from os.path import isfile, getsize, join as pjoin
+from os.path import getsize, join as pjoin
 from typing import TYPE_CHECKING
 
 from Cryptodome.Cipher import AES
@@ -43,6 +43,12 @@ class BootromNotFoundError(CryptoError):
     """ARM9 bootROM was not found. Main argument is a tuple of checked paths."""
 
 
+class CorruptBootromError(CryptoError):
+    """ARM9 bootROM hash does not match."""
+
+
+BOOT9_PROT_HASH = '7331f7edece3dd33f2ab4bd0b3a5d607229fd19212c10b734cedcaf78c1a7b98'
+
 base_key_x = {
     # New3DS 9.3 NCCH
     0x18: (0x82E9C9BEBFB8BDB875ECC0A07D474374, 0x304BF1468372EE64115EBD4093D84276),
@@ -53,8 +59,9 @@ base_key_x = {
 }
 
 # global values to be copied to new CTRCrypto instances after the first one
-_b9_key_x = {}
-_b9_key_y = {}
+_b9_key_x: 'Dict[int, int]' = {}
+_b9_key_y: 'Dict[int, int]' = {}
+_b9_key_normal: 'Dict[int, bytes]' = {}
 _b9_extdata_otp: bytes = None
 _b9_extdata_keygen: bytes = None
 _otp_key: bytes = None
@@ -141,7 +148,7 @@ class CTRCrypto:
             self.key_x[keyslot] = keys[dev]
 
         if setup_b9_keys:
-            self.setup_keys_from_boot9()
+            self.setup_keys_from_boot9_file()
 
     @property
     @_requires_bootrom
@@ -245,6 +252,7 @@ class CTRCrypto:
     def _copy_global_keys(self):
         self.key_x.update(_b9_key_x)
         self.key_y.update(_b9_key_y)
+        self.key_normal.update(_b9_key_normal)
         self._otp_key = _otp_key
         self._otp_iv = _otp_iv
         self._b9_extdata_otp = _b9_extdata_otp
@@ -252,8 +260,8 @@ class CTRCrypto:
 
         self.b9_keys_set = True
 
-    def setup_keys_from_boot9(self, path: str = None):
-        """Set up certain keys from the ARM9 bootROM."""
+    def setup_keys_from_boot9(self, b9: bytes):
+        """Set up certain keys from an ARM9 bootROM dump."""
         global _otp_key, _otp_iv, _b9_extdata_otp, _b9_extdata_keygen
         if self.b9_keys_set:
             return
@@ -262,54 +270,89 @@ class CTRCrypto:
             self._copy_global_keys()
             return
 
-        # TODO: set up all relevant keys
+        b9_len = len(b9)
+        if b9_len != 0x8000:
+            raise CorruptBootromError(f'wrong length: {b9_len}')
 
-        if path:
-            paths = (path,)
-        else:
-            paths = b9_paths
+        b9_hash_digest: str = sha256(b9).hexdigest()
+        if b9_hash_digest != BOOT9_PROT_HASH:
+            raise CorruptBootromError(f'expected: {BOOT9_PROT_HASH}; returned: {b9_hash_digest}')
+
+        keyblob_offset = 0x5860
+        otp_key_offset = 0x56E0
+        if self.dev:
+            keyblob_offset += 0x400
+            otp_key_offset += 0x20
+
+        _otp_key = b9[otp_key_offset:otp_key_offset + 0x10]
+        _otp_iv = b9[otp_key_offset + 0x10:otp_key_offset + 0x20]
+
+        keyblob: bytes = b9[keyblob_offset:keyblob_offset + 0x400]
+
+        _b9_extdata_keygen = keyblob[0:0x200]
+        _b9_extdata_otp = keyblob[0:0x24]
+
+        # Original NCCH key, UDS local-WLAN CCMP key, StreetPass key, 6.0 save key
+        _b9_key_x[0x2C] = _b9_key_x[0x2D] = _b9_key_x[0x2E] = _b9_key_x[0x2F] = readbe(keyblob[0x170:0x180])
+
+        # SD/NAND AES-CMAC key, APT wrap key, Unknown, Gamecard savedata AES-CMAC
+        _b9_key_x[0x30] = _b9_key_x[0x31] = _b9_key_x[0x32] = _b9_key_x[0x33] = readbe(keyblob[0x180:0x190])
+
+        # SD key (loaded from movable.sed), movable.sed key, Unknown (used by friends module),
+        #   Gamecard savedata actual key
+        _b9_key_x[0x34] = _b9_key_x[0x35] = _b9_key_x[0x36] = _b9_key_x[0x37] = readbe(keyblob[0x190:0x1A0])
+
+        # BOSS key, Download Play key + actual NFC key for generating retail amiibo keys, CTR-CARD hardware-crypto seed
+        #   decryption key
+        _b9_key_x[0x38] = _b9_key_x[0x39] = _b9_key_x[0x3A] = _b9_key_x[0x3B] = readbe(keyblob[0x1A0:0x1B0])
+
+        # Unused
+        _b9_key_x[0x3C] = readbe(keyblob[0x1B0:0x1C0])
+
+        # Common key (titlekey crypto)
+        _b9_key_x[0x3D] = readbe(keyblob[0x1C0:0x1D0])
+
+        # Unused
+        _b9_key_x[0x3E] = readbe(keyblob[0x1D0:0x1E0])
+
+        # NAND partition keys
+        _b9_key_y[0x04] = readbe(keyblob[0x1F0:0x200])
+        # correct 0x05 KeyY not set by boot9.
+        _b9_key_y[0x06] = readbe(keyblob[0x210:0x220])
+        _b9_key_y[0x07] = readbe(keyblob[0x220:0x230])
+
+        # Unused, Unused, DSiWare export key, NAND dbs/movable.sed AES-CMAC key
+        _b9_key_y[0x08] = readbe(keyblob[0x230:0x240])
+        _b9_key_y[0x09] = readbe(keyblob[0x240:0x250])
+        _b9_key_y[0x0A] = readbe(keyblob[0x250:0x260])
+        _b9_key_y[0x0B] = readbe(keyblob[0x260:0x270])
+
+        _b9_key_normal[0x0D] = keyblob[0x270:0x280]
+
+        self._copy_global_keys()
+
+    def setup_keys_from_boot9_file(self, path: str = None):
+        """Set up certain keys from an ARM9 bootROM file."""
+        if self.b9_keys_set:
+            return
+
+        if _b9_key_x:
+            self._copy_global_keys()
+            return
+
+        paths = (path,) if path else b9_paths
+
         for p in paths:
-            if isfile(p):
-                keyblob_offset = 0x5860
-                otp_key_offset = 0x56E0
-                if self.dev:
-                    keyblob_offset += 0x400
-                    otp_key_offset += 0x20
-                if getsize(p) == 0x10000:
-                    keyblob_offset += 0x8000
-                    otp_key_offset += 0x8000
-
-                with open(p, 'rb') as b9:
-                    b9.seek(otp_key_offset)
-                    _otp_key = b9.read(0x10)
-                    _otp_iv = b9.read(0x10)
-
-                    b9.seek(keyblob_offset)
-                    _b9_extdata_keygen = b9.read(0x200)
-                    _b9_extdata_otp = _b9_extdata_keygen[0:0x24]
-
-                    # Original NCCH
-                    b9.seek(keyblob_offset + 0x170)
-                    _b9_key_x[0x2C] = readbe(b9.read(0x10))
-
-                    # SD key
-                    b9.seek(keyblob_offset + 0x190)
-                    _b9_key_x[0x34] = readbe(b9.read(0x10))
-                    _b9_key_x[0x35] = _b9_key_x[0x34]
-
-                    # Common key
-                    b9.seek(keyblob_offset + 0x1C0)
-                    _b9_key_x[0x3D] = readbe(b9.read(0x10))
-
-                    # NAND keys
-                    b9.seek(keyblob_offset + 0x1F0)
-                    _b9_key_y[0x04] = readbe(b9.read(0x10))
-                    b9.seek(0x10, 1)
-                    _b9_key_y[0x06] = readbe(b9.read(0x10))
-                    _b9_key_y[0x07] = readbe(b9.read(0x10))
-
-                self._copy_global_keys()
-                return
+            try:
+                b9_size = getsize(p)
+                if b9_size in {0x8000, 0x10000}:
+                    with open(p, 'rb') as f:
+                        if b9_size == 0x10000:
+                            f.seek(0x8000)
+                        self.setup_keys_from_boot9(f.read(0x8000))
+                        return
+            except FileNotFoundError:
+                continue
 
         # if keys are not set...
         raise BootromNotFoundError(paths)
