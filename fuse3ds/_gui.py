@@ -682,12 +682,14 @@ if not b9_found or not seeddb_found:
                 app.addLabel('boot9 was not found. It is needed for encryption.\n'
                              'Mount types that use encryption have been disabled.\n'
                              '\n'
-                             'The following paths were checked for a boot9 dump:')
+                             'Choose this to automatically set up boot9.')
+                app.addNamedButton('Select boot9 to copy...', 'no-b9-select', lambda _: select_b9(sw))
                 app.setSticky(EASTWEST)
+                app.addHorizontalSeparator()
+                app.addLabel('The following paths were checked for a boot9 dump:')
                 app.addListBox('b9-paths', b9_paths)
                 app.setListBoxRows('b9-paths', len(b9_paths))
-                app.addLabel('Choose this to automatically set up boot9.')
-                app.addNamedButton('Select boot9 to copy...', 'no-b9-select', lambda _: select_b9(sw))
+                app.setSticky('')
                 app.addNamedButton(OK, 'no-b9-ok', lambda _: app.hideSubWindow('no-b9'))
                 app.setResizable(False)
 
@@ -728,12 +730,14 @@ if not b9_found or not seeddb_found:
                 app.addLabel('SeedDB was not found. It is needed for encryption\n'
                              'of newer digital titles.\n'
                              '\n'
-                             'The following paths were checked for SeedDB:')
+                             'Choose this to automatically set up SeedDB.')
+                app.addNamedButton('Select SeedDB to copy...', 'no-seeddb-select', lambda _: select_seeddb(sw))
                 app.setSticky(EASTWEST)
+                app.addHorizontalSeparator()
+                app.addLabel('The following paths were checked for SeedDB:')
                 app.addListBox('seeddb-paths', seeddb_paths)
                 app.setListBoxRows('seeddb-paths', len(seeddb_paths))
-                app.addLabel('Choose this to automatically set up SeedDB.')
-                app.addNamedButton('Select SeedDB to copy...', 'no-seeddb-select', lambda _: select_seeddb(sw))
+                app.setSticky('')
                 app.addNamedButton(OK, 'no-seeddb-ok', lambda _: app.hideSubWindow('no-seeddb'))
                 app.setResizable(False)
 
