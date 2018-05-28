@@ -228,12 +228,10 @@ class CTRCrypto:
         """Generate a normal key based on the keyslot."""
         if keyslot < 0x04:
             # DSi
-            return rol((self.key_x[keyslot] ^ self.key_y[keyslot]) + 0xFFFEFB4E295902582A680F5F1A4F3E79,
-                       42, 128).to_bytes(0x10, 'big')
+            return self.keygen_twl_manual(self.key_x[keyslot], self.key_y[keyslot])
         else:
             # 3DS
-            return rol((rol(self.key_x[keyslot], 2, 128) ^ self.key_y[keyslot]) + 0x1FF9E9AAC5FE0408024591DC5D52768A,
-                       87, 128).to_bytes(0x10, 'big')
+            return self.keygen_manual(self.key_x[keyslot], self.key_y[keyslot])
 
     def get_common_key(self, index: int) -> int:
         return self.common_key_y[index][self.dev]
