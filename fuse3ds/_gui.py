@@ -109,6 +109,7 @@ if windows:
 
     # unlikely, but this causes issues
     if stdout is None:  # happens if pythonw is used on windows
+        # this one uses MessageBoxW directly because the gui hasn't been made yet.
         res = windll.user32.MessageBoxW(None, (
             'This is being run with the wrong Python executable.\n'
             'This should be installed as a module, then run using the py launcher on Python 3.6.1 or later.\n\n'
@@ -136,7 +137,6 @@ if windows:
         o = get_unused_drives()
         app.changeOptionBox(MOUNTPOINT, (x + ':' for x in o))
         app.setOptionBox(MOUNTPOINT, o[-1] + ':')
-
 
 _used_pyinstaller = False
 _ndw_resp = False
@@ -173,7 +173,7 @@ def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = (
         while not check(mountpoint):
             sleep(1)
             if process.poll() is not None:
-                app.queueFunction(app.showSubWindow, 'mounterror')
+                show_mounterror()
                 app.queueFunction(app.enableButton, MOUNT)
                 return
 
@@ -204,10 +204,7 @@ def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = (
                 stop_mount()
             except CalledProcessError:
                 print_exc()
-            app.queueFunction(app.setLabel, 'exiterror-label',
-                              f'The mount process exited with an error code ({process.returncode}). '
-                              f'Please check the output.')
-            app.queueFunction(app.showSubWindow, 'exiterror')
+            show_exiterror(process.returncode)
 
         app.queueFunction(app.disableButton, UNMOUNT)
         app.queueFunction(app.enableButton, MOUNT)
@@ -234,7 +231,7 @@ def press(button: str):
         app.disableButton(MOUNT)
         item = app.getEntry(mount_type + ITEM)
         if not item:
-            app.showSubWindow('noitemerror')
+            show_noitemerror()
             app.enableButton(MOUNT)
             return
 
@@ -269,13 +266,13 @@ def press(button: str):
                         app.showSubWindow('mounterror-dir-win')
                     else:
                         print_exc()
-                        app.showSubWindow('mounterror')
+                        show_mounterror()
                     app.enableButton(MOUNT)
                     return
         else:
             mountpoint = app.getEntry(MOUNTPOINT)
             if not mountpoint:
-                app.showSubWindow('nomperror')
+                show_nomperror()
                 app.enableButton(MOUNT)
                 return
 
@@ -470,13 +467,13 @@ with app.labelFrame('Mount settings', row=1, colspan=3):
         app.addNamedCheckBox('Mount all contents', TITLEDIR + 'mountall', row=3, column=2, colspan=1)
     app.hideFrame(TITLEDIR)
 
-with app.subWindow('unknowntype', 'fuse-3ds Error', modal=True):
-    app.addLabel('unknowntype-label1', "The type of the given file couldn't be detected.\n"
-                                       "If you know it is a compatibile file, choose the \n"
-                                       "correct type and file an issue on GitHub if it works.")
-    app.addLabel('unknowntype-label2', '<filepath>')
-    app.addNamedButton(OK, 'unknowntype-ok', lambda _: app.hideSubWindow('unknowntype'))
-    app.setResizable(False)
+
+def show_unknowntype(path: str):
+    app.warningBox('fuse-3ds Error',
+                   "The type of the given file couldn't be detected.\n"
+                   "If you know it is a compatibile file, choose the \n"
+                   "correct type and file an issue on GitHub if it works.\n\n"
+                   + path)
 
 
 def detect_type(fn: str):
@@ -489,8 +486,7 @@ def detect_type(fn: str):
             if mt is not None:
                 mount_type = mount_types_rv[mt]
             else:
-                app.setLabel('unknowntype-label2', fn)
-                app.showSubWindow('unknowntype')
+                show_unknowntype(fn)
                 return
     except (IsADirectoryError, PermissionError):  # PermissionError sometimes occurs on Windows
         if isfile(pjoin(fn, 'tmd')):
@@ -665,17 +661,17 @@ elif macos:
     app.setFont(14)
 app.setResizable(False)
 
+
 # failed to mount subwindow
-with app.subWindow('mounterror', 'fuse-3ds Error', modal=True, blocking=False):
-    app.addLabel('mounterror-label', 'Failed to mount. Please check the output.')
-    app.addNamedButton(OK, 'mounterror-ok', lambda _: app.hideSubWindow('mounterror'))
-    app.setResizable(False)
+def show_mounterror():
+    app.warningBox('fuse-3ds Error', 'Failed to mount. Please check the output.')
+
 
 # exited with error subwindow
-with app.subWindow('exiterror', 'fuse-3ds Error', modal=True, blocking=False):
-    app.addLabel('exiterror-label', 'The mount process exited with an error code (<errcode>). Please check the output.')
-    app.addNamedButton(OK, 'exiterror-ok', lambda _: app.hideSubWindow('exiterror'))
-    app.setResizable(False)
+def show_exiterror(errcode: int):
+    app.warningBox('fuse-3ds Error',
+                   f'The mount process exited with an error code ({errcode}). Please check the output.')
+
 
 if windows:
     # failed to mount to directory subwindow
@@ -684,6 +680,7 @@ if windows:
                                              'Please make sure the directory is empty or does not exist.')
         app.addNamedButton(OK, 'mounterror-dir-ok', lambda _: app.hideSubWindow('mounterror-dir-win'))
         app.setResizable(False)
+
 
     def _ndw_response(btn: str):
         global _ndw_resp
@@ -721,17 +718,16 @@ with app.subWindow('extras', 'fuse-3ds Extras', modal=True, blocking=False):
 
     app.setResizable(False)
 
+
 # file/directory not set error
-with app.subWindow('noitemerror', 'fuse-3ds Error', modal=True, blocking=False):
-    app.addLabel('Select a file or directory to mount.')
-    app.addNamedButton(OK, 'noitemerror-ok', lambda _: app.hideSubWindow('noitemerror'))
-    app.setResizable(False)
+def show_noitemerror():
+    app.infoBox('fuse-3ds Error', 'Select a file or directory to mount.')
+
 
 # mountpoint not set error
-with app.subWindow('nomperror', 'fuse-3ds Error', modal=True, blocking=False):
-    app.addLabel('Select an empty directory to be the mount point.')
-    app.addNamedButton(OK, 'nomperror-ok', lambda _: app.hideSubWindow('nomperror'))
-    app.setResizable(False)
+def show_nomperror():
+    app.infoBox('fuse-3ds Error', 'Select an empty directory to be the mount point.')
+
 
 # failed to unmount subwindow
 with app.subWindow('unmounterror', 'fuse-3ds Error', modal=True, blocking=False):
@@ -761,26 +757,19 @@ def main(_pyi=False, _allow_admin=False):
     except EnvironmentError:
         # TODO: probably check if this was really "Unable to find libfuse" (this is aliased to OSError)
         if windows:
-            if _used_pyinstaller:  # the right fusepy has to be included if it's a pyinstaller exe
-                res = windll.user32.MessageBoxW(None, (
-                    'Failed to import fusepy. WinFsp needs to be installed.\n\n'
-                    'Click OK to open the WinFsp download page:\n'
-                    'http://www.secfs.net/winfsp/download/'),
-                                                'fuse-3ds', 0x00000010 | 0x00000001)
-                if res == 1:
-                    webbrowser.open('http://www.secfs.net/winfsp/download/')
-            else:
-                res = windll.user32.MessageBoxW(None, (
-                    'Failed to import fusepy. Either WinFsp or fusepy needs to be installed.\n'
-                    'Please check the README of fuse-3ds for more details.\n\n'
-                    'Click OK to open the fuse-3ds repository on GitHub:\n'
-                    'https://github.com/ihaveamac/fuse-3ds'),
-                                                'fuse-3ds', 0x00000010 | 0x00000001)
-                if res == 1:
-                    webbrowser.open('https://github.com/ihaveamac/fuse-3ds')
+            res = app.yesNoBox('fuse-3ds',
+                               'Failed to import fusepy. WinFsp needs to be installed.\n\n'
+                               'Would you like to open the WinFsp download page?\n'
+                               'http://www.secfs.net/winfsp/download/')
+            if res:
+                webbrowser.open('http://www.secfs.net/winfsp/download/')
         elif macos:
-            print('Failed to load fusepy. Make sure FUSE for macOS (osxfuse) is installed.\n'
-                  '  https://osxfuse.github.io')
+            res = app.yesNoBox('fuse-3ds',
+                               'Failed to import fusepy. FUSE for macOS needs to be installed.\n\n'
+                               'Would you like to open the FUSE for macOS download page?\n'
+                               'https://osxfuse.github.io')
+            if res:
+                webbrowser.open('https://osxfuse.github.io')
         else:
             print("Failed to load fusepy. libfuse probably couldn't be found.")
         return 1
@@ -788,13 +777,12 @@ def main(_pyi=False, _allow_admin=False):
     if windows and not _allow_admin:
         isadmin: int = windll.shell32.IsUserAnAdmin()
         if isadmin and uac_enabled():
-            windll.user32.MessageBoxW(None, (
-                'This should not be run as administrator.\n'
-                'The mount point may not be accessible by your account normally, '
-                'only by the administrator.\n\n'
-                'If you are having issues with administrative tools not seeing files, '
-                'choose a directory as a mount point instead of a drive letter.'),
-                                      'fuse-3ds', 0x00000010)
+            app.warningBox('fuse-3ds',
+                           'This should not be run as administrator.\n'
+                           'The mount point may not be accessible by your account normally, '
+                           'only by the administrator.\n\n'
+                           'If you are having issues with administrative tools not seeing files, '
+                           'choose a directory as a mount point instead of a drive letter.')
             exit(1)
 
     # this will check for the latest non-prerelease, once there is one.
