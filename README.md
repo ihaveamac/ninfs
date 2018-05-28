@@ -427,3 +427,5 @@ optional arguments:
 `fuse3ds` is under the MIT license. fusepy is under the ISC license ([taken from `setup.py`](https://github.com/fusepy/fusepy/blob/b5f87a1855119d55c755c2c4c8b1da346365629d/setup.py)).
 
 Special thanks to @Stary2001 for help with NAND crypto (especially TWL), and @d0k3 for SD crypto.
+
+OTP code is from [Stary2001/3ds_tools](https://github.com/Stary2001/3ds_tools/blob/10b74fee927f66865b97fd73b3e7392e81a3099f/three_ds/aesengine.py), and is under the MIT license.
