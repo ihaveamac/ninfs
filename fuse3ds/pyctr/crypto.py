@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from Cryptodome.Cipher._mode_ctr import CtrMode
     # noinspection PyProtectedMember
     from Cryptodome.Cipher._mode_ecb import EcbMode
-    from typing import Dict, Union
+    from typing import Dict, List, Union
 
 __all__ = ['CryptoError', 'KeyslotMissingError', 'BootromNotFoundError', 'CTRCrypto']
 
@@ -67,8 +67,10 @@ _b9_extdata_keygen: bytes = None
 _otp_key: bytes = None
 _otp_iv: bytes = None
 
-b9_paths = (['boot9.bin', 'boot9_prot.bin'] + [pjoin(x, 'boot9.bin') for x in config_dirs]
-            + [pjoin(x, 'boot9_prot.bin') for x in config_dirs])
+b9_paths: 'List[str]' = ['boot9.bin', 'boot9_prot.bin']
+for p in config_dirs:
+    b9_paths.append(pjoin(p, 'boot9.bin'))
+    b9_paths.append(pjoin(p, 'boot9_prot.bin'))
 try:
     b9_paths.insert(0, environ['BOOT9_PATH'])
 except KeyError:

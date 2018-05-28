@@ -1,5 +1,6 @@
 from hashlib import sha256
 from os import environ
+from os.path import join as pjoin
 from typing import TYPE_CHECKING, NamedTuple
 
 from ..common import PyCTRError
@@ -41,7 +42,7 @@ def get_seed(f: 'BinaryIO', program_id: int) -> bytes:
     raise NCCHSeedError(f'missing seed for {program_id:016X} from seeddb.bin')
 
 
-seeddb_paths = ['seeddb.bin', config_dirs[0] + '/seeddb.bin', config_dirs[1] + '/seeddb.bin']
+seeddb_paths = ['seeddb.bin'] + [pjoin(x, 'seeddb.bin') for x in config_dirs]
 try:
     seeddb_paths.insert(0, environ['SEEDDB_PATH'])
 except KeyError:

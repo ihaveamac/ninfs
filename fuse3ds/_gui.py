@@ -1,12 +1,12 @@
 # not very good with gui development...
 # don't read this file, it sucks
-
 import json
 import webbrowser
 from contextlib import suppress
 from glob import iglob
-from os import environ, kill, rmdir
-from os.path import abspath, dirname, expanduser, isfile, isdir, ismount, join as pjoin
+from hashlib import sha256
+from os import environ, kill, makedirs, rmdir
+from os.path import abspath, dirname, expanduser, getsize, isfile, isdir, ismount, join as pjoin
 from shutil import get_terminal_size
 from ssl import PROTOCOL_TLSv1_2, SSLContext
 from subprocess import Popen, check_call, CalledProcessError
@@ -32,6 +32,9 @@ if TYPE_CHECKING:
     from http.client import HTTPResponse
     from typing import Any, Dict, List
 
+windows = platform == 'win32'  # only for native windows, not cygwin
+macos = platform == 'darwin'
+
 ITEM = 'item'
 EASTWEST = 'ew'
 PV = 'previous'
@@ -53,14 +56,28 @@ ALLOW_OTHER = 'Allow access by other users (-o allow_other)'
 ALLOW_ROOT = 'Allow access by root (-o allow_root)'
 ALLOW_NONE = "Don't allow other users"
 
-b9_paths: 'List[str]' = ([pjoin(x, 'boot9.bin') for x in config_dirs]
-                         + [pjoin(x, 'boot9_prot.bin') for x in config_dirs])
+b9_hashes = {
+    '2f88744feed717856386400a44bba4b9ca62e76a32c715d4f309c399bf28166f': 'boot9',
+    '7331f7edece3dd33f2ab4bd0b3a5d607229fd19212c10b734cedcaf78c1a7b98': 'boot9_prot',
+}
+
+b9_paths: 'List[str]' = []
+for p in config_dirs:
+    b9_paths.append(pjoin(p, 'boot9.bin'))
+    b9_paths.append(pjoin(p, 'boot9_prot.bin'))
+
 with suppress(KeyError):
     b9_paths.insert(0, environ['BOOT9_PATH'])
 
 seeddb_paths: 'List[str]' = [pjoin(x, 'seeddb.bin') for x in config_dirs]
 with suppress(KeyError):
     seeddb_paths.insert(0, environ['SEEDDB_PATH'])
+
+# dir to copy to if chosen to copy boot9/seeddb in gui
+if windows:
+    target_dir = pjoin(environ.get('APPDATA'), '3ds')
+else:
+    target_dir = pjoin(expanduser('~'), '.3ds')
 
 for p in b9_paths:
     if isfile(p):
@@ -94,9 +111,6 @@ mount_types = {CCI: 'cci', CDN: 'cdn', CIA: 'cia', EXEFS: 'exefs', NAND: 'nand',
 mount_types_rv: 'Dict[str, str]' = {y: x for x, y in mount_types.items()}
 
 types_list = (CCI, CDN, CIA, EXEFS, NAND, NCCH, ROMFS, SD, THREEDSX, TITLEDIR)
-
-windows = platform == 'win32'  # only for native windows, not cygwin
-macos = platform == 'darwin'
 
 if windows:
     from ctypes import windll
@@ -556,7 +570,8 @@ with app.labelFrame('Mount point', row=2, colspan=3):
         def choose_debug_location(_):
             path: str = app.saveBox(fileName='fuse3ds.log', dirName=pjoin(expanduser('~'), 'Desktop'), fileTypes=(),
                                     fileExt='.log')
-            app.setEntry('debug', path)
+            if path:
+                app.setEntry('debug', path)
 
 
         app.addNamedCheckBox('Show advanced options', 'advopt', column=1, colspan=2)
@@ -627,7 +642,43 @@ if not b9_found or not seeddb_found:
             app.addNamedButton('Fix boot9', 'fix-b9', lambda _: app.showSubWindow('no-b9'), row=PV, column=2)
             app.disableButton(MOUNT)
 
-            with app.subWindow('no-b9', 'fuse-3ds Error', modal=True):
+
+            def select_b9(sw):
+                global b9_found
+                path: str = app.openBox(title='Choose boot9', fileTypes=(), parent='no-b9')
+                if path:
+                    if getsize(path) not in {0x8000, 0x10000}:
+                        app.warningBox('fuse-3ds Error',
+                                       'The size for the selected boot9 match is not 0x8000 or 0x10000.')
+                        # shouldn't be calling this directly but i seem to have encounered a bug with parent=
+                        # noinspection PyProtectedMember
+                        app._bringToFront(sw)
+                        return
+                    with open(path, 'rb') as f:
+                        data = f.read(0x10000)
+                        try:
+                            fn = b9_hashes[sha256(data).hexdigest()]
+                        except KeyError:
+                            app.warningBox('fuse-3ds Error', 'boot9 hash did not match. Please re-dump boot9.')
+                            # noinspection PyProtectedMember
+                            app._bringToFront(sw)
+                            return
+                        target = pjoin(target_dir, fn + '.bin')
+                        makedirs(target_dir, exist_ok=True)
+                        with open(target, 'wb') as o:
+                            o.write(data)
+                        app.infoBox('fuse-3ds', 'boot9 was copied to:\n\n' + target)
+                        b9_found = True
+                        app.hideLabel('no-b9')
+                        app.hideButton('fix-b9')
+                        if b9_found and seeddb_found:
+                            app.hideFrame('FOOTER')
+                        if app.getOptionBox('TYPE') in mount_types:
+                            change_type()
+                        app.hideSubWindow('no-b9')
+
+
+            with app.subWindow('no-b9', 'fuse-3ds Error', modal=True) as sw:
                 app.addLabel('boot9 was not found. It is needed for encryption.\n'
                              'Mount types that use encryption have been disabled.\n'
                              '\n'
@@ -635,6 +686,8 @@ if not b9_found or not seeddb_found:
                 app.setSticky(EASTWEST)
                 app.addListBox('b9-paths', b9_paths)
                 app.setListBoxRows('b9-paths', len(b9_paths))
+                app.addLabel('Choose this to automatically set up boot9.')
+                app.addNamedButton('Select boot9 to copy...', 'no-b9-select', lambda _: select_b9(sw))
                 app.addNamedButton(OK, 'no-b9-ok', lambda _: app.hideSubWindow('no-b9'))
                 app.setResizable(False)
 
@@ -644,7 +697,34 @@ if not b9_found or not seeddb_found:
             app.addNamedButton('Fix SeedDB', 'fix-seeddb', lambda _: app.showSubWindow('no-seeddb'), row=PV,
                                column=2)
 
-            with app.subWindow('no-seeddb', 'fuse-3ds Error', modal=True):
+
+            def select_seeddb(sw):
+                global b9_found
+                path: str = app.openBox(title='Choose seeddb', fileTypes=())
+                if path:
+                    if getsize(path) % 0x10:
+                        app.warningBox('fuse-3ds Error',
+                                       'The size for the selected SeedDB is not aligned to 0x10.')
+                        # shouldn't be calling this directly but i seem to have encounered a bug with parent=
+                        # noinspection PyProtectedMember
+                        app._bringToFront(sw)
+                        return
+                    with open(path, 'rb') as f:
+                        data = f.read(0x1FFFF0)
+                        target = pjoin(target_dir, 'seeddb.bin')
+                        makedirs(target_dir, exist_ok=True)
+                        with open(target, 'wb') as o:
+                            o.write(data)
+                        app.infoBox('fuse-3ds', 'SeedDB was copied to:\n\n' + target)
+                        seeddb_found = True
+                        app.hideLabel('no-seeddb')
+                        app.hideButton('fix-seeddb')
+                        if b9_found and seeddb_found:
+                            app.hideFrame('FOOTER')
+                        app.hideSubWindow('no-seeddb')
+
+
+            with app.subWindow('no-seeddb', 'fuse-3ds Error', modal=True) as sw:
                 app.addLabel('SeedDB was not found. It is needed for encryption\n'
                              'of newer digital titles.\n'
                              '\n'
@@ -652,6 +732,8 @@ if not b9_found or not seeddb_found:
                 app.setSticky(EASTWEST)
                 app.addListBox('seeddb-paths', seeddb_paths)
                 app.setListBoxRows('seeddb-paths', len(seeddb_paths))
+                app.addLabel('Choose this to automatically set up SeedDB.')
+                app.addNamedButton('Select SeedDB to copy...', 'no-seeddb-select', lambda _: select_seeddb(sw))
                 app.addNamedButton(OK, 'no-seeddb-ok', lambda _: app.hideSubWindow('no-seeddb'))
                 app.setResizable(False)
 

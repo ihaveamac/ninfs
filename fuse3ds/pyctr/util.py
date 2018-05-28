@@ -1,11 +1,15 @@
 import os
 from math import ceil
+from sys import platform
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Tuple
+    from typing import List
 
-__all__ = ['readle', 'readbe', 'roundup', 'config_dirs']
+__all__ = ['windows', 'macos', 'readle', 'readbe', 'roundup', 'config_dirs']
+
+windows = platform in {'win32', 'cygwin'}
+macos = platform == 'darwin'
 
 
 def readle(b: bytes) -> int:
@@ -24,4 +28,6 @@ def roundup(offset: int, alignment: int) -> int:
 
 
 _home = os.path.expanduser('~')
-config_dirs: 'Tuple[str, str]' = (os.path.join(_home, '3ds'), os.path.join(_home, '.3ds'))
+config_dirs: 'List[str]' = [os.path.join(_home, '3ds'), os.path.join(_home, '.3ds')]
+if windows:
+    config_dirs.append(os.path.join(os.environ.get('APPDATA'), '3ds'))

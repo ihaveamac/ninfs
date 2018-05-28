@@ -19,6 +19,8 @@ The ARM9 bootROM is required. You can dump it using boot9strap, which can be set
 * `~/3ds/boot9_prot.bin` (protected)
 * `~/.3ds/boot9.bin` (full)
 * `~/.3ds/boot9_prot.bin` (protected)
+* `%APPDATA%\3ds\boot9.bin` (Windows-specific, full)
+* `%APPDATA%\3ds\boot9_prot.bin` (Windows-specific, protected)
 
 "`~`" means the user's home directory. "`~/3ds`" would mean `/Users/username/3ds` on macOS and `C:\Users\username\3ds` on Windows.
 
@@ -28,6 +30,7 @@ SeedDB is checked in order of:
 * `seeddb.bin` in current working directory (not detected by the gui)
 * `~/3ds/seeddb.bin`
 * `~/.3ds/seeddb.bin`
+* `%APPDATA%\3ds\seeddb.bin` (Windows-specific)
 
 It can also be provided with the `--seeddb` argument.
 
