@@ -3,9 +3,8 @@ from argparse import ArgumentParser, SUPPRESS
 from errno import EROFS
 from functools import wraps
 from io import BufferedIOBase
-from sys import exit, hexversion, platform
+from sys import exit, platform
 from typing import TYPE_CHECKING
-from warnings import catch_warnings
 
 if TYPE_CHECKING:
     from typing import BinaryIO, Generator, Tuple, Union
@@ -18,13 +17,12 @@ macos = platform == 'darwin'
 python_cmd = 'py -3' if windows else 'python3'
 
 # TODO: switch to use_ns in all scripts
-with catch_warnings():
-    # noinspection PyBroadException
-    try:
-        from fuse import FUSE, FuseOSError, Operations, fuse_get_context
-    except Exception as e:
-        exit(f'Failed to import the fuse module:\n'
-             f'{type(e).__name__}: {e}')
+# noinspection PyBroadException
+try:
+    from fuse import FUSE, FuseOSError, Operations, fuse_get_context
+except Exception as e:
+    exit(f'Failed to import the fuse module:\n'
+         f'{type(e).__name__}: {e}')
 
 
 # custom LoggingMixIn modified from the original fusepy, to suppress certain entries.
