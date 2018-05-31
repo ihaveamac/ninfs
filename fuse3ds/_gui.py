@@ -112,6 +112,8 @@ mount_types_rv: 'Dict[str, str]' = {y: x for x, y in mount_types.items()}
 
 types_list = (CCI, CDN, CIA, EXEFS, NAND, NCCH, ROMFS, SD, THREEDSX, TITLEDIR)
 
+types_with_crypto = {CCI, CDN, CIA, NAND, NCCH, SD, TITLEDIR}
+
 if windows:
     from ctypes import windll
     from signal import CTRL_BREAK_EVENT
@@ -332,6 +334,11 @@ def press(button: str):
             elif allow_user == ALLOW_OTHER:
                 extra_args.extend(('-o', 'allow_other'))
 
+        if mount_type in types_with_crypto:
+            use_dev_keys = app.getCheckBox('devkeys')
+            if use_dev_keys:
+                extra_args.append('--dev')
+
         app.thread(run_mount, mount_types[mount_type], item, mountpoint, extra_args)
 
     elif button == UNMOUNT:
@@ -367,7 +374,7 @@ def change_type(*_):
                 app.setRadioButton('mountpoint-choice', 'Directory')
         else:
             app.hideFrame(t)
-    if not b9_found and mount_type in {CCI, CDN, CIA, NAND, NCCH, SD, TITLEDIR}:
+    if not b9_found and mount_type in types_with_crypto:
         app.disableButton(MOUNT)
     else:
         if process is None or process.poll() is not None:
@@ -580,6 +587,9 @@ with app.labelFrame('Mount point', row=2, colspan=3):
     app.setSticky(EASTWEST)
     with app.labelFrame('Advanced options', colspan=3):
         app.setSticky(EASTWEST)
+
+        app.addLabel('devkeys-label', 'Keys')
+        app.addNamedCheckBox('Use developer-unit keys', 'devkeys', row=PV, column=1, colspan=2)
 
         if not windows:
             app.addLabel('allowuser-label', 'External user access')
