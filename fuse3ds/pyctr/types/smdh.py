@@ -23,8 +23,6 @@ region_names = (
     'Traditional Chinese',
 )
 
-AppTitle = NamedTuple('AppTitle', (('short_desc', str), ('long_desc', str), ('publisher', str)))
-
 
 class SMDHError(PyCTRError):
     """Generic exception for SMDH operations."""
@@ -32,6 +30,12 @@ class SMDHError(PyCTRError):
 
 class InvalidSMDHError(SMDHError):
     """Invalid SMDH contents."""
+
+
+class AppTitle(NamedTuple):
+    short_desc: str
+    long_desc: str
+    publisher: str
 
 
 class SMDH:

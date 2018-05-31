@@ -1,13 +1,13 @@
 from functools import wraps
 from io import BufferedIOBase, TextIOWrapper
 from threading import Lock
-from typing import overload, TYPE_CHECKING, NamedTuple, Tuple  # Tuple is here until I can use 3.6+ exclusively.
+from typing import overload, TYPE_CHECKING, NamedTuple
 
 from ..common import PyCTRError
 from ..util import readle, roundup
 
 if TYPE_CHECKING:
-    from typing import BinaryIO, Optional, Union
+    from typing import BinaryIO, Optional, Tuple, Union
 
 __all__ = ['IVFC_HEADER_SIZE', 'IVFC_ROMFS_MAGIC_NUM', 'ROMFS_LV3_HEADER_SIZE', 'RomFSError', 'InvalidIVFCError',
            'InvalidRomFSHeaderError', 'RomFSEntryError', 'RomFSFileNotFoundError', 'RomFSReader']
@@ -37,9 +37,22 @@ class RomFSFileNotFoundError(RomFSError):
     """Invalid file path in RomFS Level 3."""
 
 
-RomFSRegion = NamedTuple('RomFSRegion', (('offset', int), ('size', int)))
-RomFSDirectoryEntry = NamedTuple('RomFSDirectoryEntry', (('name', str), ('type', str), ('contents', Tuple[str, ...])))
-RomFSFileEntry = NamedTuple('RomFSFileEntry', (('name', str), ('type', str), ('offset', int), ('size', int)))
+class RomFSRegion(NamedTuple):
+    offset: int
+    size: int
+
+
+class RomFSDirectoryEntry(NamedTuple):
+    name: str
+    type: str
+    contents: 'Tuple[str, ...]'
+
+
+class RomFSFileEntry(NamedTuple):
+    name: str
+    type: str
+    offset: int
+    size: int
 
 
 def _raise_if_closed(method):

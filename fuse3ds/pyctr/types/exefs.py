@@ -107,7 +107,11 @@ def decompress_code(code: bytes) -> bytes:
     return bytes(dec)
 
 
-ExeFSEntry = NamedTuple('ExeFSEntry', (('name', str), ('offset', int), ('size', int), ('hash', bytes)))
+class ExeFSEntry(NamedTuple):
+    name: str
+    offset: int
+    size: int
+    hash: bytes
 
 
 class ExeFSReader:
