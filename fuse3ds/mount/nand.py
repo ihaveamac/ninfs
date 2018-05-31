@@ -117,8 +117,11 @@ class NANDImageMount(LoggingMixIn, Operations):
 
         # including padding for crypto
         twl_mbr = self.crypto.create_ctr_cipher(0x03, self.ctr_twl + 0x1B).decrypt(ncsd_header[0xB0:0x100])[0xE:0x50]
-        twl_partitions = [[readle(twl_mbr[i + 8:i + 12]) * 0x200,
-                           readle(twl_mbr[i + 12:i + 16]) * 0x200] for i in range(0, 0x40, 0x10)]
+        if twl_mbr[0x40:0x42] == b'\x55\xaa':
+            twl_partitions = [[readle(twl_mbr[i + 8:i + 12]) * 0x200,
+                               readle(twl_mbr[i + 12:i + 16]) * 0x200] for i in range(0, 0x40, 0x10)]
+        else:
+            twl_partitions = None
 
         self.files['/twlmbr.bin'] = {'size': 0x42, 'offset': 0x1BE, 'keyslot': 0x03, 'type': 'twlmbr',
                                      'content': twl_mbr}
@@ -133,27 +136,28 @@ class NANDImageMount(LoggingMixIn, Operations):
             if idx == 0:
                 self.files['/twl_full.img'] = {'size': part[1], 'offset': part[0], 'keyslot': 0x03, 'type': 'enc'}
                 print('/twl_full.img')
-                twl_part_fstype = 0
-                for t_idx, t_part in enumerate(twl_partitions):
-                    if t_part[0] != 0:
-                        print(f'twl  idx:{t_idx}                      offset:{t_part[0]:08x} size:{t_part[1]:08x} ',
-                              end='')
-                        if twl_part_fstype == 0:
-                            self.files['/twln.img'] = {'size': t_part[1], 'offset': t_part[0], 'keyslot': 0x03,
-                                                       'type': 'enc'}
-                            print('/twln.img')
-                            twl_part_fstype += 1
-                        elif twl_part_fstype == 1:
-                            self.files['/twlp.img'] = {'size': t_part[1], 'offset': t_part[0], 'keyslot': 0x03,
-                                                       'type': 'enc'}
-                            print('/twlp.img')
-                            twl_part_fstype += 1
-                        else:
-                            self.files[f'/twl_unk{twl_part_fstype}.img'] = {'size': t_part[1],
-                                                                            'offset': t_part[0],
-                                                                            'keyslot': 0x03, 'type': 'enc'}
-                            print(f'/twl_unk{twl_part_fstype}.img')
-                            twl_part_fstype += 1
+                if twl_partitions:
+                    twl_part_fstype = 0
+                    for t_idx, t_part in enumerate(twl_partitions):
+                        if t_part[0] != 0:
+                            print(f'twl  idx:{t_idx}                      offset:{t_part[0]:08x} size:{t_part[1]:08x} ',
+                                  end='')
+                            if twl_part_fstype == 0:
+                                self.files['/twln.img'] = {'size': t_part[1], 'offset': t_part[0], 'keyslot': 0x03,
+                                                           'type': 'enc'}
+                                print('/twln.img')
+                                twl_part_fstype += 1
+                            elif twl_part_fstype == 1:
+                                self.files['/twlp.img'] = {'size': t_part[1], 'offset': t_part[0], 'keyslot': 0x03,
+                                                           'type': 'enc'}
+                                print('/twlp.img')
+                                twl_part_fstype += 1
+                            else:
+                                self.files[f'/twl_unk{twl_part_fstype}.img'] = {'size': t_part[1],
+                                                                                'offset': t_part[0],
+                                                                                'keyslot': 0x03, 'type': 'enc'}
+                                print(f'/twl_unk{twl_part_fstype}.img')
+                                twl_part_fstype += 1
 
             else:
                 if ncsd_part_fstype[idx] == 3:
@@ -171,27 +175,28 @@ class NANDImageMount(LoggingMixIn, Operations):
                     nand_fp.seek(part[0])
                     iv = self.ctr + (part[0] >> 4)
                     ctr_mbr = self.crypto.create_ctr_cipher(ctrnand_keyslot, iv).decrypt(
-                        nand_fp.read(0x200))[0x1BE:0x1FE]
-                    ctr_partitions = [[readle(ctr_mbr[i + 8:i + 12]) * 0x200,
-                                       readle(ctr_mbr[i + 12:i + 16]) * 0x200]
-                                      for i in range(0, 0x40, 0x10)]
-                    ctr_part_fstype = 0
-                    for c_idx, c_part in enumerate(ctr_partitions):
-                        if c_part[0] != 0:
-                            print(f'ctr  idx:{c_idx}                      offset:{part[0] + c_part[0]:08x} '
-                                  f'size:{c_part[1]:08x} ', end='')
-                            if ctr_part_fstype == 0:
-                                self.files['/ctrnand_fat.img'] = {'size': c_part[1], 'offset': part[0] + c_part[0],
-                                                                  'keyslot': ctrnand_keyslot, 'type': 'enc'}
-                                print('/ctrnand_fat.img')
-                                ctr_part_fstype += 1
-                            else:
-                                self.files[f'/ctr_unk{ctr_part_fstype}.img'] = {'size': c_part[1],
-                                                                                'offset': part[0] + c_part[0],
-                                                                                'keyslot': ctrnand_keyslot,
-                                                                                'type': 'enc'}
-                                print(f'/ctr_unk{ctr_part_fstype}.img')
-                                ctr_part_fstype += 1
+                        nand_fp.read(0x200))[0x1BE:0x200]
+                    if ctr_mbr[0x40:0x42] == b'\x55\xaa':
+                        ctr_partitions = [[readle(ctr_mbr[i + 8:i + 12]) * 0x200,
+                                           readle(ctr_mbr[i + 12:i + 16]) * 0x200]
+                                          for i in range(0, 0x40, 0x10)]
+                        ctr_part_fstype = 0
+                        for c_idx, c_part in enumerate(ctr_partitions):
+                            if c_part[0] != 0:
+                                print(f'ctr  idx:{c_idx}                      offset:{part[0] + c_part[0]:08x} '
+                                      f'size:{c_part[1]:08x} ', end='')
+                                if ctr_part_fstype == 0:
+                                    self.files['/ctrnand_fat.img'] = {'size': c_part[1], 'offset': part[0] + c_part[0],
+                                                                      'keyslot': ctrnand_keyslot, 'type': 'enc'}
+                                    print('/ctrnand_fat.img')
+                                    ctr_part_fstype += 1
+                                else:
+                                    self.files[f'/ctr_unk{ctr_part_fstype}.img'] = {'size': c_part[1],
+                                                                                    'offset': part[0] + c_part[0],
+                                                                                    'keyslot': ctrnand_keyslot,
+                                                                                    'type': 'enc'}
+                                    print(f'/ctr_unk{ctr_part_fstype}.img')
+                                    ctr_part_fstype += 1
 
                 elif ncsd_part_fstype[idx] == 4:
                     self.files['/agbsave.bin'] = {'size': part[1], 'offset': part[0], 'keyslot': 0x07, 'type': 'enc'}
