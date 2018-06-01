@@ -99,20 +99,21 @@ CDN = 'CDN contents ("cetk", "tmd", and contents)'
 CIA = 'CTR Importable Archive (".cia")'
 EXEFS = 'Executable Filesystem (".exefs", "exefs.bin")'
 NAND = 'NAND backup ("nand.bin")'
+NANDDSI = 'Nintendo DSi NAND backup ("nand_dsi.bin")'
 NCCH = 'NCCH (".cxi", ".cfa", ".ncch", ".app")'
 ROMFS = 'Read-only Filesystem (".romfs", "romfs.bin")'
 SD = 'SD Card Contents ("Nintendo 3DS" from SD)'
 THREEDSX = '3DSX Homebrew (".3dsx")'
 TITLEDIR = 'Titles directory ("title" from NAND or SD)'
 
-mount_types = {CCI: 'cci', CDN: 'cdn', CIA: 'cia', EXEFS: 'exefs', NAND: 'nand', NCCH: 'ncch', ROMFS: 'romfs', SD: 'sd',
-               THREEDSX: 'threedsx', TITLEDIR: 'titledir'}
+mount_types = {CCI: 'cci', CDN: 'cdn', CIA: 'cia', EXEFS: 'exefs', NAND: 'nand', NANDDSI: 'nanddsi', NCCH: 'ncch',
+               ROMFS: 'romfs', SD: 'sd', THREEDSX: 'threedsx', TITLEDIR: 'titledir'}
 
 mount_types_rv: 'Dict[str, str]' = {y: x for x, y in mount_types.items()}
 
-types_list = (CCI, CDN, CIA, EXEFS, NAND, NCCH, ROMFS, SD, THREEDSX, TITLEDIR)
+types_list = (CCI, CDN, CIA, EXEFS, NAND, NANDDSI, NCCH, ROMFS, SD, THREEDSX, TITLEDIR)
 
-types_with_crypto = {CCI, CDN, CIA, NAND, NCCH, SD, TITLEDIR}
+types_requiring_b9 = {CCI, CDN, CIA, NAND, NCCH, SD, TITLEDIR}
 
 if windows:
     from ctypes import windll
@@ -253,7 +254,7 @@ def press(button: str):
 
         if windows:
             if app.getRadioButton('mountpoint-choice') == 'Drive letter':
-                if mount_type == NAND:
+                if mount_type in {NAND, NANDDSI}:
                     res = app.okBox(
                         'fuse-3ds Warning',
                         'You chose drive letter when using the NAND mount.\n'
@@ -306,6 +307,13 @@ def press(button: str):
                 extra_args.extend(('--cid', cid))
             if not aw:
                 extra_args.append('-r')
+        elif mount_type == NANDDSI:
+            consoleid = app.getEntry(NANDDSI + 'consoleid')
+            aw = app.getCheckBox(NANDDSI + 'aw')
+            if consoleid:
+                extra_args.extend(('--console-id', consoleid))
+            if not aw:
+                extra_args.append('-r')
         elif mount_type == SD:
             movable = app.getEntry(SD + 'movable')
             aw = app.getCheckBox(SD + 'aw')
@@ -334,7 +342,7 @@ def press(button: str):
             elif allow_user == ALLOW_OTHER:
                 extra_args.extend(('-o', 'allow_other'))
 
-        if mount_type in types_with_crypto:
+        if mount_type in types_requiring_b9:
             use_dev_keys = app.getCheckBox('devkeys')
             if use_dev_keys:
                 extra_args.append('--dev')
@@ -370,11 +378,11 @@ def change_type(*_):
     for t in mount_types:
         if t == mount_type:
             app.showFrame(t)
-            if t == NAND and windows:
+            if t in {NAND, NANDDSI} and windows:
                 app.setRadioButton('mountpoint-choice', 'Directory')
         else:
             app.hideFrame(t)
-    if not b9_found and mount_type in types_with_crypto:
+    if not b9_found and mount_type in types_requiring_b9:
         app.disableButton(MOUNT)
     else:
         if process is None or process.poll() is not None:
@@ -446,6 +454,18 @@ with app.labelFrame('Mount settings', row=1, colspan=3):
         app.addLabel(NAND + 'label5', 'Options', row=5, column=0)
         app.addNamedCheckBox('Allow writing', NAND + 'aw', row=5, column=1, colspan=1)
     app.hideFrame(NAND)
+
+    with app.frame(NANDDSI, row=1, colspan=3):
+        app.addLabel(NANDDSI + LABEL1, FILE, row=0, column=0)
+        app.addFileEntry(NANDDSI + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
+        app.setEntryDefault(NANDDSI + ITEM, DRAGFILE)
+
+        app.addLabel(NANDDSI + LABEL2, 'Console ID', row=2, column=0)
+        app.addEntry(NANDDSI + 'consoleid', row=2, column=1, colspan=2)
+
+        app.addLabel(NANDDSI + LABEL3, 'Options', row=5, column=0)
+        app.addNamedCheckBox('Allow writing', NANDDSI + 'aw', row=5, column=1, colspan=1)
+    app.hideFrame(NANDDSI)
 
     with app.frame(NCCH, row=1, colspan=3):
         app.addLabel(NCCH + LABEL1, FILE, row=0, column=0)
@@ -931,8 +951,7 @@ def main(_pyi=False, _allow_admin=False):
                     to_use = mount_type
                     app.setEntry(mount_type + ITEM, fn)
                 else:
-                    app.setLabel('unknowntype-label2', fn)
-                    app.queueFunction(app.showSubWindow, 'unknowntype')
+                    show_unknowntype(fn)
         except (IsADirectoryError, PermissionError):  # PermissionError sometimes occurs on Windows
             if isfile(pjoin(fn, 'tmd')):
                 mount_type = CDN

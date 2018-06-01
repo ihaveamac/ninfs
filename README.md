@@ -99,6 +99,12 @@ Windows users can use a drive letter like `F:` as a mountpoint, or use `*` and a
   `mount_nand --otp otp.bin --cid nandcid.bin nand.bin mountpoint`
 * Mount a NAND backup with OTP file and a CID hexstring:  
   `mount_nand --otp otp.bin --cid 7468616E6B7334636865636B696E6721 nand.bin mountpoint`
+* Mount a DSi NAND backup (Counter is automatically generated):
+  `mount_nanddsi --console-id 4E696E74656E646F nand_dsi.bin mountpoint`
+* Mount a DSi NAND backup with a specified CID hexstring:
+  `mount_nanddsi --console-id 4E696E74656E646F --cid 576879446F657344536945786973743F nand_dsi.bin mountpoint`
+* Mount a DSi NAND backup with a specified CID file:
+  `mount_nanddsi --console-id 4E696E74656E646F --cid CID.bin nand_dsi.bin mountpoint`
 * Mount an NCCH container (.app, .cxi, .cfa, .ncch):  
   `mount_ncch content.cxi mountpoint`
 * Mount a RomFS:  
@@ -297,6 +303,46 @@ mount_point
 ├── twlmbr.bin
 ├── twln.img
 └── twlp.img
+```
+
+### mount_nanddsi
+Mounts Nintendo DSi NAND images, creating a virtual filesystem of decrypted partitions.
+
+```
+usage: mount_nanddsi [-h] [-f] [-d] [-o OPTIONS] [-r]
+                     [--console-id CONSOLE_ID] [--cid CID]
+                     nand mount_point
+
+Mount Nintendo DSi NAND images.
+
+positional arguments:
+  nand                  DSi NAND image
+  mount_point           mount point
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -f, --fg              run in foreground
+  -d                    debug output (fuse/winfsp log)
+  -o OPTIONS            mount options
+  -r, --ro              mount read-only
+  --console-id CONSOLE_ID
+                        Console ID, as hex or file
+  --cid CID             EMMC CID, as hex or file. Not required in 99% of
+                        cases.
+```
+
+#### Current files
+```
+mount_point
+├── diag_area.bin
+├── stage2_bootldr.bin
+├── stage2_footer.bin
+├── stage2_infoblk1.bin
+├── stage2_infoblk2.bin
+├── stage2_infoblk3.bin
+├── twl_main.img
+├── twl_photo.img
+└── twl_unk1.bin
 ```
 
 ### mount_ncch
