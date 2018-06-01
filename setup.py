@@ -38,6 +38,7 @@ setup(
                                       'mount_cia = fuse3ds.main:main',
                                       'mount_exefs = fuse3ds.main:main',
                                       'mount_nand = fuse3ds.main:main',
+                                      'mount_nanddsi = fuse3ds.main:main',
                                       'mount_ncch = fuse3ds.main:main',
                                       'mount_romfs = fuse3ds.main:main',
                                       'mount_sd = fuse3ds.main:main',
