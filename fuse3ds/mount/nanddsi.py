@@ -28,6 +28,16 @@ class TWLNandImageMount(LoggingMixIn, Operations):
         self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
                        'st_atime': int(g_stat.st_atime)}
 
+        self.files = {}
+
+        res = nand_fp.seek(0, 2)
+        if res == 0xF000200:
+            self.files['/nocash_blk.bin'] = {'offset': 0xF000000, 'size': 0x200, 'type': 'dec'}
+        elif res != 0xF000000:
+            exit(f'Unknown NAND size (expected 0xF000000 or 0xF000200, got {res:#09X}')
+
+        nand_fp.seek(0)
+
         try:
             consoleid = bytes.fromhex(consoleid)
         except (ValueError, TypeError):
@@ -75,12 +85,12 @@ class TWLNandImageMount(LoggingMixIn, Operations):
                      'or ensure the provided Console ID is correct..')
             print('Counter automatically generated.')
 
-        self.files = {'/stage2_infoblk1.bin': {'offset': 0x200, 'size': 0x200, 'type': 'dec'},
-                      '/stage2_infoblk2.bin': {'offset': 0x400, 'size': 0x200, 'type': 'dec'},
-                      '/stage2_infoblk3.bin': {'offset': 0x600, 'size': 0x200, 'type': 'dec'},
-                      '/stage2_bootldr.bin': {'offset': 0x800, 'size': 0x4DC00, 'type': 'dec'},
-                      '/stage2_footer.bin': {'offset': 0x4E400, 'size': 0x400, 'type': 'dec'},
-                      '/diag_area.bin': {'offset': 0xFFA00, 'size': 0x400, 'type': 'dec'}}
+        self.files['/stage2_infoblk1.bin'] = {'offset': 0x200, 'size': 0x200, 'type': 'dec'}
+        self.files['/stage2_infoblk2.bin'] = {'offset': 0x400, 'size': 0x200, 'type': 'dec'}
+        self.files['/stage2_infoblk3.bin'] = {'offset': 0x600, 'size': 0x200, 'type': 'dec'}
+        self.files['/stage2_bootldr.bin'] = {'offset': 0x800, 'size': 0x4DC00, 'type': 'dec'}
+        self.files['/stage2_footer.bin'] = {'offset': 0x4E400, 'size': 0x400, 'type': 'dec'}
+        self.files['/diag_area.bin'] = {'offset': 0xFFA00, 'size': 0x400, 'type': 'dec'}
 
         header = self.crypto.create_ctr_cipher(0x03, self.ctr).decrypt(header_enc)
         mbr = header[0x1BE:0x200]
