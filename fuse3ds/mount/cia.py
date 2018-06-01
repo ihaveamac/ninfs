@@ -61,18 +61,9 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
         self.tmd = TitleMetadataReader.load(cia_fp)
         self.title_id = self.tmd.title_id
 
-        # read title id, encrypted titlekey and common key index
-        cia_fp.seek(ticket_offset + 0x1DC)
-        tik_title_id = cia_fp.read(8)
-        cia_fp.seek(ticket_offset + 0x1BF)
-        enc_titlekey = cia_fp.read(0x10)
-        cia_fp.seek(ticket_offset + 0x1F1)
-        common_key_index = ord(cia_fp.read(1))
-
-        # decrypt titlekey
-        self.crypto.set_keyslot('y', 0x3D, self.crypto.get_common_key(common_key_index))
-        titlekey = self.crypto.create_cbc_cipher(0x3D, tik_title_id + (b'\0' * 8)).decrypt(enc_titlekey)
-        self.crypto.set_normal_key(0x40, titlekey)
+        # load titlekey
+        cia_fp.seek(ticket_offset)
+        self.crypto.load_from_ticket(cia_fp.read(ticket_size))
 
         # create virtual files
         self.files = {'/header.bin': {'size': archive_header_size, 'offset': 0, 'type': 'raw'},

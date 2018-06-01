@@ -65,17 +65,8 @@ class CDNContentsMount(LoggingMixIn, Operations):
             self.crypto.set_normal_key(0x40, titlekey)
         else:
             with open(self.rp('cetk'), 'rb') as tik:
-                # read encrypted titlekey and common key index
-                tik.seek(0x1BF)
-                enc_titlekey = tik.read(0x10)
-                tik.seek(0x1F1)
-                common_key_index = ord(tik.read(1))
-
-            # decrypt titlekey
-            self.crypto.set_keyslot('y', 0x3D, self.crypto.get_common_key(common_key_index))
-            titlekey = self.crypto.create_cbc_cipher(0x3D,
-                                                     bytes.fromhex(self.title_id) + (b'\0' * 8)).decrypt(enc_titlekey)
-            self.crypto.set_normal_key(0x40, titlekey)
+                # load ticket
+                self.crypto.load_from_ticket(tik.read(0x350))
 
         # create virtual files
         self.files = {'/ticket.bin': {'size': 0x350, 'type': 'raw', 'real_filepath': self.rp('cetk')},

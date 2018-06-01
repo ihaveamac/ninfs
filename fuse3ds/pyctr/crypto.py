@@ -19,7 +19,8 @@ if TYPE_CHECKING:
     from Cryptodome.Cipher._mode_ecb import EcbMode
     from typing import Dict, List, Union
 
-__all__ = ['CryptoError', 'KeyslotMissingError', 'BootromNotFoundError', 'CTRCrypto']
+__all__ = ['CryptoError', 'OTPLengthError', 'CorruptBootromError', 'KeyslotMissingError', 'TicketLengthError',
+           'BootromNotFoundError', 'CorruptOTPError', 'CTRCrypto']
 
 
 class CryptoError(PyCTRError):
@@ -38,6 +39,15 @@ class KeyslotMissingError(CryptoError):
     """Normal key is not set up for the keyslot."""
 
 
+class TicketLengthError(CryptoError):
+    """Ticket is too small."""
+    def __init__(self, length):
+        super().__init__(length)
+
+    def __str__(self):
+        return f'0x350 expected, {self.args[0]:#x} given'
+
+
 # wonder if I'm doing this right...
 class BootromNotFoundError(CryptoError):
     """ARM9 bootROM was not found. Main argument is a tuple of checked paths."""
@@ -48,6 +58,23 @@ class CorruptBootromError(CryptoError):
 
 
 BOOT9_PROT_HASH = '7331f7edece3dd33f2ab4bd0b3a5d607229fd19212c10b734cedcaf78c1a7b98'
+
+DEV_COMMON_KEY_0 = bytes.fromhex('85215E96CB95A9ECA4B4DE601CB562C7')
+
+common_key_y = (
+    # eShop
+    0xD07B337F9CA4385932A2E25723232EB9,
+    # System
+    0x0C767230F0998F1C46828202FAACBE4C,
+    # Unknown
+    0xC475CB3AB8C788BB575E12A10907B8A4,
+    # Unknown
+    0xE486EEE3D0C09C902F6686D4C06F649F,
+    # Unknown
+    0xED31BA9C04B067506C4497A35B7804FC,
+    # Unknown
+    0x5E66998AB4E8931606850FD7A16DD755
+)
 
 base_key_x = {
     # New3DS 9.3 NCCH
@@ -123,21 +150,6 @@ class CTRCrypto:
     _otp_key: bytes = None
     _otp_iv: bytes = None
 
-    common_key_y = (
-        # eShop
-        (0xD07B337F9CA4385932A2E25723232EB9, 0x85215E96CB95A9ECA4B4DE601CB562C7),
-        # System
-        (0x0C767230F0998F1C46828202FAACBE4C,) * 2,
-        # Unknown
-        (0xC475CB3AB8C788BB575E12A10907B8A4,) * 2,
-        # Unknown
-        (0xE486EEE3D0C09C902F6686D4C06F649F,) * 2,
-        # Unknown
-        (0xED31BA9C04B067506C4497A35B7804FC,) * 2,
-        # Unknown
-        (0x5E66998AB4E8931606850FD7A16DD755,) * 2
-    )
-
     def __init__(self, dev: int = 0, setup_b9_keys: bool = True):
         self.key_x: Dict[int, int] = {}
         self.key_y: Dict[int, int] = {0x03: 0xE1A00005202DDD1DBD4DC4D30AB9DC76,
@@ -208,6 +220,26 @@ class CTRCrypto:
 
         return AES.new(key, AES.MODE_ECB)
 
+    def load_from_ticket(self, ticket: bytes):
+        """Load a titlekey from a ticket and set keyslot 0x40 to the decrypted titlekey."""
+        ticket_len = len(ticket)
+        # TODO: probably support other sig types which would be different lengths
+        # unlikely to happen in practice, but I would still like to
+        if ticket_len < 0x350:
+            raise TicketLengthError(ticket_len)
+
+        titlekey_enc = ticket[0x1BF:0x1CF]
+        title_id = ticket[0x1DC:0x1E4]
+        common_key_index = ticket[0x1F1]
+
+        if self.dev and common_key_index == 0:
+            self.set_normal_key(0x3D, DEV_COMMON_KEY_0)
+        else:
+            self.set_keyslot('y', 0x3D, common_key_y[common_key_index])
+
+        cipher = self.create_cbc_cipher(0x3D, title_id + (b'\0' * 8))
+        self.set_normal_key(0x40, cipher.decrypt(titlekey_enc))
+
     def set_keyslot(self, xy: str, keyslot: int, key: 'Union[int, bytes]'):
         """Sets a keyslot to the specified key."""
         to_use = None
@@ -234,9 +266,6 @@ class CTRCrypto:
         else:
             # 3DS
             return self.keygen_manual(self.key_x[keyslot], self.key_y[keyslot])
-
-    def get_common_key(self, index: int) -> int:
-        return self.common_key_y[index][self.dev]
 
     @staticmethod
     def keygen_manual(key_x: int, key_y: int) -> bytes:
