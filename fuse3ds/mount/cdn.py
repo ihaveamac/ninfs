@@ -9,7 +9,7 @@ from stat import S_IFDIR, S_IFREG
 from sys import exit, argv
 from typing import TYPE_CHECKING
 
-from pyctr.crypto import CTRCrypto
+from pyctr.crypto import CryptoEngine
 from pyctr.types.tmd import TitleMetadataReader, CHUNK_RECORD_SIZE
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
@@ -30,7 +30,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
     def __init__(self, cdn_dir: str, dec_key: str = None, dev: bool = False, seeddb: str = None):
         self.cdn_dir = cdn_dir
 
-        self.crypto = CTRCrypto(dev=dev)
+        self.crypto = CryptoEngine(dev=dev)
 
         self.cdn_content_size = 0
         self.dev = dev

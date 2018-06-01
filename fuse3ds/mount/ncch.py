@@ -11,7 +11,7 @@ from stat import S_IFDIR, S_IFREG
 from sys import argv
 from typing import BinaryIO, Dict
 
-from pyctr.crypto import CTRCrypto
+from pyctr.crypto import CryptoEngine
 from pyctr.types.ncch import NCCHReader, FIXED_SYSTEM_KEY
 from pyctr.util import readbe, roundup
 from . import _common as _c
@@ -30,7 +30,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
 
     def __init__(self, ncch_fp: BinaryIO, g_stat: os.stat_result, decompress_code: bool = True, dev: bool = False,
                  seeddb: str = None):
-        self.crypto = CTRCrypto(dev=dev)
+        self.crypto = CryptoEngine(dev=dev)
 
         self.decompress_code = decompress_code
         self.seeddb = seeddb

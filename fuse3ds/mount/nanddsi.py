@@ -11,7 +11,7 @@ from struct import pack
 from sys import exit, argv
 from typing import BinaryIO
 
-from pyctr.crypto import CTRCrypto
+from pyctr.crypto import CryptoEngine
 from pyctr.util import readbe, readle
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
@@ -22,7 +22,7 @@ class TWLNandImageMount(LoggingMixIn, Operations):
     fd = 0
 
     def __init__(self, nand_fp: BinaryIO, g_stat: os.stat, consoleid: str, cid: str = None, readonly: bool = False):
-        self.crypto = CTRCrypto(setup_b9_keys=False)
+        self.crypto = CryptoEngine(setup_b9_keys=False)
         self.readonly = readonly
 
         self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),

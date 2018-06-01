@@ -13,7 +13,7 @@ from struct import unpack
 from sys import argv
 from typing import BinaryIO, Dict
 
-from pyctr.crypto import CTRCrypto
+from pyctr.crypto import CryptoEngine
 from pyctr.types.tmd import TitleMetadataReader, CHUNK_RECORD_SIZE
 from pyctr.util import readbe
 from . import _common as _c
@@ -31,7 +31,7 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
     fd = 0
 
     def __init__(self, cia_fp: BinaryIO, g_stat: os.stat_result, dev: bool = False, seeddb: bool = None):
-        self.crypto = CTRCrypto(dev=dev)
+        self.crypto = CryptoEngine(dev=dev)
 
         self.dev = dev
         self.seeddb = seeddb

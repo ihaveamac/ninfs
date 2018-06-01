@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from typing import Dict, List, Union
 
 __all__ = ['CryptoError', 'OTPLengthError', 'CorruptBootromError', 'KeyslotMissingError', 'TicketLengthError',
-           'BootromNotFoundError', 'CorruptOTPError', 'CTRCrypto']
+           'BootromNotFoundError', 'CorruptOTPError', 'CryptoEngine']
 
 
 class CryptoError(PyCTRError):
@@ -85,7 +85,7 @@ base_key_x = {
     0x25: (0xCEE7D8AB30C00DAE850EF5E382AC5AF3, 0x81907A4B6F1B47323A677974CE4AD71B),
 }
 
-# global values to be copied to new CTRCrypto instances after the first one
+# global values to be copied to new CryptoEngine instances after the first one
 _b9_key_x: 'Dict[int, int]' = {}
 _b9_key_y: 'Dict[int, int]' = {}
 _b9_key_normal: 'Dict[int, bytes]' = {}
@@ -139,7 +139,7 @@ class _TWLCryptoWrapper:
     decrypt = encrypt
 
 
-class CTRCrypto:
+class CryptoEngine:
     """Class for 3DS crypto operations, including encryption and key generation."""
 
     b9_keys_set: bool = False

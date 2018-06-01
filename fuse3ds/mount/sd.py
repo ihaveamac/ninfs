@@ -11,7 +11,7 @@ from struct import unpack
 from sys import exit, argv
 from typing import TYPE_CHECKING
 
-from pyctr.crypto import CTRCrypto
+from pyctr.crypto import CryptoEngine
 from pyctr.util import readbe
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
@@ -33,7 +33,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         return hash_p1 ^ hash_p2
 
     def __init__(self, sd_dir: str, movable: str, dev: bool = False, readonly: bool = False):
-        self.crypto = CTRCrypto(dev=dev)
+        self.crypto = CryptoEngine(dev=dev)
 
         with open(movable, 'rb') as mv:
             mv.seek(0x110)

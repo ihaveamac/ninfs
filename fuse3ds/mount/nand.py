@@ -11,7 +11,7 @@ from stat import S_IFDIR, S_IFREG
 from sys import exit, argv
 from typing import BinaryIO, AnyStr
 
-from pyctr.crypto import CTRCrypto
+from pyctr.crypto import CryptoEngine
 from pyctr.types.exefs import ExeFSReader, InvalidExeFSError
 from pyctr.util import readbe, readle, roundup
 from . import _common as _c
@@ -30,7 +30,7 @@ class NANDImageMount(LoggingMixIn, Operations):
 
     def __init__(self, nand_fp: BinaryIO, g_stat: os.stat_result, dev: bool = False, readonly: bool = False,
                  otp: bytes = None, cid: AnyStr = None):
-        self.crypto = CTRCrypto(dev=dev)
+        self.crypto = CryptoEngine(dev=dev)
 
         self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
                        'st_atime': int(g_stat.st_atime)}
