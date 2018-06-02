@@ -30,6 +30,8 @@ from pyctr.util import config_dirs
 
 if TYPE_CHECKING:
     from http.client import HTTPResponse
+    # noinspection PyProtectedMember
+    from pkg_resources._vendor.packaging.version import Version
     from typing import Any, Dict, List
 
 windows = platform == 'win32'  # only for native windows, not cygwin
@@ -906,14 +908,19 @@ def main(_pyi=False, _allow_admin=False):
     try:
         print(f'Checking for updates... (Currently running v{version})')
         ctx = SSLContext(PROTOCOL_TLSv1_2)
-        with urlopen('https://api.github.com/repos/ihaveamac/fuse-3ds/releases', context=ctx) as u:
+        release_url = 'https://api.github.com/repos/ihaveamac/fuse-3ds/releases'
+        current_ver: 'Version' = parse_version(version)
+        if not current_ver.is_prerelease:
+            release_url += '/latest'
+        with urlopen(release_url, context=ctx) as u:
             u: HTTPResponse
             res: List[Dict[str, Any]] = json.loads(u.read().decode('utf-8'))
-            latest_ver: str = res[0]['tag_name']
-            if parse_version(latest_ver) > parse_version(version):
-                name: str = res[0]['name']
-                url: str = res[0]['html_url']
-                info_all: str = res[0]['body']
+            latest_rel = res[0] if current_ver.is_prerelease else res
+            latest_ver: str = latest_rel['tag_name']
+            if parse_version(latest_ver) > current_ver:
+                name: str = latest_rel['name']
+                url: str = latest_rel['html_url']
+                info_all: str = latest_rel['body']
                 info = info_all[:info_all.find('------')].strip().replace('\r\n', '\n')
 
                 def update_press(button: str):
