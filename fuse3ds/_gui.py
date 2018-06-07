@@ -83,14 +83,14 @@ else:
 
 for p in b9_paths:
     if isfile(p):
-        b9_found = True
+        b9_found = p
         break
 else:
     b9_found = False
 
 for p in seeddb_paths:
     if isfile(p):
-        seeddb_found = True
+        seeddb_found = p
         break
 else:
     seeddb_found = False
@@ -173,6 +173,8 @@ app = gui('fuse-3ds v' + version, showIcon=False, handleArgs=False)
 def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = ()):
     global process, curr_mountpoint
     if process is None or process.poll() is not None:
+        environ['BOOT9_PATH'] = b9_found
+        environ['SEEDDB_PATH'] = seeddb_found
         args = [executable]
         if not _used_pyinstaller:
             args.append(dirname(__file__))
@@ -700,7 +702,7 @@ if not b9_found or not seeddb_found:
                         with open(target, 'wb') as o:
                             o.write(data)
                         app.infoBox('fuse-3ds', 'boot9 was copied to:\n\n' + target)
-                        b9_found = True
+                        b9_found = target
                         app.hideLabel('no-b9')
                         app.hideButton('fix-b9')
                         if b9_found and seeddb_found:
@@ -733,8 +735,8 @@ if not b9_found or not seeddb_found:
 
 
             def select_seeddb(sw):
-                global b9_found
-                path: str = app.openBox(title='Choose seeddb', fileTypes=())
+                global seeddb_found
+                path: str = app.openBox(title='Choose SeedDB', fileTypes=())
                 if path:
                     if getsize(path) % 0x10:
                         app.warningBox('fuse-3ds Error',
@@ -750,7 +752,7 @@ if not b9_found or not seeddb_found:
                         with open(target, 'wb') as o:
                             o.write(data)
                         app.infoBox('fuse-3ds', 'SeedDB was copied to:\n\n' + target)
-                        seeddb_found = True
+                        seeddb_found = target
                         app.hideLabel('no-seeddb')
                         app.hideButton('fix-seeddb')
                         if b9_found and seeddb_found:

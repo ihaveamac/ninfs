@@ -37,7 +37,7 @@ Python 3.6.1+ and pycryptodomex are required. appJar is required for the GUI.
 ### Windows
 Windows 7 or later is required.
 
-A standalone executable with a GUI is available for use. If you download the exe from the [latest release](https://github.com/ihaveamac/fuse-3ds/releases) and run it, a window will appear allowing you to choose mount options easily.
+A standalone executable with a GUI is available for use. You can get a single executable for download from [GitHub](https://github.com/ihaveamac/fuse-3ds/releases) or the [GBAtemp Download Center](https://gbatemp.net/download/fuse-3ds.34706/) A window will appear allowing you to choose mount options easily.
 
 Python does not have to be installed, but [WinFsp](http://www.secfs.net/winfsp/download/) is still required.
 
