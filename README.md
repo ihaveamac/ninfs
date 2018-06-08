@@ -101,11 +101,11 @@ Windows users can use a drive letter like `F:` as a mountpoint, or use `*` and a
   `mount_nand --otp otp.bin --cid nand_cid.bin nand.bin mountpoint`
 * Mount a NAND backup with OTP file and a CID hexstring:  
   `mount_nand --otp otp.bin --cid 7468616E6B7334636865636B696E6721 nand.bin mountpoint`
-* Mount a DSi NAND backup (Counter is automatically generated):
+* Mount a DSi NAND backup (Counter is automatically generated):  
   `mount_nanddsi --console-id 4E696E74656E646F nand_dsi.bin mountpoint`
-* Mount a DSi NAND backup with a Console ID hexstring and specified CID hexstring:
+* Mount a DSi NAND backup with a Console ID hexstring and specified CID hexstring:  
   `mount_nanddsi --console-id 4E696E74656E646F --cid 576879446F657344536945786973743F nand_dsi.bin mountpoint`
-* Mount a DSi NAND backup with a Console ID file and specified CID file:
+* Mount a DSi NAND backup with a Console ID file and specified CID file:  
   `mount_nanddsi --console-id ConsoleID.bin --cid CID.bin nand_dsi.bin mountpoint`
 * Mount an NCCH container (.app, .cxi, .cfa, .ncch):  
   `mount_ncch content.cxi mountpoint`
