@@ -303,12 +303,9 @@ def press(button: str):
                 extra_args.extend(('--dec-key', key))
         elif mount_type == NAND:
             otp = app.getEntry(NAND + 'otp')
-            cid = app.getEntry(NAND + 'cid')
             aw = app.getCheckBox(NAND + 'aw')
             if otp:
                 extra_args.extend(('--otp', otp))
-            if cid:
-                extra_args.extend(('--cid', cid))
             if not aw:
                 extra_args.append('-r')
         elif mount_type == NANDDSI:
@@ -450,13 +447,10 @@ with app.labelFrame('Mount settings', row=1, colspan=3):
         app.addFileEntry(NAND + 'otp', row=2, column=1, colspan=2).theButton.config(text=BROWSE)
         app.setEntryDefault(NAND + 'otp', DRAGFILE)
 
-        app.addLabel(NAND + LABEL3, 'CID file*', row=3, column=0)
-        app.addFileEntry(NAND + 'cid', row=3, column=1, colspan=2).theButton.config(text=BROWSE)
-        app.setEntryDefault(NAND + 'cid', DRAGFILE)
-        app.addLabel(NAND + 'label4', '*Not required if backup has essential.exefs from GodMode9.', row=4, colspan=3)
+        app.addLabel(NAND + 'label4', '*Not required if backup has essential.exefs from GodMode9.', row=3, colspan=3)
 
-        app.addLabel(NAND + 'label5', 'Options', row=5, column=0)
-        app.addNamedCheckBox('Allow writing', NAND + 'aw', row=5, column=1, colspan=1)
+        app.addLabel(NAND + 'label5', 'Options', row=4, column=0)
+        app.addNamedCheckBox('Allow writing', NAND + 'aw', row=4, column=1, colspan=1)
     app.hideFrame(NAND)
 
     with app.frame(NANDDSI, row=1, colspan=3):
@@ -639,7 +633,6 @@ try:
     for t in types_list:
         app.setEntryDropTarget(t + ITEM, make_dnd_entry_check(t + ITEM))
     app.setEntryDropTarget(NAND + 'otp', make_dnd_entry_check(NAND + 'otp'))
-    app.setEntryDropTarget(NAND + 'cid', make_dnd_entry_check(NAND + 'cid'))
     app.setEntryDropTarget(SD + 'movable', make_dnd_entry_check(SD + 'movable'))
     app.setEntryDropTarget(MOUNTPOINT, make_dnd_entry_check(MOUNTPOINT))
     has_dnd = True

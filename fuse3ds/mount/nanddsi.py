@@ -71,7 +71,6 @@ class TWLNandImageMount(LoggingMixIn, Operations):
 
         else:
             # attempt to generate counter
-            nand_fp.seek(0x1C0)
             block_0x1c = readbe(header_enc[0x1C0:0x1D0])
             blk_xored = block_0x1c ^ 0x1804060FE03B77080000896F06000002
             ctr_offs = self.crypto.create_ecb_cipher(0x03).decrypt(blk_xored.to_bytes(0x10, 'little'))
@@ -79,7 +78,7 @@ class TWLNandImageMount(LoggingMixIn, Operations):
 
             # try the counter
             block_0x1d = header_enc[0x1D0:0x1E0]
-            out = self.crypto.create_ctr_cipher(0x03, self.ctr + 0x1d).decrypt(block_0x1d)
+            out = self.crypto.create_ctr_cipher(0x03, self.ctr + 0x1D).decrypt(block_0x1d)
             if out != b'\xce<\x06\x0f\xe0\xbeMx\x06\x00\xb3\x05\x01\x00\x00\x02':
                 exit('Counter could not be automatically generated. Please provide the CID, '
                      'or ensure the provided Console ID is correct..')

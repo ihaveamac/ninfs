@@ -9,6 +9,7 @@ from errno import EPERM, ENOENT, EROFS
 from hashlib import sha1, sha256
 from stat import S_IFDIR, S_IFREG
 from sys import exit, argv
+from traceback import print_exc
 from typing import BinaryIO, AnyStr
 
 from pyctr.crypto import CryptoEngine
@@ -49,46 +50,95 @@ class NANDImageMount(LoggingMixIn, Operations):
             exefs = ExeFSReader.load(nand_fp)
         except InvalidExeFSError:
             exefs = None
-        if otp or cid:
-            if otp:
+
+        otp_data = None
+        if otp:
+            try:
                 with open(otp, 'rb') as f:
-                    otp = f.read(0x200)
-            else:
-                exit('OTP not found, provide otp-file with --otp (or embed essentials backup with GodMode9)')
-            if cid:
-                try:
-                    cid = bytes.fromhex(cid)
-                except ValueError:
-                    try:
-                        with open(cid, 'rb') as f:
-                            cid = f.read(0x10)
-                    except FileNotFoundError:
-                        exit('Failed to convert CID to bytes, or file did not exist.')
-                if len(cid) != 0x10:
-                    exit('CID is not 16 bytes.')
-            else:
-                exit('NAND CID not found, provide cid with --cid (or embed essentials backup with GodMode9)')
+                    otp_data = f.read(0x200)
+            except Exception:
+                print(f'Failed to open and read given OTP ({otp}).\n')
+                print_exc()
+                exit(1)
+
         else:
             if exefs is None:
-                if not otp:
-                    exit('OTP not found, provide otp-file with --otp (or embed essentials backup with GodMode9)')
-                if not cid:
-                    exit('NAND CID not found, provide cid with --cid (or embed essentials backup with GodMode9)')
+                exit('OTP not found, provide with --otp or embed essentials backup with GodMode9')
             else:
                 if 'otp' in exefs.entries:
                     nand_fp.seek(exefs['otp'].offset + 0x400)
-                    otp = nand_fp.read(exefs['otp'].size)
+                    otp_data = nand_fp.read(exefs['otp'].size)
+                else:
+                    exit('"otp" not found in essentials backup, update with GodMode9 or provide with --otp')
+
+        self.crypto.setup_keys_from_otp(otp_data)
+
+        def generate_ctr():
+            print('Attempting to generate Counter for CTR/TWL areas. If errors occur, provide the CID manually.')
+
+            # -------------------------------------------------- #
+            # attempt to generate CTR Counter
+            nand_fp.seek(0xB9301D0)
+            # these blocks are assumed to be entirely 00, so no need to xor anything
+            ctrn_block_0x1d = nand_fp.read(0x10)
+            ctrn_block_0x1e = nand_fp.read(0x10)
+            for ks in (0x04, 0x05):
+                ctr_counter_offs = self.crypto.create_ecb_cipher(ks).decrypt(ctrn_block_0x1d)
+                ctr_counter = int.from_bytes(ctr_counter_offs, 'big') - 0xB9301D
+
+                # try the counter
+                out = self.crypto.create_ctr_cipher(ks, ctr_counter + 0xB9301E).decrypt(ctrn_block_0x1e)
+                if out == b'\0' * 16:
+                    print('Counter for CTR area automatically generated.')
+                    self.ctr = ctr_counter
+                    break
+            else:
+                print('Counter could not be generated for CTR area. Related virtual files will not appear.')
+                self.ctr = None
+
+            # -------------------------------------------------- #
+            # attempt to generate TWL Counter
+            nand_fp.seek(0x1C0)
+            twln_block_0x1c = readbe(nand_fp.read(0x10))
+            twl_blk_xored = twln_block_0x1c ^ 0x18000601A03F97000000A97D04000004
+            twl_counter_offs = self.crypto.create_ecb_cipher(0x03).decrypt(twl_blk_xored.to_bytes(0x10, 'little'))
+            twl_counter = int.from_bytes(twl_counter_offs, 'big') - 0x1C
+
+            # try the counter
+            twln_block_0x1d = nand_fp.read(0x10)
+            out = self.crypto.create_ctr_cipher(0x03, twl_counter + 0x1D).decrypt(twln_block_0x1d)
+            if out == b'\x8e@\x06\x01\xa0\xc3\x8d\x80\x04\x00\xb3\x05\x01\x00\x00\x00':
+                print('Counter for TWL area automatically generated.')
+                self.ctr_twl = twl_counter
+            else:
+                print('Counter could not be generated for TWL area. Related virtual files will not appear.')
+                self.ctr_twl = None
+
+        cid_data = None
+        if cid:
+            try:
+                with open(cid, 'rb') as f:
+                    cid_data = f.read(0x200)
+            except Exception:
+                print(f'Failed to open and read given CID ({cid}).')
+                print('If you want to attempt Counter generation, do not provide a CID path.\n')
+                print_exc()
+                exit(1)
+
+        else:
+            if exefs is None:
+                generate_ctr()
+            else:
                 if 'nand_cid' in exefs.entries:
                     nand_fp.seek(exefs['nand_cid'].offset + 0x400)
-                    cid = nand_fp.read(exefs['nand_cid'].size)
-                if not (otp or cid):
-                    exit('otp and nand_cid somehow not found in essentials backup. update with GodMode9 or '
-                         'provide OTP/NAND CID with --otp/--cid.')
+                    cid_data = nand_fp.read(exefs['nand_cid'].size)
+                else:
+                    print('"nand_cid" not found in essentials backup, update with GodMode9 or provide with --cid')
+                    generate_ctr()
 
-        self.ctr = readbe(sha256(cid).digest()[0:16])
-        self.ctr_twl = readle(sha1(cid).digest()[0:16])
-
-        self.crypto.setup_keys_from_otp(otp)
+        if cid_data:
+            self.ctr = readbe(sha256(cid_data).digest()[0:16])
+            self.ctr_twl = readle(sha1(cid_data).digest()[0:16])
 
         nand_fp.seek(0, 2)
         raw_nand_size = nand_fp.tell()
@@ -116,15 +166,18 @@ class NANDImageMount(LoggingMixIn, Operations):
                             readle(ncsd_part_raw[i + 4:i + 8]) * 0x200] for i in range(0, 0x40, 0x8)]
 
         # including padding for crypto
-        twl_mbr = self.crypto.create_ctr_cipher(0x03, self.ctr_twl + 0x1B).decrypt(ncsd_header[0xB0:0x100])[0xE:0x50]
-        if twl_mbr[0x40:0x42] == b'\x55\xaa':
-            twl_partitions = [[readle(twl_mbr[i + 8:i + 12]) * 0x200,
-                               readle(twl_mbr[i + 12:i + 16]) * 0x200] for i in range(0, 0x40, 0x10)]
+        if self.ctr_twl:
+            twl_mbr = self.crypto.create_ctr_cipher(0x03, self.ctr_twl + 0x1B).decrypt(ncsd_header[0xB0:0x100])[0xE:0x50]
+            if twl_mbr[0x40:0x42] == b'\x55\xaa':
+                twl_partitions = [[readle(twl_mbr[i + 8:i + 12]) * 0x200,
+                                   readle(twl_mbr[i + 12:i + 16]) * 0x200] for i in range(0, 0x40, 0x10)]
+            else:
+                twl_partitions = None
+
+            self.files['/twlmbr.bin'] = {'size': 0x42, 'offset': 0x1BE, 'keyslot': 0x03, 'type': 'twlmbr',
+                                         'content': twl_mbr}
         else:
             twl_partitions = None
-
-        self.files['/twlmbr.bin'] = {'size': 0x42, 'offset': 0x1BE, 'keyslot': 0x03, 'type': 'twlmbr',
-                                     'content': twl_mbr}
 
         # then actually parse the partitions to create files
         firm_idx = 0
@@ -134,32 +187,35 @@ class NANDImageMount(LoggingMixIn, Operations):
             print(f'ncsd idx:{idx} fstype:{ncsd_part_fstype[idx]} crypttype:{ncsd_part_crypttype[idx]} '
                   f'offset:{part[0]:08x} size:{part[1]:08x} ', end='')
             if idx == 0:
-                self.files['/twl_full.img'] = {'size': part[1], 'offset': part[0], 'keyslot': 0x03, 'type': 'enc'}
-                print('/twl_full.img')
-                if twl_partitions:
-                    twl_part_fstype = 0
-                    for t_idx, t_part in enumerate(twl_partitions):
-                        if t_part[0] != 0:
-                            print(f'twl  idx:{t_idx}                      offset:{t_part[0]:08x} size:{t_part[1]:08x} ',
-                                  end='')
-                            if twl_part_fstype == 0:
-                                self.files['/twln.img'] = {'size': t_part[1], 'offset': t_part[0], 'keyslot': 0x03,
-                                                           'type': 'enc'}
-                                print('/twln.img')
-                                twl_part_fstype += 1
-                            elif twl_part_fstype == 1:
-                                self.files['/twlp.img'] = {'size': t_part[1], 'offset': t_part[0], 'keyslot': 0x03,
-                                                           'type': 'enc'}
-                                print('/twlp.img')
-                                twl_part_fstype += 1
-                            else:
-                                self.files[f'/twl_unk{twl_part_fstype}.img'] = {'size': t_part[1],
-                                                                                'offset': t_part[0],
-                                                                                'keyslot': 0x03, 'type': 'enc'}
-                                print(f'/twl_unk{twl_part_fstype}.img')
-                                twl_part_fstype += 1
+                if self.ctr_twl:
+                    self.files['/twl_full.img'] = {'size': part[1], 'offset': part[0], 'keyslot': 0x03, 'type': 'enc'}
+                    print('/twl_full.img')
+                    if twl_partitions:
+                        twl_part_fstype = 0
+                        for t_idx, t_part in enumerate(twl_partitions):
+                            if t_part[0] != 0:
+                                print(f'twl  idx:{t_idx}                      '
+                                      f'offset:{t_part[0]:08x} size:{t_part[1]:08x} ', end='')
+                                if twl_part_fstype == 0:
+                                    self.files['/twln.img'] = {'size': t_part[1], 'offset': t_part[0], 'keyslot': 0x03,
+                                                               'type': 'enc'}
+                                    print('/twln.img')
+                                    twl_part_fstype += 1
+                                elif twl_part_fstype == 1:
+                                    self.files['/twlp.img'] = {'size': t_part[1], 'offset': t_part[0], 'keyslot': 0x03,
+                                                               'type': 'enc'}
+                                    print('/twlp.img')
+                                    twl_part_fstype += 1
+                                else:
+                                    self.files[f'/twl_unk{twl_part_fstype}.img'] = {'size': t_part[1],
+                                                                                    'offset': t_part[0],
+                                                                                    'keyslot': 0x03, 'type': 'enc'}
+                                    print(f'/twl_unk{twl_part_fstype}.img')
+                                    twl_part_fstype += 1
+                else:
+                    print('<ctr_twl not set>')
 
-            else:
+            elif self.ctr:
                 if ncsd_part_fstype[idx] == 3:
                     # boot9 hardcoded this keyslot, i'll do this properly later
                     self.files[f'/firm{firm_idx}.bin'] = {'size': part[1], 'offset': part[0], 'keyslot': 0x06,
@@ -201,6 +257,9 @@ class NANDImageMount(LoggingMixIn, Operations):
                 elif ncsd_part_fstype[idx] == 4:
                     self.files['/agbsave.bin'] = {'size': part[1], 'offset': part[0], 'keyslot': 0x07, 'type': 'enc'}
                     print('/agbsave.bin')
+
+            else:
+                print('<ctr not set>')
 
         self.readonly = readonly
 

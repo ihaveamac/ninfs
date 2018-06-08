@@ -95,8 +95,10 @@ Windows users can use a drive letter like `F:` as a mountpoint, or use `*` and a
   `mount_exefs exefs.bin mountpoint`
 * Mount a NAND backup with `essential.exefs` embedded:    
   `mount_nand nand.bin mountpoint`
+* Mount a NAND backup with an OTP file (Counter is automatically generated):  
+  `mount_nand --otp otp.bin nand.bin mountpoint`
 * Mount a NAND backup with OTP and CID files:  
-  `mount_nand --otp otp.bin --cid nandcid.bin nand.bin mountpoint`
+  `mount_nand --otp otp.bin --cid nand_cid.bin nand.bin mountpoint`
 * Mount a NAND backup with OTP file and a CID hexstring:  
   `mount_nand --otp otp.bin --cid 7468616E6B7334636865636B696E6721 nand.bin mountpoint`
 * Mount a DSi NAND backup (Counter is automatically generated):

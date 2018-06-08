@@ -151,6 +151,8 @@ class ExeFSReader:
     def load(cls, fp: 'BinaryIO', strict: bool = False) -> 'ExeFSReader':
         """Load an ExeFS from a file-like object."""
         header = fp.read(0x200)
+        if len(set(header)) == 1:
+            raise InvalidExeFSError('Empty header')
 
         entries = []
         # exefs entry number, exefs hash number
