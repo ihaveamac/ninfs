@@ -685,9 +685,8 @@ def select_seeddb(sw):
             with suppress(ItemLookupError):
                 app.hideLabel('no-seeddb')
                 app.hideButton('fix-seeddb')
-            if b9_found and seeddb_found:
-                app.hideFrame('FOOTER')
-            with suppress(ItemLookupError):
+                if b9_found and seeddb_found:
+                    app.hideFrame('FOOTER')
                 app.hideSubWindow('no-seeddb')
 
 

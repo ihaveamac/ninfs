@@ -28,6 +28,6 @@ def roundup(offset: int, alignment: int) -> int:
 
 
 _home = os.path.expanduser('~')
-config_dirs: 'List[str]' = [os.path.join(_home, '3ds'), os.path.join(_home, '.3ds')]
+config_dirs: 'List[str]' = [os.path.join(_home, '.3ds'), os.path.join(_home, '3ds')]
 if windows:
-    config_dirs.append(os.path.join(os.environ.get('APPDATA'), '3ds'))
+    config_dirs.insert(0, os.path.join(os.environ.get('APPDATA'), '3ds'))
