@@ -18,6 +18,7 @@ from urllib.request import urlopen
 
 try:
     from appJar import gui
+    from appJar.appjar import ItemLookupError
 except ModuleNotFoundError:
     exit('Could not import appJar. If you installed via pip, make sure you installed with the gui.\n'
          'Read the README at the GitHub repository.')
@@ -661,6 +662,35 @@ with app.frame('default', row=1, colspan=3):
         app.addLabel('d-label3', 'If you need help, click "Help" at the top-right.', colspan=3)
 app.hideFrame('default')  # to be shown later
 
+
+def select_seeddb(sw):
+    global seeddb_found
+    path: str = app.openBox(title='Choose SeedDB', fileTypes=())
+    if path:
+        if getsize(path) % 0x10:
+            app.warningBox('fuse-3ds Error',
+                           'The size for the selected SeedDB is not aligned to 0x10.')
+            # shouldn't be calling this directly but i seem to have encounered a bug with parent=
+            # noinspection PyProtectedMember
+            app._bringToFront(sw)
+            return
+        with open(path, 'rb') as f:
+            data = f.read(0x1FFFF0)
+            target = pjoin(target_dir, 'seeddb.bin')
+            makedirs(target_dir, exist_ok=True)
+            with open(target, 'wb') as o:
+                o.write(data)
+            app.infoBox('fuse-3ds', 'SeedDB was copied to:\n\n' + target)
+            seeddb_found = target
+            with suppress(ItemLookupError):
+                app.hideLabel('no-seeddb')
+                app.hideButton('fix-seeddb')
+            if b9_found and seeddb_found:
+                app.hideFrame('FOOTER')
+            with suppress(ItemLookupError):
+                app.hideSubWindow('no-seeddb')
+
+
 if not b9_found or not seeddb_found:
     with app.frame('FOOTER', row=3, colspan=3):
         if not b9_found:
@@ -726,33 +756,6 @@ if not b9_found or not seeddb_found:
             app.addNamedButton('Fix SeedDB', 'fix-seeddb', lambda _: app.showSubWindow('no-seeddb'), row=PV,
                                column=2)
 
-
-            def select_seeddb(sw):
-                global seeddb_found
-                path: str = app.openBox(title='Choose SeedDB', fileTypes=())
-                if path:
-                    if getsize(path) % 0x10:
-                        app.warningBox('fuse-3ds Error',
-                                       'The size for the selected SeedDB is not aligned to 0x10.')
-                        # shouldn't be calling this directly but i seem to have encounered a bug with parent=
-                        # noinspection PyProtectedMember
-                        app._bringToFront(sw)
-                        return
-                    with open(path, 'rb') as f:
-                        data = f.read(0x1FFFF0)
-                        target = pjoin(target_dir, 'seeddb.bin')
-                        makedirs(target_dir, exist_ok=True)
-                        with open(target, 'wb') as o:
-                            o.write(data)
-                        app.infoBox('fuse-3ds', 'SeedDB was copied to:\n\n' + target)
-                        seeddb_found = target
-                        app.hideLabel('no-seeddb')
-                        app.hideButton('fix-seeddb')
-                        if b9_found and seeddb_found:
-                            app.hideFrame('FOOTER')
-                        app.hideSubWindow('no-seeddb')
-
-
             with app.subWindow('no-seeddb', 'fuse-3ds Error', modal=True) as sw:
                 app.addLabel('SeedDB was not found. It is needed for encryption\n'
                              'of newer digital titles.\n'
@@ -800,7 +803,15 @@ if windows:
         _ndw_resp = btn == 'ndw-continue'
         app.hideSubWindow('nand-driveletter-warning')
 
-with app.subWindow('extras', 'fuse-3ds Extras', modal=True, blocking=False):
+
+with app.subWindow('extras', 'fuse-3ds Extras', modal=True, blocking=False) as sw:
+    app.setSticky(EASTWEST)
+    with app.labelFrame('Update SeedDB', colspan=3):
+        app.setSticky(EASTWEST)
+        app.addLabel('updateseeddb-label', 'Update SeedDB to a newer database.', colspan=2)
+        app.addNamedButton('Update', 'updateseeddb-btn', lambda _: select_seeddb(sw),
+                           row=PV, column=2)
+
     app.setSticky(EASTWEST)
     with app.labelFrame('Tutorial', colspan=3):
         app.setSticky(EASTWEST)
