@@ -140,6 +140,10 @@ class NANDImageMount(LoggingMixIn, Operations):
             self.ctr = readbe(sha256(cid_data).digest()[0:16])
             self.ctr_twl = readle(sha1(cid_data).digest()[0:16])
 
+        if not (self.ctr or self.ctr_twl):
+            exit("Couldn't generate Counter for both CTR/TWL. "
+                 "Make sure the OTP is correct, or provide the CID manually.")
+
         nand_fp.seek(0, 2)
         raw_nand_size = nand_fp.tell()
 
