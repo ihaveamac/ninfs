@@ -87,14 +87,14 @@ for p in b9_paths:
         b9_found = p
         break
 else:
-    b9_found = False
+    b9_found = ''
 
 for p in seeddb_paths:
     if isfile(p):
         seeddb_found = p
         break
 else:
-    seeddb_found = False
+    seeddb_found = ''
 
 # types
 CCI = 'CTR Cart Image (".3ds", ".cci")'
