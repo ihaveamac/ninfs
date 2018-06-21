@@ -27,6 +27,9 @@ def detect_format(header: bytes) -> 'Optional[str]':
         # hardcoded header, type, version, cert chain, ticket sizes (should never change in practice)
         return 'cia'
 
+    elif header[0xC0:0xC8] == bytes.fromhex('24FFAE51 699AA221'):
+        return 'srl'
+
     elif header[0:4] == b'3DSX':
         return 'threedsx'
 

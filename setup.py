@@ -12,7 +12,7 @@ with open('README.md', 'r', encoding='utf-8') as f:
 
 setup(
     name='fuse-3ds',
-    version='1.1.1',
+    version='1.2.dev1',
     packages=['fuse3ds', 'fuse3ds.pyctr', 'fuse3ds.pyctr.types', 'fuse3ds.mount'],
     url='https://github.com/ihaveamac/fuse-3ds',
     license='MIT',
@@ -42,13 +42,15 @@ setup(
                                       'mount_ncch = fuse3ds.main:main',
                                       'mount_romfs = fuse3ds.main:main',
                                       'mount_sd = fuse3ds.main:main',
+                                      'mount_srl = fuse3ds.main:main',
                                       'mount_threedsx = fuse3ds.main:main',
                                       'mount_titledir = fuse3ds.main:main',
                                       # aliases
                                       'mount_3ds = fuse3ds.main:main',
+                                      'mount_3dsx = fuse3ds.main:main',
+                                      'mount_app = fuse3ds.main:main',
                                       'mount_csu = fuse3ds.main:main',
                                       'mount_cxi = fuse3ds.main:main',
                                       'mount_cfa = fuse3ds.main:main',
-                                      'mount_app = fuse3ds.main:main',
-                                      'mount_3dsx = fuse3ds.main:main']}
+                                      'mount_nds = fuse3ds.main:main',]}
 )

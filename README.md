@@ -113,6 +113,8 @@ Windows users can use a drive letter like `F:` as a mountpoint, or use `*` and a
   `mount_romfs romfs.bin mountpoint`
 * Mount a `Nintendo 3DS` directory from an SD card:  
   `mount_sd --movable movable.sed "/path/to/Nintendo 3DS" mountpoint`
+* Mount a Nintendo DS ROM image (NDS/SRL, `mount_nds` also works):  
+  `mount_srl game.nds`
 * Mount a 3DSX homebrew application:  
   `mount_threedsx boot.3dsx mountpoint`
 * Mount an entire `title` directory (like one from a NAND backup, or in an SD card mount):  
@@ -424,6 +426,39 @@ optional arguments:
   -r, --ro              mount read-only
   --dev                 use dev keys
   --movable MOVABLESED  path to movable.sed
+```
+
+### mount_srl
+Mounts Nintendo DS ROM images, creating a virtual filesystem of the RomFS contents.
+
+```
+usage: mount_srl [-h] [-f] [-d] [-o OPTIONS] srl mount_point
+
+Mount Nintendo DS ROM images.
+
+positional arguments:
+  srl          NDS/SRL file
+  mount_point  mount point
+
+optional arguments:
+  -h, --help   show this help message and exit
+  -f, --fg     run in foreground
+  -d           debug output (fuse/winfsp log)
+  -o OPTIONS   mount options
+```
+
+#### Current files
+```
+mount_point
+├── data/
+├── arm7.bin
+├── arm7i.bin
+├── arm7overlay.bin
+├── arm9.bin
+├── arm9i.bin
+├── arm9overlay.bin
+├── banner.bin
+└── header.bin
 ```
 
 ### mount_threedsx

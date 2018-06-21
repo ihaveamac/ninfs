@@ -106,15 +106,16 @@ NANDDSI = 'Nintendo DSi NAND backup ("nand_dsi.bin")'
 NCCH = 'NCCH (".cxi", ".cfa", ".ncch", ".app")'
 ROMFS = 'Read-only Filesystem (".romfs", "romfs.bin")'
 SD = 'SD Card Contents ("Nintendo 3DS" from SD)'
+SRL = 'Nintendo DS ROM image (".nds", ".srl")'
 THREEDSX = '3DSX Homebrew (".3dsx")'
 TITLEDIR = 'Titles directory ("title" from NAND or SD)'
 
 mount_types = {CCI: 'cci', CDN: 'cdn', CIA: 'cia', EXEFS: 'exefs', NAND: 'nand', NANDDSI: 'nanddsi', NCCH: 'ncch',
-               ROMFS: 'romfs', SD: 'sd', THREEDSX: 'threedsx', TITLEDIR: 'titledir'}
+               ROMFS: 'romfs', SD: 'sd', SRL: 'srl', THREEDSX: 'threedsx', TITLEDIR: 'titledir'}
 
 mount_types_rv: 'Dict[str, str]' = {y: x for x, y in mount_types.items()}
 
-types_list = (CCI, CDN, CIA, EXEFS, NAND, NANDDSI, NCCH, ROMFS, SD, THREEDSX, TITLEDIR)
+types_list = (CCI, CDN, CIA, EXEFS, NAND, NANDDSI, NCCH, ROMFS, SD, SRL, THREEDSX, TITLEDIR)
 
 types_requiring_b9 = {CCI, CDN, CIA, NAND, NCCH, SD, TITLEDIR}
 
@@ -496,6 +497,12 @@ with app.labelFrame('Mount settings', row=1, colspan=3):
         app.addFileEntry(THREEDSX + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
         app.setEntryDefault(THREEDSX + ITEM, DRAGFILE)
     app.hideFrame(THREEDSX)
+
+    with app.frame(SRL, row=1, colspan=3):
+        app.addLabel(SRL + LABEL1, FILE, row=0, column=0)
+        app.addFileEntry(SRL + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
+        app.setEntryDefault(SRL + ITEM, DRAGFILE)
+    app.hideFrame(SRL)
 
     with app.frame(TITLEDIR, row=1, colspan=3):
         app.addLabel(TITLEDIR + LABEL1, DIRECTORY, row=0, column=0)
