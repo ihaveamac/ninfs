@@ -20,6 +20,7 @@ from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
 from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 from .ncch import NCCHContainerMount
+from .srl import SRLMount
 
 
 # based on http://stackoverflow.com/questions/1766535/bit-hack-round-off-to-multiple-of-8/1766566#1766566
@@ -95,7 +96,8 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
         # read chunks to generate virtual files
         current_offset = self.content_offset
         for chunk in self.tmd.chunk_records:
-            file_ext = 'nds' if chunk.cindex == b'\0\0' and readbe(self.title_id) >> 44 == 0x48 else 'ncch'
+            is_srl = chunk.cindex == 0 and self.title_id[3:5] == '48'
+            file_ext = 'nds' if is_srl else 'ncch'
             filename = f'/{chunk.cindex:04x}.{chunk.id}.{file_ext}'
             self.files[filename] = {'size': chunk.size, 'offset': current_offset,
                                     'index': chunk.cindex.to_bytes(2, 'big'),
@@ -106,7 +108,10 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
             # noinspection PyBroadException
             try:
                 content_vfp = _c.VirtualFileWrapper(self, filename, chunk.size)
-                content_fuse = NCCHContainerMount(content_vfp, dev=self.dev, g_stat=self._g_stat, seeddb=self.seeddb)
+                if is_srl:
+                    content_fuse = SRLMount(content_vfp, g_stat=self._g_stat)
+                else:
+                    content_fuse = NCCHContainerMount(content_vfp, dev=self.dev, g_stat=self._g_stat, seeddb=self.seeddb)
                 content_fuse.init(path)
                 self.dirs[dirname] = content_fuse
             except Exception as e:

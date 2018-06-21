@@ -15,6 +15,7 @@ from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
 from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 from .ncch import NCCHContainerMount
+from .srl import SRLMount
 
 if TYPE_CHECKING:
     from typing import Dict
@@ -91,7 +92,8 @@ class CDNContentsMount(LoggingMixIn, Operations):
             if chunk.size != f_stat.st_size:
                 print('Warning: TMD Content size and filesize of', chunk.id, 'are different.')
             self.cdn_content_size += chunk.size
-            file_ext = 'nds' if chunk.cindex == 0 and int(self.title_id, 16) >> 44 == 0x48 else 'ncch'
+            is_srl = chunk.cindex == 0 and self.title_id[3:5] == '48'
+            file_ext = 'nds' if is_srl else 'ncch'
             filename = f'/{chunk.cindex:04x}.{chunk.id}.{file_ext}'
             self.files[filename] = {'size': chunk.size, 'index': chunk.cindex.to_bytes(2, 'big'),
                                     'type': 'enc' if chunk.type.encrypted else 'raw',
@@ -101,7 +103,10 @@ class CDNContentsMount(LoggingMixIn, Operations):
             # noinspection PyBroadException
             try:
                 content_vfp = _c.VirtualFileWrapper(self, filename, chunk.size)
-                content_fuse = NCCHContainerMount(content_vfp, dev=self.dev, g_stat=f_stat, seeddb=self.seeddb)
+                if is_srl:
+                    content_fuse = SRLMount(content_vfp, g_stat=f_stat)
+                else:
+                    content_fuse = NCCHContainerMount(content_vfp, dev=self.dev, g_stat=f_stat, seeddb=self.seeddb)
                 content_fuse.init(path)
                 self.dirs[dirname] = content_fuse
             except Exception as e:
