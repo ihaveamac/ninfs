@@ -460,10 +460,12 @@ with app.labelFrame('Mount settings', row=1, colspan=3):
         app.addFileEntry(NANDDSI + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
         app.setEntryDefault(NANDDSI + ITEM, DRAGFILE)
 
-        app.addLabel(NANDDSI + LABEL2, 'Console ID', row=2, column=0)
+        app.addLabel(NANDDSI + LABEL2, 'Console ID*', row=2, column=0)
         app.addEntry(NANDDSI + 'consoleid', row=2, column=1, colspan=2)
 
-        app.addLabel(NANDDSI + LABEL3, 'Options', row=5, column=0)
+        app.addLabel(NANDDSI + LABEL3, '*Not required if backup has nocash footer with ConsoleID/CID.', row=3, colspan=3)
+
+        app.addLabel(NANDDSI + 'label4', 'Options', row=5, column=0)
         app.addNamedCheckBox('Allow writing', NANDDSI + 'aw', row=5, column=1, colspan=1)
     app.hideFrame(NANDDSI)
 

@@ -30,6 +30,8 @@ class TWLNandImageMount(LoggingMixIn, Operations):
 
         self.files = {}
 
+        self.f = nand_fp
+
         res = nand_fp.seek(0, 2)
         if res == 0xF000200:
             self.files['/nocash_blk.bin'] = {'offset': 0xF000000, 'size': 0x200, 'type': 'dec'}
@@ -47,7 +49,21 @@ class TWLNandImageMount(LoggingMixIn, Operations):
                 with open(consoleid, 'rb') as f:
                     consoleid = f.read(0x10)
             except (FileNotFoundError, TypeError):
-                exit('Failed to convert Console ID to bytes, or file did not exist.')
+                # read Console ID and CID from footer
+                if res > 0xF000000:
+                    nocash_blk: bytes = self.read('/nocash_blk.bin', 0x40, 0, 0)
+                    if len(nocash_blk) != 0x40:
+                        exit('Failed to read 0x40 of footer (this should never happen)')
+                    if nocash_blk[0:0x10] != b'DSi eMMC CID/CPU':
+                        exit('Failed to find footer magic "DSi eMMC CID/CPU"')
+                    if nocash_blk[0x10:0x40] == b'\0' * 0x30:
+                        exit('Nocash block is entirely empty. Maybe re-dump NAND with another exploit, or manually '
+                             'get Console ID with some other method.')
+                    cid = nocash_blk[0x10:0x20]
+                    consoleid = nocash_blk[0x20:0x28][::-1]
+                    print('Console ID and CID read from nocash block.')
+                else:
+                    exit('Failed to convert Console ID to bytes, or file did not exist.')
 
         twl_consoleid_list = (readbe(consoleid[4:8]), readbe(consoleid[0:4]))
 
@@ -58,17 +74,19 @@ class TWLNandImageMount(LoggingMixIn, Operations):
 
         self.crypto.set_keyslot('x', 0x03, pack('<4I', *key_x_list))
 
+        nand_fp.seek(0)
         header_enc = nand_fp.read(0x200)
 
         if cid:
-            try:
-                cid = bytes.fromhex(cid)
-            except ValueError:
+            if not isinstance(cid, bytes):  # if cid was already read above
                 try:
-                    with open(cid, 'rb') as f:
-                        cid = f.read(0x10)
-                except FileNotFoundError:
-                    exit('Failed to convert CID to bytes, or file did not exist.')
+                    cid = bytes.fromhex(cid)
+                except ValueError:
+                    try:
+                        with open(cid, 'rb') as f:
+                            cid = f.read(0x10)
+                    except FileNotFoundError:
+                        exit('Failed to convert CID to bytes, or file did not exist.')
             self.ctr = readle(sha1(cid).digest()[0:16])
 
         else:
@@ -105,8 +123,6 @@ class TWLNandImageMount(LoggingMixIn, Operations):
                 ptype = 'enc' if idx < 2 else 'dec'
                 pname = ('twl_main', 'twl_photo', 'twl_unk1', 'twk_unk2')[idx]
                 self.files[f'/{pname}.img'] = {'offset': part[0], 'size': part[1], 'type': ptype}
-
-        self.f = nand_fp
 
     def __del__(self, *args):
         try:
