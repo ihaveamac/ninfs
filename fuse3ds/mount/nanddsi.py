@@ -33,8 +33,10 @@ class TWLNandImageMount(LoggingMixIn, Operations):
         res = nand_fp.seek(0, 2)
         if res == 0xF000200:
             self.files['/nocash_blk.bin'] = {'offset': 0xF000000, 'size': 0x200, 'type': 'dec'}
+        elif res == 0xF000040:
+            self.files['/nocash_blk.bin'] = {'offset': 0xF000000, 'size': 0x40, 'type': 'dec'}
         elif res != 0xF000000:
-            exit(f'Unknown NAND size (expected 0xF000000 or 0xF000200, got {res:#09X}')
+            exit(f'Unknown NAND size (expected 0xF000000, 0xF000200, or 0xF000040, got {res:#09X}')
 
         nand_fp.seek(0)
 
