@@ -32,13 +32,11 @@ class TWLNandImageMount(LoggingMixIn, Operations):
 
         self.f = nand_fp
 
-        res = nand_fp.seek(0, 2)
-        if res == 0xF000200:
-            self.files['/nocash_blk.bin'] = {'offset': 0xF000000, 'size': 0x200, 'type': 'dec'}
-        elif res == 0xF000040:
-            self.files['/nocash_blk.bin'] = {'offset': 0xF000000, 'size': 0x40, 'type': 'dec'}
-        elif res != 0xF000000:
-            exit(f'Unknown NAND size (expected 0xF000000, 0xF000200, or 0xF000040, got {res:#09X}')
+        nand_size = nand_fp.seek(0, 2)
+        if nand_size < 0xF000000:
+            exit(f'NAND is too small (expected >= 0xF000000, got {nand_size:#X}')
+        if nand_size & 0x40 == 0x40:
+            self.files['/nocash_blk.bin'] = {'offset': nand_size - 0x40, 'size': 0x40, 'type': 'dec'}
 
         nand_fp.seek(0)
 
@@ -50,7 +48,7 @@ class TWLNandImageMount(LoggingMixIn, Operations):
                     consoleid = f.read(0x10)
             except (FileNotFoundError, TypeError):
                 # read Console ID and CID from footer
-                if res > 0xF000000:
+                if nand_size > 0xF000000:
                     nocash_blk: bytes = self.read('/nocash_blk.bin', 0x40, 0, 0)
                     if len(nocash_blk) != 0x40:
                         exit('Failed to read 0x40 of footer (this should never happen)')
