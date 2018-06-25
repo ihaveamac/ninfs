@@ -6,6 +6,7 @@ import logging
 import os
 from collections import defaultdict
 from errno import ENOENT
+from functools import lru_cache
 from stat import S_IFDIR, S_IFREG
 from struct import Struct, iter_unpack
 from sys import argv
@@ -80,6 +81,7 @@ class TwlHeaderRaw(NamedTuple):
 class SRLMount(LoggingMixIn, Operations):
     fd = 0
 
+    @lru_cache()
     def parse_path(self, path: str):
         curr = self.hierarchy
         if path[0] == '/':

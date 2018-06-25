@@ -240,7 +240,7 @@ def stop_mount():
             kill(process.pid, CTRL_BREAK_EVENT)
         else:
             # this is cheating...
-            if platform == 'darwin':
+            if macos:
                 check_call(['diskutil', 'unmount', curr_mountpoint])
             else:
                 # assuming linux or bsd, which have fusermount
@@ -286,7 +286,7 @@ def press(button: str):
                 except Exception as e:
                     # noinspection PyUnresolvedReferences
                     if isinstance(e, OSError) and e.winerror == 145:  # "The directory is not empty"
-                        app.showSubWindow('mounterror-dir-win')
+                        show_mounterror_dir_win()
                     else:
                         print_exc()
                         show_mounterror()
@@ -302,6 +302,16 @@ def press(button: str):
         if mount_type == CDN:
             key = app.getEntry(CDN + 'key')
             if key:
+                try:
+                    _res = bytes.fromhex(key)
+                except ValueError:
+                    app.warningBox('fuse-3ds Error', 'The given titlekey was not a valid hexstring.')
+                    app.enableButton(MOUNT)
+                    return
+                if len(_res) != 8:
+                    app.warningBox('fuse-3ds Error', 'The given titlekey must be 32 characters.')
+                    app.enableButton(MOUNT)
+                    return
                 extra_args.extend(('--dec-key', key))
         elif mount_type == NAND:
             otp = app.getEntry(NAND + 'otp')
@@ -314,12 +324,31 @@ def press(button: str):
             consoleid = app.getEntry(NANDDSI + 'consoleid')
             aw = app.getCheckBox(NANDDSI + 'aw')
             if consoleid:
+                if consoleid.lower().startswith('fw'):
+                    app.warningBox('fuse-3ds Error', 'A real Console ID does not start with FW. '
+                                                     'It is a 16-character hexstring.')
+                    app.enableButton(MOUNT)
+                    return
+                try:
+                    _res = bytes.fromhex(consoleid)
+                except ValueError:
+                    app.warningBox('fuse-3ds Error', 'The given Console ID was not a valid hexstring.')
+                    app.enableButton(MOUNT)
+                    return
+                if len(_res) != 8:
+                    app.warningBox('fuse-3ds Error', 'The given Console ID must be 16 characters.')
+                    app.enableButton(MOUNT)
+                    return
                 extra_args.extend(('--console-id', consoleid))
             if not aw:
                 extra_args.append('-r')
         elif mount_type == SD:
             movable = app.getEntry(SD + 'movable')
             aw = app.getCheckBox(SD + 'aw')
+            if not movable:
+                app.warningBox('fuse-3ds Error', 'A movable.sed is required.')
+                app.enableButton(MOUNT)
+                return
             extra_args.extend(('--movable', movable))
             if not aw:
                 extra_args.append('-r')
@@ -797,19 +826,12 @@ def show_exiterror(errcode: int):
                    f'The mount process exited with an error code ({errcode}). Please check the output.')
 
 
+# failed to mount to directory subwindow
 if windows:
-    # failed to mount to directory subwindow
-    with app.subWindow('mounterror-dir-win', 'fuse-3ds Error', modal=True, blocking=False):
-        app.addLabel('mounterror-dir-label', 'Failed to mount to the given mount point.\n'
-                                             'Please make sure the directory is empty or does not exist.')
-        app.addNamedButton(OK, 'mounterror-dir-ok', lambda _: app.hideSubWindow('mounterror-dir-win'))
-        app.setResizable(False)
-
-
-    def _ndw_response(btn: str):
-        global _ndw_resp
-        _ndw_resp = btn == 'ndw-continue'
-        app.hideSubWindow('nand-driveletter-warning')
+    def show_mounterror_dir_win():
+        app.warningBox('fuse-3ds Error',
+                       'Failed to mount to the given mount point.\n'
+                       'Please make sure the directory is empty or does not exist.')
 
 
 with app.subWindow('extras', 'fuse-3ds Extras', modal=True, blocking=False) as sw:
