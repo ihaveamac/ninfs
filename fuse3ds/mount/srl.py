@@ -135,8 +135,11 @@ class SRLMount(LoggingMixIn, Operations):
                                                              'size': header.arm7_overlay_size}
 
         if header.icon_offset:
+            srl_fp.seek(header.icon_offset)
+            ver = int.from_bytes(srl_fp.read(2), 'little')
+            sizes = defaultdict(lambda: 0, {0x0001: 0x0840, 0x0002: 0x0940, 0x0003: 0x1240, 0x0103: 0x23C0})
             self.hierarchy['contents']['banner.bin'] = {'name': 'banner.bin', 'type': 'file',
-                                                        'offset': header.icon_offset, 'size': 0x23C0}
+                                                        'offset': header.icon_offset, 'size': sizes[ver]}
 
         if header.fnt_offset:
             self.hierarchy['contents']['data'] = {'name': 'data', 'type': 'dir', 'contents': {}}
