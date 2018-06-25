@@ -430,6 +430,8 @@ def make_dnd_entry_check(entry_name: str):
     return handle
 
 
+print('Setting up GUI...')
+
 with app.frame('loading', row=1, colspan=3):
     app.addLabel('l-label', 'Getting ready...', colspan=3)
 
