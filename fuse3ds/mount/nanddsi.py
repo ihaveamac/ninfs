@@ -54,7 +54,7 @@ class TWLNandImageMount(LoggingMixIn, Operations):
                         exit('Failed to read 0x40 of footer (this should never happen)')
                     if nocash_blk[0:0x10] != b'DSi eMMC CID/CPU':
                         exit('Failed to find footer magic "DSi eMMC CID/CPU"')
-                    if nocash_blk[0x10:0x40] == b'\0' * 0x30:
+                    if len(set(nocash_blk[0x10:0x40])) == 1:
                         exit('Nocash block is entirely empty. Maybe re-dump NAND with another exploit, or manually '
                              'get Console ID with some other method.')
                     cid = nocash_blk[0x10:0x20]
@@ -99,7 +99,7 @@ class TWLNandImageMount(LoggingMixIn, Operations):
             out = self.crypto.create_ctr_cipher(0x03, self.ctr + 0x1D).decrypt(block_0x1d)
             if out != b'\xce<\x06\x0f\xe0\xbeMx\x06\x00\xb3\x05\x01\x00\x00\x02':
                 exit('Counter could not be automatically generated. Please provide the CID, '
-                     'or ensure the provided Console ID is correct..')
+                     'or ensure the provided Console ID is correct.')
             print('Counter automatically generated.')
 
         self.files['/stage2_infoblk1.bin'] = {'offset': 0x200, 'size': 0x200, 'type': 'dec'}
@@ -111,8 +111,10 @@ class TWLNandImageMount(LoggingMixIn, Operations):
 
         header = self.crypto.create_ctr_cipher(0x03, self.ctr).decrypt(header_enc)
         mbr = header[0x1BE:0x200]
-        if mbr[0x40:0x42] != b'\x55\xaa':
-            exit('MBR signature not found. Make sure the provided Console ID and CID are correct.')
+        mbr_sig = mbr[0x40:0x42]
+        if mbr_sig != b'\x55\xaa':
+            exit(f'MBR signature not found (expected "55aa", got "{mbr_sig.hex()}"). '
+                 f'Make sure the provided Console ID and CID are correct.')
         partitions = [[readle(mbr[i + 8:i + 12]) * 0x200,
                        readle(mbr[i + 12:i + 16]) * 0x200] for i in range(0, 0x40, 0x10)]
 
