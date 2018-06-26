@@ -113,8 +113,12 @@ class SRLMount(LoggingMixIn, Operations):
                                                       'offset': header.arm7_rom_offset, 'size': header.arm7_size}
 
         if header.arm9_rom_offset:
+            f_size = header.arm9_size
+            srl_fp.seek(header.arm9_rom_offset + header.arm9_size)
+            if int.from_bytes(srl_fp.read(4), 'little') == 0xDEC00621:
+                f_size += 0xC
             self.hierarchy['contents']['arm9.bin'] = {'name': 'arm9.bin', 'type': 'file',
-                                                      'offset': header.arm9_rom_offset, 'size': header.arm9_size}
+                                                      'offset': header.arm9_rom_offset, 'size': f_size}
 
         if header.arm7i_rom_offset:
             self.hierarchy['contents']['arm7i.bin'] = {'name': 'arm7i.bin', 'type': 'file',
