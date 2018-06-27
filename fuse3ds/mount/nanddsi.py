@@ -21,7 +21,8 @@ from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_conte
 class TWLNandImageMount(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, nand_fp: BinaryIO, g_stat: os.stat, consoleid: str, cid: str = None, readonly: bool = False):
+    def __init__(self, nand_fp: BinaryIO, g_stat: os.stat, consoleid: str = None, cid: str = None,
+                 readonly: bool = False):
         self.crypto = CryptoEngine(setup_b9_keys=False)
         self.readonly = readonly
 
@@ -48,8 +49,14 @@ class TWLNandImageMount(LoggingMixIn, Operations):
                     consoleid = f.read(0x10)
             except (FileNotFoundError, TypeError):
                 # read Console ID and CID from footer
-                if nand_size > 0xF000000:
+                try:
                     nocash_blk: bytes = self.read('/nocash_blk.bin', 0x40, 0, 0)
+                except KeyError:
+                    if consoleid is None:
+                        exit('Nocash block not found, and Console ID not provided.')
+                    else:
+                        exit('Failed to convert Console ID to bytes, or file did not exist.')
+                else:
                     if len(nocash_blk) != 0x40:
                         exit('Failed to read 0x40 of footer (this should never happen)')
                     if nocash_blk[0:0x10] != b'DSi eMMC CID/CPU':
@@ -60,8 +67,6 @@ class TWLNandImageMount(LoggingMixIn, Operations):
                     cid = nocash_blk[0x10:0x20]
                     consoleid = nocash_blk[0x20:0x28][::-1]
                     print('Console ID and CID read from nocash block.')
-                else:
-                    exit('Failed to convert Console ID to bytes, or file did not exist.')
 
         twl_consoleid_list = (readbe(consoleid[4:8]), readbe(consoleid[0:4]))
 
