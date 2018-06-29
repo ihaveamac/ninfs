@@ -115,7 +115,9 @@ mount_types = {CCI: 'cci', CDN: 'cdn', CIA: 'cia', EXEFS: 'exefs', NAND: 'nand',
 
 mount_types_rv: 'Dict[str, str]' = {y: x for x, y in mount_types.items()}
 
-types_list = (CCI, CDN, CIA, EXEFS, NAND, NANDDSI, NCCH, ROMFS, SD, SRL, THREEDSX, TITLEDIR)
+ctr_types = (CCI, CDN, CIA, EXEFS, NAND, NCCH, ROMFS, SD, THREEDSX, TITLEDIR)
+twl_types = (NANDDSI, SRL)
+types_list = ctr_types + twl_types
 
 types_requiring_b9 = {CCI, CDN, CIA, NAND, NCCH, SD, TITLEDIR}
 
@@ -684,7 +686,9 @@ except Exception as e:
     has_dnd = False
 
 app.setSticky('new')
-app.addOptionBox('TYPE', (f'- Choose a type{" or drag a file/directory here" if has_dnd else ""} -', *types_list),
+app.addOptionBox('TYPE', (f'- Choose a type{" or drag a file/directory here" if has_dnd else ""} -',
+                          '- Nintendo 3DS -', *ctr_types,
+                          '- Nintendo DS / DSi -', *twl_types),
                  row=0, colspan=2)
 app.setOptionBoxChangeFunction('TYPE', change_type)
 app.addButton('Help & Extras', press, row=0, column=2)
