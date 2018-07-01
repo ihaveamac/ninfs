@@ -310,7 +310,7 @@ def press(button: str):
                     app.warningBox('fuse-3ds Error', 'The given titlekey was not a valid hexstring.')
                     app.enableButton(MOUNT)
                     return
-                if len(_res) != 8:
+                if len(_res) != 16:
                     app.warningBox('fuse-3ds Error', 'The given titlekey must be 32 characters.')
                     app.enableButton(MOUNT)
                     return
