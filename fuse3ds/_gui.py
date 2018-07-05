@@ -19,9 +19,14 @@ from urllib.request import urlopen
 try:
     from appJar import gui
     from appJar.appjar import ItemLookupError
-except ModuleNotFoundError:
-    exit('Could not import appJar. If you installed via pip, make sure you installed with the gui.\n'
-         'Read the README at the GitHub repository.')
+except ImportError as e:
+    if '_tkinter' in e.args[0]:
+        exit('Could not import tkinter, please install python3-tk (or equivalent for your distribution).')
+    else:
+        exit('Could not import appJar. If you installed via pip, make sure you installed with the gui.\n'
+             'Read the README at the GitHub repository.')
+    # this code will never be reached
+    gui = ItemLookupError = None
 
 from pkg_resources import parse_version
 
@@ -658,6 +663,11 @@ with app.labelFrame('Mount point', row=2, colspan=3):
             app.addRadioButton('allowuser', ALLOW_NONE, row=PV, column=1, colspan=2)
             app.addRadioButton('allowuser', ALLOW_ROOT, column=1, colspan=2)
             app.addRadioButton('allowuser', ALLOW_OTHER, column=1, colspan=2)
+            if not macos:
+                app.addMessage('allowuser-notice', 'This may require extra permissions, such as adding the user to the '
+                                                   'fuse group, or editing /etc/fuse.conf.', column=1, colspan=2)
+                app.setMessageAlign('allowuser-notice', 'left')
+                app.setMessageAspect('allowuser-notice', 500)
 
         app.addLabel('debug-label1', 'Debug output')
         app.addNamedCheckBox('Enable debug output', 'debug', row=PV, column=1, colspan=2)
