@@ -4,12 +4,11 @@ Mounts NCCH containers, creating a virtual filesystem of decrypted sections.
 
 import logging
 import os
-from collections import OrderedDict
 from errno import ENOENT
 from math import ceil
 from stat import S_IFDIR, S_IFREG
 from sys import argv
-from typing import BinaryIO, Dict
+from typing import BinaryIO, TYPE_CHECKING
 
 from pyctr.crypto import CryptoEngine
 from pyctr.types.ncch import NCCHReader, FIXED_SYSTEM_KEY
@@ -19,6 +18,9 @@ from . import _common as _c
 from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
 from .exefs import ExeFSMount
 from .romfs import RomFSMount
+
+if TYPE_CHECKING:
+    from typing import Dict, List
 
 
 class NCCHContainerMount(LoggingMixIn, Operations):
@@ -90,7 +92,10 @@ class NCCHContainerMount(LoggingMixIn, Operations):
 
         exefs_region = self.reader.exefs_region
         if exefs_region.offset:
-            self.files['/exefs.bin'] = {'size': exefs_region.size, 'offset': exefs_region.offset, 'enctype': 'exefs',
+            exefs_type = 'exefs'
+            if self.reader.extra_keyslot == 0x2C:
+                exefs_type = 'normal'
+            self.files['/exefs.bin'] = {'size': exefs_region.size, 'offset': exefs_region.offset, 'enctype': exefs_type,
                                         'keyslot': 0x2C, 'keyslot_extra': self.reader.extra_keyslot,
                                         'iv': (self.reader.partition_id << 64 | (0x02 << 56)),
                                         'keyslot_normal_range': [(0, 0x200)]}
@@ -206,17 +211,25 @@ class NCCHContainerMount(LoggingMixIn, Operations):
             aligned_offset = offset - before
             aligned_size = size + before
             self.f.seek(aligned_real_offset)
-            data = b''
-            # noinspection PyTypeChecker
-            for chunk in range(ceil(aligned_size / 0x200)):
-                iv = fi['iv'] + ((aligned_offset + (chunk * 0x200)) >> 4)
-                keyslot = fi['keyslot_extra']
-                for r in fi['keyslot_normal_range']:
-                    if r[0] <= self.f.tell() - fi['offset'] < r[1]:
-                        keyslot = fi['keyslot']
-                data += self.crypto.create_ctr_cipher(keyslot, iv).decrypt(self.f.read(0x200))
 
-            data = data[before:size + before]
+            def do_thing(al_offset: int, al_size: int, cut_start: int, cut_end: int):
+                end: int = al_offset + (ceil(al_size / 0x200) * 0x200)
+                last_chunk_offset = end - 0x200
+                # noinspection PyTypeChecker
+                for chunk in range(al_offset, end, 0x200):
+                    iv = fi['iv'] + (chunk >> 4)
+                    keyslot = fi['keyslot_extra']
+                    for r in fi['keyslot_normal_range']:
+                        if r[0] <= self.f.tell() - fi['offset'] < r[1]:
+                            keyslot = fi['keyslot']
+                    out = self.crypto.create_ctr_cipher(keyslot, iv).decrypt(self.f.read(0x200))
+                    if chunk == al_offset:
+                        out = out[cut_start:]
+                    if chunk == last_chunk_offset and cut_end != 0x200:
+                        out = out[:-cut_end]
+                    yield out
+
+            data = b''.join(do_thing(aligned_offset, aligned_size, before, 0x200 - ((size + before) % 0x200)))
 
         elif fi['enctype'] == 'fulldec':
             # this could be optimized much better
@@ -225,40 +238,89 @@ class NCCHContainerMount(LoggingMixIn, Operations):
             aligned_offset = offset - before
             aligned_size = size + before
             self.f.seek(aligned_real_offset)
-            data = b''
-            files_to_read = OrderedDict()
-            # noinspection PyTypeChecker
-            for chunk in range(ceil(aligned_size / 0x200)):
-                new_offset = (aligned_offset + (chunk * 0x200))
-                added = False
-                for fname, attrs in self.files.items():
-                    if attrs['enctype'] == 'fulldec':
-                        continue
-                    if attrs['offset'] <= new_offset < attrs['offset'] + attrs['size']:
-                        if fname not in files_to_read:
-                            files_to_read[fname] = [new_offset - attrs['offset'], 0]
-                        files_to_read[fname][1] += 0x200
-                        added = True
-                if not added:
-                    files_to_read[f'raw{chunk}'] = [new_offset, 0x200]
 
-            for fname, info in files_to_read.items():
-                try:
-                    new_data = self.read(fname, info[1], info[0], 0)
-                    if fname == '/ncch.bin':
-                        # fix crypto flags
-                        ncch_array = bytearray(new_data)
-                        ncch_array[0x18B] = 0
-                        ncch_array[0x18F] = 4
-                        new_data = bytes(ncch_array)
-                except KeyError:
-                    # for unknown files
-                    self.f.seek(info[0])
-                    new_data = self.f.read(info[1])
+            def do_thing(al_offset: int, al_size: int, cut_start: int, cut_end: int):
+                end: int = al_offset + (ceil(al_size / 0x200) * 0x200)
+                # dict is ordered by default in CPython since 3.6.0
+                # and part of the language spec since 3.7.0
+                to_read: Dict[str, List[int]] = {}
 
-                data += new_data
+                if self.reader.check_for_extheader():
+                    extheader_start = 0x200
+                    extheader_end = 0x1000
+                else:
+                    extheader_start = extheader_end = 0
 
-            data = data[before:size + before]
+                logo = self.reader.logo_region
+                logo_start = logo.offset
+                logo_end = logo_start + logo.size
+
+                plain = self.reader.plain_region
+                plain_start = plain.offset
+                plain_end = plain_start + plain.size
+
+                exefs = self.reader.exefs_region
+                exefs_start = exefs.offset
+                exefs_end = exefs_start + exefs.size
+
+                romfs = self.reader.romfs_region
+                romfs_start = romfs.offset
+                romfs_end = romfs_start + romfs.size
+
+                for chunk_offset in range(al_offset, end, 0x200):
+                    # RomFS check first, since it might be faster
+                    if romfs_start <= chunk_offset < romfs_end:
+                        name = '/romfs.bin'
+                        curr_offset = romfs_start
+                    # ExeFS check second, since it might be faster
+                    elif exefs_start <= chunk_offset < exefs_end:
+                        name = '/exefs.bin'
+                        curr_offset = exefs_start
+                    # NCCH check, always 0x0 to 0x200
+                    elif 0 <= chunk_offset < 0x200:
+                        name = '/ncch.bin'
+                        curr_offset = 0
+                    elif extheader_start <= chunk_offset <= extheader_end:
+                        name = '/extheader.bin'
+                        curr_offset = extheader_start
+                    elif logo_start <= chunk_offset <= logo_end:
+                        name = '/logo.bin'
+                        curr_offset = logo_start
+                    elif plain_start <= chunk_offset < plain_end:
+                        name = '/plain.bin'
+                        curr_offset = plain_start
+                    else:
+                        name = f'raw{chunk_offset}'
+                        curr_offset = 0
+                    if name not in to_read:
+                        to_read[name] = [chunk_offset - curr_offset, 0]
+                    to_read[name][1] += 0x200
+                    last_name = name
+
+                is_start = True
+                for name, info in to_read.items():
+                    try:
+                        new_data = self.read(name, info[1], info[0], 0)
+                        if name == '/ncch.bin':
+                            # fix crypto flags
+                            ncch_array = bytearray(new_data)
+                            ncch_array[0x18B] = 0
+                            ncch_array[0x18F] = 4
+                            new_data = bytes(ncch_array)
+                    except KeyError:
+                        # for unknown files
+                        self.f.seek(info[0])
+                        new_data = self.f.read(info[1])
+                    if is_start is True:
+                        new_data = new_data[cut_start:]
+                        is_start = False
+                    # noinspection PyUnboundLocalVariable
+                    if name == last_name and cut_end != 0x200:
+                        new_data = new_data[:-cut_end]
+
+                    yield new_data
+
+            data = b''.join(do_thing(aligned_offset, aligned_size, before, 0x200 - ((size + before) % 0x200)))
 
         else:
             from pprint import pformat
