@@ -123,7 +123,6 @@ class NCCHContainerMount(LoggingMixIn, Operations):
         if _setup_romfs:
             self.setup_romfs()
 
-    def setup_romfs(self):
         if not self.reader.flags.no_romfs:
             romfs_region = self.reader.romfs_region
             if romfs_region.offset:
@@ -131,14 +130,16 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                                             'enctype': 'normal', 'keyslot': self.reader.extra_keyslot,
                                             'iv': (self.reader.partition_id << 64 | (0x03 << 56))}
 
-                # noinspection PyBroadException
-                try:
-                    romfs_vfp = _c.VirtualFileWrapper(self, '/romfs.bin', romfs_region.size)
-                    romfs_fuse = RomFSMount(romfs_vfp, self._g_stat)
-                    romfs_fuse.init('/')
-                    self.romfs_fuse = romfs_fuse
-                except Exception as e:
-                    print(f'Failed to mount RomFS: {type(e).__name__}: {e}')
+    def setup_romfs(self):
+        if '/romfs.bin' in self.files:
+            # noinspection PyBroadException
+            try:
+                romfs_vfp = _c.VirtualFileWrapper(self, '/romfs.bin', self.reader.romfs_region.size)
+                romfs_fuse = RomFSMount(romfs_vfp, self._g_stat)
+                romfs_fuse.init('/')
+                self.romfs_fuse = romfs_fuse
+            except Exception as e:
+                print(f'Failed to mount RomFS: {type(e).__name__}: {e}')
 
     def flush(self, path, fh):
         return self.f.flush()
@@ -247,7 +248,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
 
                 if self.reader.check_for_extheader():
                     extheader_start = 0x200
-                    extheader_end = 0x1000
+                    extheader_end = 0xA00
                 else:
                     extheader_start = extheader_end = 0
 
@@ -280,10 +281,10 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                     elif 0 <= chunk_offset < 0x200:
                         name = '/ncch.bin'
                         curr_offset = 0
-                    elif extheader_start <= chunk_offset <= extheader_end:
+                    elif extheader_start <= chunk_offset < extheader_end:
                         name = '/extheader.bin'
                         curr_offset = extheader_start
-                    elif logo_start <= chunk_offset <= logo_end:
+                    elif logo_start <= chunk_offset < logo_end:
                         name = '/logo.bin'
                         curr_offset = logo_start
                     elif plain_start <= chunk_offset < plain_end:
