@@ -20,7 +20,7 @@ try:
     from appJar import gui
     from appJar.appjar import ItemLookupError
 except ImportError as e:
-    if '_tkinter' in e.args[0]:
+    if 'tkinter' in e.args[0].lower():
         exit('Could not import tkinter, please install python3-tk (or equivalent for your distribution).')
     else:
         exit('Could not import appJar. If you installed via pip, make sure you installed with the gui.\n'
