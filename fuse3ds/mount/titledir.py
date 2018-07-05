@@ -103,7 +103,7 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
                     content_vfp = _c.VirtualFileWrapper(self, filename, chunk.size)
                     content_fuse = NCCHContainerMount(content_vfp, decompress_code=self.decompress_code, dev=self.dev,
                                                       g_stat=f_stat, seeddb=self.seeddb)
-                    content_fuse.init(path)
+                    content_fuse.init(path, _setup_romfs=False)
                 except Exception as e:
                     print(f'Failed to mount {real_filename}: {type(e).__name__}: {e}')
                 else:
@@ -130,6 +130,10 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
 
                 if self.mount_all is False:
                     break
+
+        for name, ops in self.dirs.items():
+            print(f'Setting up RomFS for {name[0:30]}...')
+            ops.setup_romfs()
 
         print('Done!')
 
@@ -162,13 +166,14 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
     @_c.ensure_lower_path
     def read(self, path, size, offset, fh):
         first_dir = _c.get_first_dir(path)
-        if first_dir in self._real_dir_names:
+        try:
             return self.dirs[self._real_dir_names[first_dir]].read(_c.remove_first_dir(path), size, offset, fh)
-        # file handling only to support the above.
-        fi = self._files[path]
-        with open(fi['real_filepath'], 'rb') as f:
-            f.seek(offset)
-            return f.read(size)
+        except KeyError:
+            # file handling only to support the above.
+            fi = self._files[path]
+            with open(fi['real_filepath'], 'rb') as f:
+                f.seek(offset)
+                return f.read(size)
 
     @_c.ensure_lower_path
     def statfs(self, path):

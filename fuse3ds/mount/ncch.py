@@ -70,7 +70,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
 
     destroy = __del__
 
-    def init(self, path):
+    def init(self, path, _setup_romfs=True):
         decrypted_filename = '/decrypted.' + ('cxi' if self.reader.flags.executable else 'cfa')
 
         self.files[decrypted_filename] = {'size': self.reader.content_size, 'offset': 0, 'enctype': 'fulldec'}
@@ -115,6 +115,10 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                             self.files['/exefs.bin']['keyslot_normal_range'].append(
                                 (ent.offset + 0x200, ent.offset + 0x200 + roundup(ent.size, 0x200)))
 
+        if _setup_romfs:
+            self.setup_romfs()
+
+    def setup_romfs(self):
         if not self.reader.flags.no_romfs:
             romfs_region = self.reader.romfs_region
             if romfs_region.offset:
@@ -126,7 +130,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                 try:
                     romfs_vfp = _c.VirtualFileWrapper(self, '/romfs.bin', romfs_region.size)
                     romfs_fuse = RomFSMount(romfs_vfp, self._g_stat)
-                    romfs_fuse.init(path)
+                    romfs_fuse.init('/')
                     self.romfs_fuse = romfs_fuse
                 except Exception as e:
                     print(f'Failed to mount RomFS: {type(e).__name__}: {e}')
