@@ -126,20 +126,20 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
                                 pass
                     dirname = dirname.rstrip('.')  # fix windows issue
                     self.dirs[dirname] = content_fuse
-                    self._real_dir_names[dirname.lower()] = dirname
+                    self._real_dir_names[dirname.lower()[0:31]] = dirname
 
                 if self.mount_all is False:
                     break
 
         for name, ops in self.dirs.items():
-            print(f'Setting up RomFS for {name[0:30]}...')
+            print(f'Setting up RomFS for {name[1:31]}...')
             ops.setup_romfs()
 
         print('Done!')
 
     @_c.ensure_lower_path
     def getattr(self, path, fh=None):
-        first_dir = _c.get_first_dir(path)
+        first_dir = _c.get_first_dir(path)[0:31]
         if first_dir in self._real_dir_names:
             return self.dirs[self._real_dir_names[first_dir]].getattr(_c.remove_first_dir(path), fh)
         uid, gid, pid = fuse_get_context()
@@ -155,7 +155,7 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
 
     @_c.ensure_lower_path
     def readdir(self, path, fh):
-        first_dir = _c.get_first_dir(path)
+        first_dir = _c.get_first_dir(path)[0:31]
         if first_dir in self._real_dir_names:
             yield from self.dirs[self._real_dir_names[first_dir]].readdir(_c.remove_first_dir(path), fh)
         else:
@@ -165,7 +165,7 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
 
     @_c.ensure_lower_path
     def read(self, path, size, offset, fh):
-        first_dir = _c.get_first_dir(path)
+        first_dir = _c.get_first_dir(path)[0:31]
         try:
             return self.dirs[self._real_dir_names[first_dir]].read(_c.remove_first_dir(path), size, offset, fh)
         except KeyError:
@@ -177,7 +177,7 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
 
     @_c.ensure_lower_path
     def statfs(self, path):
-        first_dir = _c.get_first_dir(path)
+        first_dir = _c.get_first_dir(path)[0:31]
         if first_dir in self._real_dir_names:
             return self.dirs[self._real_dir_names[first_dir]].read(_c.remove_first_dir(path))
         return {'f_bsize': 4096, 'f_blocks': self.total_size // 4096, 'f_bavail': 0, 'f_bfree': 0, 'f_files': 0}
@@ -207,6 +207,7 @@ def main(prog: str = None, args: list = None):
         if _c.macos:
             path_to_show = os.path.realpath(a.title_dir).rsplit('/', maxsplit=2)
             opts['volname'] = f'Nintendo 3DS Titles Directory ({path_to_show[-2]}/{path_to_show[-1]})'
+            opts['noappledouble'] = True
         elif _c.windows:
             # volume label can only be up to 32 chars
             opts['volname'] = 'Nintendo 3DS Titles Directory'
