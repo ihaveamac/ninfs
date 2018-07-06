@@ -124,6 +124,7 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
                                 break
                             except (AttributeError, TypeError):
                                 pass
+                    dirname = dirname.rstrip('.')  # fix windows issue
                     self.dirs[dirname] = content_fuse
                     self._real_dir_names[dirname.lower()[0:31]] = dirname
 
