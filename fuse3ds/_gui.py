@@ -284,6 +284,10 @@ def press(button: str):
                 mountpoint = app.getOptionBox(MOUNTPOINT)
             else:
                 mountpoint = app.getEntry(MOUNTPOINT)
+                if not mountpoint:
+                    show_nomperror()
+                    app.enableButton(MOUNT)
+                    return
                 try:
                     # winfsp won't work on an existing directory
                     # so we try to use rmdir, which will delete it, only if it's empty
@@ -409,23 +413,250 @@ def kill_process(_):
     app.disableButton(UNMOUNT)
 
 
-def change_type(*_):
-    mount_type = app.getOptionBox('TYPE')
-    app.hideFrame('default')
-    app.showLabelFrame('Mount point')
-    app.showLabelFrame('Mount settings')
-    for t in mount_types:
-        if t == mount_type:
-            app.showFrame(t)
-            if t in {NAND, NANDDSI} and windows:
-                app.setRadioButton('mountpoint-choice', 'Directory')
-        else:
-            app.hideFrame(t)
+current_type = 'default'
+
+
+def check_mount_button(mount_type: str):
     if not b9_found and mount_type in types_requiring_b9:
         app.disableButton(MOUNT)
     else:
         if process is None or process.poll() is not None:
             app.enableButton(MOUNT)
+
+
+def change_type(*_):
+    global current_type
+    mount_type: str = app.getOptionBox('TYPE')
+    try:
+        app.openLabelFrame('Mount settings')
+    except ItemLookupError:
+        app.setSticky(EASTWEST)
+        app.startLabelFrame('Mount settings', row=1, colspan=3)
+        app.setSticky(EASTWEST)
+        app.showLabelFrame('Mount settings')
+
+    app.hideFrame(current_type)
+
+    try:
+        app.showFrame(mount_type)
+    except ItemLookupError:
+        if mount_type == CCI:
+            with app.frame(CCI, row=1, colspan=3):
+                app.addLabel(CCI + LABEL1, FILE, row=0, column=0)
+                app.addFileEntry(CCI + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
+                app.setEntryDefault(CCI + ITEM, DRAGFILE)
+
+        elif mount_type == CDN:
+            with app.frame(CDN, row=1, colspan=3):
+                app.addLabel(CDN + LABEL1, DIRECTORY, row=0, column=0)
+                app.addDirectoryEntry(CDN + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
+                app.setEntryDefault(CDN + ITEM, DRAGDIR)
+
+                app.addLabel(CDN + LABEL2, 'Decrypted Titlekey*', row=3, column=0)
+                app.addEntry(CDN + 'key', row=3, column=1, colspan=2)
+
+                app.setEntryDefault(CDN + 'key', 'Insert a decrypted titlekey')
+                app.addLabel(CDN + LABEL3, '*Not required if title has a cetk.', row=4, colspan=3)
+
+        elif mount_type == CIA:
+            with app.frame(CIA, row=1, colspan=3):
+                app.addLabel(CIA + LABEL1, FILE, row=0, column=0)
+                app.addFileEntry(CIA + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
+                app.setEntryDefault(CIA + ITEM, DRAGFILE)
+
+        elif mount_type == EXEFS:
+            with app.frame(EXEFS, row=1, colspan=3):
+                app.addLabel(EXEFS + LABEL1, FILE, row=0, column=0)
+                app.addFileEntry(EXEFS + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
+                app.setEntryDefault(EXEFS + ITEM, DRAGFILE)
+
+                app.addLabel(EXEFS + LABEL3, 'Options', row=3, column=0)
+                app.addNamedCheckBox('Decompress .code', EXEFS + 'decompress', row=3, column=1, colspan=1)
+
+        elif mount_type == NAND:
+            with app.frame(NAND, row=1, colspan=3):
+                app.addLabel(NAND + LABEL1, FILE, row=0, column=0)
+                app.addFileEntry(NAND + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
+                app.setEntryDefault(NAND + ITEM, DRAGFILE)
+
+                app.addLabel(NAND + LABEL2, 'OTP file*', row=2, column=0)
+                app.addFileEntry(NAND + 'otp', row=2, column=1, colspan=2).theButton.config(text=BROWSE)
+                app.setEntryDefault(NAND + 'otp', DRAGFILE)
+
+                app.addLabel(NAND + 'label4', '*Not required if backup has essential.exefs from GodMode9.', row=3,
+                             colspan=3)
+
+                app.addLabel(NAND + 'label5', 'Options', row=4, column=0)
+                app.addNamedCheckBox('Allow writing', NAND + 'aw', row=4, column=1, colspan=1)
+
+                if has_dnd:
+                    app.setEntryDropTarget(NAND + 'otp', make_dnd_entry_check(NAND + 'otp'))
+
+        elif mount_type == NANDDSI:
+            with app.frame(NANDDSI, row=1, colspan=3):
+                app.addLabel(NANDDSI + LABEL1, FILE, row=0, column=0)
+                app.addFileEntry(NANDDSI + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
+                app.setEntryDefault(NANDDSI + ITEM, DRAGFILE)
+
+                app.addLabel(NANDDSI + LABEL2, 'Console ID*', row=2, column=0)
+                app.addEntry(NANDDSI + 'consoleid', row=2, column=1, colspan=2)
+                app.setEntryDefault(NANDDSI + 'consoleid', 'If required, input Console ID as hexstring')
+
+                app.addLabel(NANDDSI + LABEL3, '*Not required if backup has nocash footer with ConsoleID/CID.', row=3,
+                             colspan=3)
+
+                app.addLabel(NANDDSI + 'label4', 'Options', row=5, column=0)
+                app.addNamedCheckBox('Allow writing', NANDDSI + 'aw', row=5, column=1, colspan=1)
+
+        elif mount_type == NCCH:
+            with app.frame(NCCH, row=1, colspan=3):
+                app.addLabel(NCCH + LABEL1, FILE, row=0, column=0)
+                app.addFileEntry(NCCH + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
+                app.setEntryDefault(NCCH + ITEM, DRAGFILE)
+
+        elif mount_type == ROMFS:
+            with app.frame(ROMFS, row=1, colspan=3):
+                app.addLabel(ROMFS + LABEL1, FILE, row=0, column=0)
+                app.addFileEntry(ROMFS + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
+                app.setEntryDefault(ROMFS + ITEM, DRAGFILE)
+
+        elif mount_type == SD:
+            with app.frame(SD, row=1, colspan=3):
+                app.addLabel(SD + LABEL1, DIRECTORY, row=0, column=0)
+                app.addDirectoryEntry(SD + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
+                app.setEntryDefault(SD + ITEM, DRAGDIR)
+
+                app.addLabel(SD + LABEL2, 'movable.sed', row=2, column=0)
+                app.addFileEntry(SD + 'movable', row=2, column=1, colspan=2).theButton.config(text=BROWSE)
+                app.setEntryDefault(SD + 'movable', DRAGFILE)
+
+                app.addLabel(SD + LABEL3, 'Options', row=3, column=0)
+                app.addNamedCheckBox('Allow writing', SD + 'aw', row=3, column=1, colspan=1)
+
+                if has_dnd:
+                    app.setEntryDropTarget(SD + 'movable', make_dnd_entry_check(SD + 'movable'))
+
+        elif mount_type == THREEDSX:
+            with app.frame(THREEDSX, row=1, colspan=3):
+                app.addLabel(THREEDSX + LABEL1, FILE, row=0, column=0)
+                app.addFileEntry(THREEDSX + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
+                app.setEntryDefault(THREEDSX + ITEM, DRAGFILE)
+
+        elif mount_type == SRL:
+            with app.frame(SRL, row=1, colspan=3):
+                app.addLabel(SRL + LABEL1, FILE, row=0, column=0)
+                app.addFileEntry(SRL + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
+                app.setEntryDefault(SRL + ITEM, DRAGFILE)
+
+        elif mount_type == TITLEDIR:
+            with app.frame(TITLEDIR, row=1, colspan=3):
+                app.addLabel(TITLEDIR + LABEL1, DIRECTORY, row=0, column=0)
+                app.addDirectoryEntry(TITLEDIR + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
+                app.setEntryDefault(TITLEDIR + ITEM, DRAGFILE)
+
+                app.addLabel(TITLEDIR + LABEL3, 'Options', row=3, column=0)
+                app.addNamedCheckBox('Decompress .code (slow!)', TITLEDIR + 'decompress', row=3, column=1, colspan=1)
+                app.addNamedCheckBox('Mount all contents', TITLEDIR + 'mountall', row=3, column=2, colspan=1)
+
+        if has_dnd:
+            app.setEntryDropTarget(mount_type + ITEM, make_dnd_entry_check(mount_type + ITEM))
+
+    finally:
+        app.stopLabelFrame()
+        current_type = mount_type
+
+        try:
+            app.showLabelFrame('Mount point')
+        except ItemLookupError:
+            app.setSticky(EASTWEST)
+            with app.labelFrame('Mount point', row=2, colspan=3):
+                app.setSticky(EASTWEST)
+                with app.frame('mountpoint-root', colspan=3):
+                    if windows:
+                        def rb_change(_):
+                            if app.getRadioButton('mountpoint-choice') == 'Drive letter':
+                                app.hideFrame('mountpoint-dir')
+                                app.showFrame('mountpoint-drive')
+                            else:
+                                app.hideFrame('mountpoint-drive')
+                                app.showFrame('mountpoint-dir')
+
+                        app.addLabel('mountpoint-choice-label', 'Mount type', row=0)
+                        app.addRadioButton('mountpoint-choice', 'Drive letter', row=0, column=1)
+                        app.addRadioButton('mountpoint-choice', 'Directory', row=0, column=2)
+
+                        app.setRadioButtonChangeFunction('mountpoint-choice', rb_change)
+                        with app.frame('mountpoint-drive', row=1, colspan=3):
+                            app.addLabel('mountlabel1', 'Drive letter', row=0, column=0)
+                            # putting "WWWW" to avoid a warning
+                            app.addOptionBox(MOUNTPOINT, ['WWWW'], row=0, column=1, colspan=2)
+
+                        with app.frame('mountpoint-dir', row=1, colspan=3):
+                            app.addLabel('mountlabel2', 'Mount point', row=0, column=0)
+                            app.addDirectoryEntry(MOUNTPOINT, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
+                        app.hideFrame('mountpoint-dir')
+                        # noinspection PyUnboundLocalVariable
+                        update_drives()
+                    else:
+                        app.addLabel('mountlabel', 'Mount point', row=2, column=0)
+                        app.addDirectoryEntry(MOUNTPOINT, row=2, column=1, colspan=2).theButton.config(text=BROWSE)
+                    app.setEntryDefault(MOUNTPOINT, DRAGDIR)
+
+                    def toggle_advanced_opts(_):
+                        if app.getCheckBox('advopt'):
+                            app.showLabelFrame('Advanced options')
+                        else:
+                            app.hideLabelFrame('Advanced options')
+
+                    def choose_debug_location(_):
+                        path: str = app.saveBox(fileName='fuse3ds.log', dirName=pjoin(expanduser('~'), 'Desktop'),
+                                                fileTypes=(),
+                                                fileExt='.log')
+                        if path:
+                            app.setEntry('debug', path)
+
+                    app.addNamedCheckBox('Show advanced options', 'advopt', column=1, colspan=2)
+                    app.setCheckBoxChangeFunction('advopt', toggle_advanced_opts)
+
+                app.setSticky(EASTWEST)
+                with app.labelFrame('Advanced options', colspan=3):
+                    app.setSticky(EASTWEST)
+
+                    app.addLabel('devkeys-label', 'Keys')
+                    app.addNamedCheckBox('Use developer-unit keys', 'devkeys', row=PV, column=1, colspan=2)
+
+                    if not windows:
+                        app.addLabel('allowuser-label', 'External user access')
+                        app.addRadioButton('allowuser', ALLOW_NONE, row=PV, column=1, colspan=2)
+                        app.addRadioButton('allowuser', ALLOW_ROOT, column=1, colspan=2)
+                        app.addRadioButton('allowuser', ALLOW_OTHER, column=1, colspan=2)
+                        if not macos:
+                            app.addMessage('allowuser-notice',
+                                           'This may require extra permissions, such as adding the user to the '
+                                           'fuse group, or editing /etc/fuse.conf.', column=1, colspan=2)
+                            app.setMessageAlign('allowuser-notice', 'left')
+                            app.setMessageAspect('allowuser-notice', 500)
+
+                    app.addLabel('debug-label1', 'Debug output')
+                    app.addNamedCheckBox('Enable debug output', 'debug', row=PV, column=1, colspan=2)
+                    app.addLabel('debug-label2', 'Debug log file')
+                    app.addNamedButton('Choose log location...', 'debug', choose_debug_location, row=PV, column=1,
+                                       colspan=2)
+                    app.addEntry('debug', column=1, colspan=2)
+                    app.setEntryDefault('debug', 'Choose where to save above...')
+
+                app.hideLabelFrame('Advanced options')
+
+                app.addButtons([MOUNT, UNMOUNT], press, colspan=3)
+                app.disableButton(UNMOUNT)
+
+            if has_dnd:
+                app.setEntryDropTarget(MOUNTPOINT, make_dnd_entry_check(MOUNTPOINT))
+
+        check_mount_button(mount_type)
+
+        if mount_type in {NAND, NANDDSI} and windows:
+            app.setRadioButton('mountpoint-choice', 'Directory')
 
 
 def make_dnd_entry_check(entry_name: str):
@@ -441,119 +672,6 @@ print('Setting up GUI...')
 
 with app.frame('loading', row=1, colspan=3):
     app.addLabel('l-label', 'Getting ready...', colspan=3)
-
-app.setSticky(EASTWEST)
-with app.labelFrame('Mount settings', row=1, colspan=3):
-    app.setSticky(EASTWEST)
-    with app.frame(CCI, row=1, colspan=3):
-        app.addLabel(CCI + LABEL1, FILE, row=0, column=0)
-        app.addFileEntry(CCI + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
-        app.setEntryDefault(CCI + ITEM, DRAGFILE)
-    app.hideFrame(CCI)
-
-    with app.frame(CDN, row=1, colspan=3):
-        app.addLabel(CDN + LABEL1, DIRECTORY, row=0, column=0)
-        app.addDirectoryEntry(CDN + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
-        app.setEntryDefault(CDN + ITEM, DRAGDIR)
-
-        app.addLabel(CDN + LABEL2, 'Decrypted Titlekey*', row=3, column=0)
-        app.addEntry(CDN + 'key', row=3, column=1, colspan=2)
-
-        app.setEntryDefault(CDN + 'key', 'Insert a decrypted titlekey')
-        app.addLabel(CDN + LABEL3, '*Not required if title has a cetk.', row=4, colspan=3)
-    app.hideFrame(CDN)
-
-    with app.frame(CIA, row=1, colspan=3):
-        app.addLabel(CIA + LABEL1, FILE, row=0, column=0)
-        app.addFileEntry(CIA + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
-        app.setEntryDefault(CIA + ITEM, DRAGFILE)
-    app.hideFrame(CIA)
-
-    with app.frame(EXEFS, row=1, colspan=3):
-        app.addLabel(EXEFS + LABEL1, FILE, row=0, column=0)
-        app.addFileEntry(EXEFS + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
-        app.setEntryDefault(EXEFS + ITEM, DRAGFILE)
-
-        app.addLabel(EXEFS + LABEL3, 'Options', row=3, column=0)
-        app.addNamedCheckBox('Decompress .code', EXEFS + 'decompress', row=3, column=1, colspan=1)
-    app.hideFrame(EXEFS)
-
-    with app.frame(NAND, row=1, colspan=3):
-        app.addLabel(NAND + LABEL1, FILE, row=0, column=0)
-        app.addFileEntry(NAND + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
-        app.setEntryDefault(NAND + ITEM, DRAGFILE)
-
-        app.addLabel(NAND + LABEL2, 'OTP file*', row=2, column=0)
-        app.addFileEntry(NAND + 'otp', row=2, column=1, colspan=2).theButton.config(text=BROWSE)
-        app.setEntryDefault(NAND + 'otp', DRAGFILE)
-
-        app.addLabel(NAND + 'label4', '*Not required if backup has essential.exefs from GodMode9.', row=3, colspan=3)
-
-        app.addLabel(NAND + 'label5', 'Options', row=4, column=0)
-        app.addNamedCheckBox('Allow writing', NAND + 'aw', row=4, column=1, colspan=1)
-    app.hideFrame(NAND)
-
-    with app.frame(NANDDSI, row=1, colspan=3):
-        app.addLabel(NANDDSI + LABEL1, FILE, row=0, column=0)
-        app.addFileEntry(NANDDSI + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
-        app.setEntryDefault(NANDDSI + ITEM, DRAGFILE)
-
-        app.addLabel(NANDDSI + LABEL2, 'Console ID*', row=2, column=0)
-        app.addEntry(NANDDSI + 'consoleid', row=2, column=1, colspan=2)
-        app.setEntryDefault(NANDDSI + 'consoleid', 'If required, input Console ID as hexstring')
-
-        app.addLabel(NANDDSI + LABEL3, '*Not required if backup has nocash footer with ConsoleID/CID.', row=3, colspan=3)
-
-        app.addLabel(NANDDSI + 'label4', 'Options', row=5, column=0)
-        app.addNamedCheckBox('Allow writing', NANDDSI + 'aw', row=5, column=1, colspan=1)
-    app.hideFrame(NANDDSI)
-
-    with app.frame(NCCH, row=1, colspan=3):
-        app.addLabel(NCCH + LABEL1, FILE, row=0, column=0)
-        app.addFileEntry(NCCH + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
-        app.setEntryDefault(NCCH + ITEM, DRAGFILE)
-    app.hideFrame(NCCH)
-
-    with app.frame(ROMFS, row=1, colspan=3):
-        app.addLabel(ROMFS + LABEL1, FILE, row=0, column=0)
-        app.addFileEntry(ROMFS + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
-        app.setEntryDefault(ROMFS + ITEM, DRAGFILE)
-    app.hideFrame(ROMFS)
-
-    with app.frame(SD, row=1, colspan=3):
-        app.addLabel(SD + LABEL1, DIRECTORY, row=0, column=0)
-        app.addDirectoryEntry(SD + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
-        app.setEntryDefault(SD + ITEM, DRAGDIR)
-
-        app.addLabel(SD + LABEL2, 'movable.sed', row=2, column=0)
-        app.addFileEntry(SD + 'movable', row=2, column=1, colspan=2).theButton.config(text=BROWSE)
-        app.setEntryDefault(SD + 'movable', DRAGFILE)
-
-        app.addLabel(SD + LABEL3, 'Options', row=3, column=0)
-        app.addNamedCheckBox('Allow writing', SD + 'aw', row=3, column=1, colspan=1)
-    app.hideFrame(SD)
-
-    with app.frame(THREEDSX, row=1, colspan=3):
-        app.addLabel(THREEDSX + LABEL1, FILE, row=0, column=0)
-        app.addFileEntry(THREEDSX + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
-        app.setEntryDefault(THREEDSX + ITEM, DRAGFILE)
-    app.hideFrame(THREEDSX)
-
-    with app.frame(SRL, row=1, colspan=3):
-        app.addLabel(SRL + LABEL1, FILE, row=0, column=0)
-        app.addFileEntry(SRL + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
-        app.setEntryDefault(SRL + ITEM, DRAGFILE)
-    app.hideFrame(SRL)
-
-    with app.frame(TITLEDIR, row=1, colspan=3):
-        app.addLabel(TITLEDIR + LABEL1, DIRECTORY, row=0, column=0)
-        app.addDirectoryEntry(TITLEDIR + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
-        app.setEntryDefault(TITLEDIR + ITEM, DRAGFILE)
-
-        app.addLabel(TITLEDIR + LABEL3, 'Options', row=3, column=0)
-        app.addNamedCheckBox('Decompress .code (slow!)', TITLEDIR + 'decompress', row=3, column=1, colspan=1)
-        app.addNamedCheckBox('Mount all contents', TITLEDIR + 'mountall', row=3, column=2, colspan=1)
-    app.hideFrame(TITLEDIR)
 
 
 def show_unknowntype(path: str):
@@ -598,112 +716,22 @@ def detect_type(fn: str):
     app.showFrame(mount_type)
 
 
-app.setSticky(EASTWEST)
-with app.labelFrame('Mount point', row=2, colspan=3):
-    app.setSticky(EASTWEST)
-    with app.frame('mountpoint-root', colspan=3):
-        if windows:
-            def rb_change(_):
-                if app.getRadioButton('mountpoint-choice') == 'Drive letter':
-                    app.hideFrame('mountpoint-dir')
-                    app.showFrame('mountpoint-drive')
-                else:
-                    app.hideFrame('mountpoint-drive')
-                    app.showFrame('mountpoint-dir')
-
-
-            app.addLabel('mountpoint-choice-label', 'Mount type', row=0)
-            app.addRadioButton('mountpoint-choice', 'Drive letter', row=0, column=1)
-            app.addRadioButton('mountpoint-choice', 'Directory', row=0, column=2)
-
-            app.setRadioButtonChangeFunction('mountpoint-choice', rb_change)
-            with app.frame('mountpoint-drive', row=1, colspan=3):
-                app.addLabel('mountlabel1', 'Drive letter', row=0, column=0)
-                # putting "WWWW" to avoid a warning
-                app.addOptionBox(MOUNTPOINT, ['WWWW'], row=0, column=1, colspan=2)
-
-            with app.frame('mountpoint-dir', row=1, colspan=3):
-                app.addLabel('mountlabel2', 'Mount point', row=0, column=0)
-                app.addDirectoryEntry(MOUNTPOINT, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
-            app.hideFrame('mountpoint-dir')
-            # noinspection PyUnboundLocalVariable
-            update_drives()
-        else:
-            app.addLabel('mountlabel', 'Mount point', row=2, column=0)
-            app.addDirectoryEntry(MOUNTPOINT, row=2, column=1, colspan=2).theButton.config(text=BROWSE)
-        app.setEntryDefault(MOUNTPOINT, DRAGDIR)
-
-
-        def toggle_advanced_opts(_):
-            if app.getCheckBox('advopt'):
-                app.showLabelFrame('Advanced options')
-            else:
-                app.hideLabelFrame('Advanced options')
-
-
-        def choose_debug_location(_):
-            path: str = app.saveBox(fileName='fuse3ds.log', dirName=pjoin(expanduser('~'), 'Desktop'), fileTypes=(),
-                                    fileExt='.log')
-            if path:
-                app.setEntry('debug', path)
-
-
-        app.addNamedCheckBox('Show advanced options', 'advopt', column=1, colspan=2)
-        app.setCheckBoxChangeFunction('advopt', toggle_advanced_opts)
-
-    app.setSticky(EASTWEST)
-    with app.labelFrame('Advanced options', colspan=3):
-        app.setSticky(EASTWEST)
-
-        app.addLabel('devkeys-label', 'Keys')
-        app.addNamedCheckBox('Use developer-unit keys', 'devkeys', row=PV, column=1, colspan=2)
-
-        if not windows:
-            app.addLabel('allowuser-label', 'External user access')
-            app.addRadioButton('allowuser', ALLOW_NONE, row=PV, column=1, colspan=2)
-            app.addRadioButton('allowuser', ALLOW_ROOT, column=1, colspan=2)
-            app.addRadioButton('allowuser', ALLOW_OTHER, column=1, colspan=2)
-            if not macos:
-                app.addMessage('allowuser-notice', 'This may require extra permissions, such as adding the user to the '
-                                                   'fuse group, or editing /etc/fuse.conf.', column=1, colspan=2)
-                app.setMessageAlign('allowuser-notice', 'left')
-                app.setMessageAspect('allowuser-notice', 500)
-
-        app.addLabel('debug-label1', 'Debug output')
-        app.addNamedCheckBox('Enable debug output', 'debug', row=PV, column=1, colspan=2)
-        app.addLabel('debug-label2', 'Debug log file')
-        app.addNamedButton('Choose log location...', 'debug', choose_debug_location, row=PV, column=1, colspan=2)
-        app.addEntry('debug', column=1, colspan=2)
-        app.setEntryDefault('debug', 'Choose where to save above...')
-
-    app.hideLabelFrame('Advanced options')
-
-    app.addButtons([MOUNT, UNMOUNT], press, colspan=3)
-    app.disableButton(UNMOUNT)
-app.hideLabelFrame('Mount point')
-
-# noinspection PyBroadException
+app.setSticky('new')
+# this is here to force the width to be set
+app.addOptionBox('TYPE', ('- Choose a type or drag a file/directory here -',), row=0, colspan=2)
+app.setOptionBoxChangeFunction('TYPE', change_type)
+app.addButton('Help & Extras', press, row=0, column=2)
 try:
-    for t in types_list:
-        app.setEntryDropTarget(t + ITEM, make_dnd_entry_check(t + ITEM))
-    app.setEntryDropTarget(NAND + 'otp', make_dnd_entry_check(NAND + 'otp'))
-    app.setEntryDropTarget(SD + 'movable', make_dnd_entry_check(SD + 'movable'))
-    app.setEntryDropTarget(MOUNTPOINT, make_dnd_entry_check(MOUNTPOINT))
+    app.setOptionBoxDropTarget('TYPE', detect_type)
     has_dnd = True
 except Exception as e:
     print('Warning: Failed to enable Drag & Drop, will not be used.')
     print_exc()
     has_dnd = False
 
-app.setSticky('new')
-app.addOptionBox('TYPE', (f'- Choose a type{" or drag a file/directory here" if has_dnd else ""} -',
-                          '- Nintendo 3DS -', *ctr_types,
-                          '- Nintendo DS / DSi -', *twl_types),
-                 row=0, colspan=2)
-app.setOptionBoxChangeFunction('TYPE', change_type)
-app.addButton('Help & Extras', press, row=0, column=2)
-if has_dnd:
-    app.setOptionBoxDropTarget('TYPE', detect_type)
+app.changeOptionBox('TYPE', (f'- Choose a type{" or drag a file/directory here" if has_dnd else ""} -',
+                             '- Nintendo 3DS -', *ctr_types,
+                             '- Nintendo DS / DSi -', *twl_types))
 
 with app.frame('default', row=1, colspan=3):
     app.setSticky(EASTWEST)
@@ -884,12 +912,6 @@ with app.subWindow('extras', 'fuse-3ds Extras', modal=True, blocking=False) as s
         app.addLabel('about-label', 'Open the about dialog.')
         app.addNamedButton('Open', 'about-btn', _show_about, row=PV, column=2)
 
-    with app.frame('extras-footer', colspan=3):
-        app.addHorizontalSeparator()
-        app.addLabel('footer',
-                     f'fuse-3ds v{version} running on Python {pyver} {pybits}-bit '
-                     f'on {platform}')
-
     app.setResizable(False)
 
 app.setSticky(EASTWEST)
@@ -898,13 +920,14 @@ with app.subWindow('about', 'fuse-3ds', modal=True, blocking=False):
     app.addMessage('about-msg', f'fuse-3ds v{version}\n'
                    f'Running on Python {pyver} {pybits}-bit\n'
                    f'\n'
-                   f'fuse-3ds is released under the MIT license.', colspan=3)
+                   f'fuse-3ds is released under the MIT license.', colspan=4)
     app.setMessageAspect('about-msg', 500)
-    app.addWebLink('View fuse-3ds on GitHub', 'https://github.com/ihaveamac/fuse-3ds', colspan=3)
-    app.addLabel('These libraries are used in the project:', colspan=3)
+    app.addWebLink('View fuse-3ds on GitHub', 'https://github.com/ihaveamac/fuse-3ds', colspan=4)
+    app.addLabel('These libraries are used in the project:', colspan=4)
     app.addWebLink('appJar', 'https://github.com/jarvisteach/appJar')
     app.addWebLink('PyCryptodome', 'https://github.com/Legrandin/pycryptodome', row=PV, column=1)
     app.addWebLink('fusepy', 'https://github.com/fusepy/fusepy', row=PV, column=2)
+    app.addWebLink('PyInstaller', 'https://github.com/pyinstaller/pyinstaller', row=PV, column=3)
     app.setResizable(False)
 
 
@@ -1027,7 +1050,8 @@ def main(_pyi=False, _allow_admin=False):
                 if mt is not None:
                     mount_type = mount_types_rv[mt]
                     to_use = mount_type
-                    app.setEntry(mount_type + ITEM, fn)
+                    # app.setEntry(mount_type + ITEM, fn)
+                    file_to_use = fn
                 else:
                     show_unknowntype(fn)
         except (IsADirectoryError, PermissionError):  # PermissionError sometimes occurs on Windows
@@ -1043,7 +1067,8 @@ def main(_pyi=False, _allow_admin=False):
                     # at least one entry
                     mount_type = SD
             to_use = mount_type
-            app.setEntry(mount_type + ITEM, fn)
+            # app.setEntry(mount_type + ITEM, fn)
+            file_to_use = fn
         except Exception:
             print('Failed to get type of', fn)
             print_exc()
@@ -1076,7 +1101,8 @@ def main(_pyi=False, _allow_admin=False):
         if to_use == 'default':
             app.queueFunction(app.showFrame, 'default')
         else:
-            app.setOptionBox('TYPE', mount_type)
+            # app.queueFunction(app.setOptionBox, 'TYPE', mount_type)
+            app.queueFunction(detect_type, file_to_use)
         app.queueFunction(app.hideFrame, 'loading')
 
     app.thread(sh)
