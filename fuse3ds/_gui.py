@@ -856,8 +856,7 @@ with app.subWindow('extras', 'fuse-3ds Extras', modal=True, blocking=False) as s
     with app.labelFrame('Update SeedDB', colspan=3):
         app.setSticky(EASTWEST)
         app.addLabel('updateseeddb-label', 'Update SeedDB to a newer database.', colspan=2)
-        app.addNamedButton('Update', 'updateseeddb-btn', lambda _: select_seeddb(sw),
-                           row=PV, column=2)
+        app.addNamedButton('Update', 'updateseeddb-btn', lambda _: select_seeddb(sw), row=PV, column=2)
 
     app.setSticky(EASTWEST)
     with app.labelFrame('Tutorial', colspan=3):
@@ -866,20 +865,24 @@ with app.subWindow('extras', 'fuse-3ds Extras', modal=True, blocking=False) as s
         app.addNamedButton('Open', 'tutorial-btn', lambda _: webbrowser.open('https://gbatemp.net/threads/499994/'),
                            row=PV, column=2)
 
-    app.setSticky(EASTWEST)
-    with app.labelFrame('GitHub Repository', colspan=3):
-        app.setSticky(EASTWEST)
-        app.addLabel('repo-label', 'View the repository on GitHub.')
-        app.addNamedButton('Open', 'repo-btn', lambda _: webbrowser.open('https://github.com/ihaveamac/fuse-3ds'),
-                           row=PV, column=2)
-
     if windows:
         app.setSticky(EASTWEST)
         with app.labelFrame('Context Menu', colspan=3):
             app.setSticky(EASTWEST)
             app.addLabel('ctxmenu-label', 'Add an entry to the right-click menu.', colspan=2)
-            app.addNamedButton('Add', 'ctxmenu-btn', lambda _: app.showSubWindow('ctxmenu-window'),
-                               row=PV, column=2)
+            app.addNamedButton('Add', 'ctxmenu-btn', lambda _: app.showSubWindow('ctxmenu-window'), row=PV, column=2)
+
+
+    def _show_about():
+        app.showSubWindow('about')
+        app.hideSubWindow('extras')
+
+
+    app.setSticky(EASTWEST)
+    with app.labelFrame('About', colspan=3):
+        app.setSticky(EASTWEST)
+        app.addLabel('about-label', 'Open the about dialog.')
+        app.addNamedButton('Open', 'about-btn', _show_about, row=PV, column=2)
 
     with app.frame('extras-footer', colspan=3):
         app.addHorizontalSeparator()
@@ -887,6 +890,21 @@ with app.subWindow('extras', 'fuse-3ds Extras', modal=True, blocking=False) as s
                      f'fuse-3ds v{version} running on Python {pyver} {pybits}-bit '
                      f'on {platform}')
 
+    app.setResizable(False)
+
+app.setSticky(EASTWEST)
+with app.subWindow('about', 'fuse-3ds', modal=True, blocking=False):
+    app.setSticky(EASTWEST)
+    app.addMessage('about-msg', f'fuse-3ds v{version}\n'
+                   f'Running on Python {pyver} {pybits}-bit\n'
+                   f'\n'
+                   f'fuse-3ds is released under the MIT license.', colspan=3)
+    app.setMessageAspect('about-msg', 500)
+    app.addWebLink('View fuse-3ds on GitHub', 'https://github.com/ihaveamac/fuse-3ds', colspan=3)
+    app.addLabel('These libraries are used in the project:', colspan=3)
+    app.addWebLink('appJar', 'https://github.com/jarvisteach/appJar')
+    app.addWebLink('PyCryptodome', 'https://github.com/Legrandin/pycryptodome', row=PV, column=1)
+    app.addWebLink('fusepy', 'https://github.com/fusepy/fusepy', row=PV, column=2)
     app.setResizable(False)
 
 
