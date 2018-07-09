@@ -128,10 +128,13 @@ types_requiring_b9 = {CCI, CDN, CIA, NAND, NCCH, SD, TITLEDIR}
 
 if windows:
     from ctypes import windll
+    from platform import win32_ver
     from signal import CTRL_BREAK_EVENT
     from string import ascii_uppercase
     from subprocess import CREATE_NEW_PROCESS_GROUP
     from sys import stdout
+    # noinspection PyUnresolvedReferences
+    from winreg import OpenKey, QueryValueEx, HKEY_LOCAL_MACHINE
 
     from reg_shell import add_reg, del_reg, uac_enabled
 
@@ -165,6 +168,8 @@ if windows:
         o = get_unused_drives()
         app.changeOptionBox(MOUNTPOINT, (x + ':' for x in o))
         app.setOptionBox(MOUNTPOINT, o[-1] + ':')
+elif macos:
+    from platform import mac_ver
 
 _used_pyinstaller = False
 _ndw_resp = False
@@ -403,7 +408,7 @@ def press(button: str):
             app.showSubWindow('unmounterror')
             app.enableButton(UNMOUNT)
     elif button == 'Help & Extras':
-        app.showSubWindow('extras')
+        show_extras()
 
 
 def kill_process(_):
@@ -779,7 +784,6 @@ if not b9_found or not seeddb_found:
             app.addLabel('no-b9', 'boot9 was not found. Click for more details.', colspan=2)
             app.setLabelBg('no-b9', '#ff9999')
             app.addNamedButton('Fix boot9', 'fix-b9', lambda _: app.showSubWindow('no-b9'), row=PV, column=2)
-            app.disableButton(MOUNT)
 
 
             def select_b9(sw):
@@ -812,8 +816,7 @@ if not b9_found or not seeddb_found:
                         app.hideButton('fix-b9')
                         if b9_found and seeddb_found:
                             app.hideFrame('FOOTER')
-                        if app.getOptionBox('TYPE') in mount_types:
-                            change_type()
+                        check_mount_button(app.getOptionBox('TYPE'))
                         app.hideSubWindow('no-b9')
 
 
@@ -879,56 +882,82 @@ if windows:
                        'Please make sure the directory is empty or does not exist.')
 
 
-with app.subWindow('extras', 'fuse-3ds Extras', modal=True, blocking=False) as sw:
-    app.setSticky(EASTWEST)
-    with app.labelFrame('Update SeedDB', colspan=3):
-        app.setSticky(EASTWEST)
-        app.addLabel('updateseeddb-label', 'Update SeedDB to a newer database.', colspan=2)
-        app.addNamedButton('Update', 'updateseeddb-btn', lambda _: select_seeddb(sw), row=PV, column=2)
-
-    app.setSticky(EASTWEST)
-    with app.labelFrame('Tutorial', colspan=3):
-        app.setSticky(EASTWEST)
-        app.addLabel('tutorial-label', 'View a tutorial on GBAtemp.', colspan=2)
-        app.addNamedButton('Open', 'tutorial-btn', lambda _: webbrowser.open('https://gbatemp.net/threads/499994/'),
-                           row=PV, column=2)
-
-    if windows:
-        app.setSticky(EASTWEST)
-        with app.labelFrame('Context Menu', colspan=3):
+def show_extras():
+    try:
+        app.showSubWindow('extras')
+    except ItemLookupError:
+        with app.subWindow('extras', 'fuse-3ds Extras', modal=True, blocking=False) as sw:
             app.setSticky(EASTWEST)
-            app.addLabel('ctxmenu-label', 'Add an entry to the right-click menu.', colspan=2)
-            app.addNamedButton('Add', 'ctxmenu-btn', lambda _: app.showSubWindow('ctxmenu-window'), row=PV, column=2)
+            with app.labelFrame('Update SeedDB', colspan=3):
+                app.setSticky(EASTWEST)
+                app.addLabel('updateseeddb-label', 'Update SeedDB to a newer database.', colspan=2)
+                app.addNamedButton('Update', 'updateseeddb-btn', lambda _: select_seeddb(sw), row=PV, column=2)
 
+            app.setSticky(EASTWEST)
+            with app.labelFrame('Tutorial', colspan=3):
+                app.setSticky(EASTWEST)
+                app.addLabel('tutorial-label', 'View a tutorial on GBAtemp.', colspan=2)
+                app.addNamedButton('Open', 'tutorial-btn', lambda _: webbrowser.open('https://gbatemp.net/threads/499994/'),
+                                   row=PV, column=2)
 
-    def _show_about():
-        app.showSubWindow('about')
-        app.hideSubWindow('extras')
+            if windows:
+                app.setSticky(EASTWEST)
+                with app.labelFrame('Context Menu', colspan=3):
+                    app.setSticky(EASTWEST)
+                    app.addLabel('ctxmenu-label', 'Add an entry to the right-click menu.', colspan=2)
+                    app.addNamedButton('Add', 'ctxmenu-btn', lambda _: app.showSubWindow('ctxmenu-window'), row=PV,
+                                       column=2)
 
+            def _show_about():
+                app.showSubWindow('about')
+                app.hideSubWindow('extras')
 
-    app.setSticky(EASTWEST)
-    with app.labelFrame('About', colspan=3):
+            app.setSticky(EASTWEST)
+            with app.labelFrame('About', colspan=3):
+                app.setSticky(EASTWEST)
+                app.addLabel('about-label', 'Open the about dialog.')
+                app.addNamedButton('Open', 'about-btn', _show_about, row=PV, column=2)
+
+            app.setResizable(False)
+
         app.setSticky(EASTWEST)
-        app.addLabel('about-label', 'Open the about dialog.')
-        app.addNamedButton('Open', 'about-btn', _show_about, row=PV, column=2)
+        with app.subWindow('about', 'fuse-3ds', modal=True, blocking=False):
+            app.setSticky(EASTWEST)
+            if windows:
+                _ver = win32_ver()
+                os_ver = 'Windows ' + _ver[0]
+                print(repr(_ver[0]))
+                if _ver[0] == '10':
+                    k = OpenKey(HKEY_LOCAL_MACHINE, r'SOFTWARE\Microsoft\Windows NT\CurrentVersion')
+                    try:
+                        r: str = QueryValueEx(k, 'ReleaseId')[0]
+                    except FileNotFoundError:
+                        r = '1507'  # assuming RTM, since this key only exists in 1511 and up
+                    os_ver += ', version ' + r
+                else:
+                    if _ver[2] != 'SP0':
+                        os_ver += ' ' + _ver[2]
+            elif macos:
+                os_ver = 'macOS ' + mac_ver()[0]
+            else:
+                os_ver = ''
+            if os_ver:
+                os_ver += '\n'
+            app.addMessage('about-msg', f'fuse-3ds v{version}\n'
+                                        f'Running on Python {pyver} {pybits}-bit\n'
+                                        f'{os_ver}'
+                                        f'\n'
+                                        f'fuse-3ds is released under the MIT license.', colspan=4)
+            app.setMessageAspect('about-msg', 500)
+            app.addWebLink('View fuse-3ds on GitHub', 'https://github.com/ihaveamac/fuse-3ds', colspan=4)
+            app.addLabel('These libraries are used in the project:', colspan=4)
+            app.addWebLink('appJar', 'https://github.com/jarvisteach/appJar')
+            app.addWebLink('PyCryptodome', 'https://github.com/Legrandin/pycryptodome', row=PV, column=1)
+            app.addWebLink('fusepy', 'https://github.com/fusepy/fusepy', row=PV, column=2)
+            app.addWebLink('PyInstaller', 'https://github.com/pyinstaller/pyinstaller', row=PV, column=3)
+            app.setResizable(False)
 
-    app.setResizable(False)
-
-app.setSticky(EASTWEST)
-with app.subWindow('about', 'fuse-3ds', modal=True, blocking=False):
-    app.setSticky(EASTWEST)
-    app.addMessage('about-msg', f'fuse-3ds v{version}\n'
-                   f'Running on Python {pyver} {pybits}-bit\n'
-                   f'\n'
-                   f'fuse-3ds is released under the MIT license.', colspan=4)
-    app.setMessageAspect('about-msg', 500)
-    app.addWebLink('View fuse-3ds on GitHub', 'https://github.com/ihaveamac/fuse-3ds', colspan=4)
-    app.addLabel('These libraries are used in the project:', colspan=4)
-    app.addWebLink('appJar', 'https://github.com/jarvisteach/appJar')
-    app.addWebLink('PyCryptodome', 'https://github.com/Legrandin/pycryptodome', row=PV, column=1)
-    app.addWebLink('fusepy', 'https://github.com/fusepy/fusepy', row=PV, column=2)
-    app.addWebLink('PyInstaller', 'https://github.com/pyinstaller/pyinstaller', row=PV, column=3)
-    app.setResizable(False)
+        app.showSubWindow('extras')
 
 
 # file/directory not set error
