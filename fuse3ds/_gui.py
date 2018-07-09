@@ -926,7 +926,6 @@ def show_extras():
             if windows:
                 _ver = win32_ver()
                 os_ver = 'Windows ' + _ver[0]
-                print(repr(_ver[0]))
                 if _ver[0] == '10':
                     k = OpenKey(HKEY_LOCAL_MACHINE, r'SOFTWARE\Microsoft\Windows NT\CurrentVersion')
                     try:
