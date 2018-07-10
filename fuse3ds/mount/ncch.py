@@ -120,15 +120,15 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                             self.files['/exefs.bin']['keyslot_normal_range'].append(
                                 (ent.offset + 0x200, ent.offset + 0x200 + roundup(ent.size, 0x200)))
 
-        if _setup_romfs:
-            self.setup_romfs()
-
         if not self.reader.flags.no_romfs:
             romfs_region = self.reader.romfs_region
             if romfs_region.offset:
                 self.files['/romfs.bin'] = {'size': romfs_region.size, 'offset': romfs_region.offset,
                                             'enctype': 'normal', 'keyslot': self.reader.extra_keyslot,
                                             'iv': (self.reader.partition_id << 64 | (0x03 << 56))}
+
+        if _setup_romfs:
+            self.setup_romfs()
 
     def setup_romfs(self):
         if '/romfs.bin' in self.files:

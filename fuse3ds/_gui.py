@@ -962,6 +962,27 @@ def show_extras():
             app.addWebLink('PyInstaller', 'https://github.com/pyinstaller/pyinstaller', row=PV, column=3)
             app.setResizable(False)
 
+        if windows:
+            def add_entry(button: str):
+                app.hideSubWindow('ctxmenu-window')
+                if button == 'Add entry':
+                    add_reg(_used_pyinstaller)
+                elif button == 'Remove entry':
+                    del_reg()
+
+            with app.subWindow('ctxmenu-window', 'fuse-3ds', modal=True):
+                msg = (
+                    'A new entry can be added to the Windows context menu when you right-click on a file, providing an '
+                    'easy way to mount various files in Windows Explorer using fuse-3ds.\n'
+                    '\n'
+                    'This will modify the registry to add it.')
+                if _used_pyinstaller:
+                    msg += ' If you move or rename the EXE, you will need to re-add the entry.'
+                app.addMessage('extras-ctxmenu-label', msg)
+                app.setMessageAspect('extras-ctxmenu-label', 300)
+                app.addButtons(['Add entry', 'Remove entry', 'Cancel'], add_entry, colspan=3)
+                app.setResizable(False)
+
         app.showSubWindow('extras')
 
 
@@ -1107,28 +1128,6 @@ def main(_pyi=False, _allow_admin=False):
         except Exception:
             print('Failed to get type of', fn)
             print_exc()
-
-    # putting this here so i can use _pyi
-    if windows:
-        def add_entry(button: str):
-            app.hideSubWindow('ctxmenu-window')
-            if button == 'Add entry':
-                add_reg(_used_pyinstaller)
-            elif button == 'Remove entry':
-                del_reg()
-
-        with app.subWindow('ctxmenu-window', 'fuse-3ds', modal=True):
-            msg = ('A new entry can be added to the Windows context menu when you\n'
-                   'right-click on a file, providing an easy way to mount various files\n'
-                   'in Windows Explorer using fuse-3ds.\n'
-                   '\n'
-                   'This will modify the registry to add it.')
-            if _pyi:
-                msg += (' If you move or rename the EXE,\n'
-                        'you will need to re-add the entry.')
-            app.addLabel('extras-ctxmenu-label', msg)
-            app.addButtons(['Add entry', 'Remove entry', 'Cancel'], add_entry, colspan=3)
-            app.setResizable(False)
 
     # kinda lame way to prevent a resize bug
     def sh():
