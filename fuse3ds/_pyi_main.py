@@ -15,9 +15,7 @@ def _():
 path.insert(0, dirname(realpath(__file__)))
 
 if len(argv) < 2 or argv[1] in {'gui', 'gui_i_want_to_be_an_admin_pls'}:
-    print('Preparing...')
     from _gui import main
-    print('Starting the GUI!')
     admin = False
     if len(argv) > 1:
         admin = argv.pop(1) == 'gui_i_want_to_be_an_admin_pls'

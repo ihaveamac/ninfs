@@ -1,5 +1,7 @@
 # not very good with gui development...
 # don't read this file, it sucks
+print('Importing dependencies...')
+
 import json
 import webbrowser
 from contextlib import suppress
@@ -900,12 +902,16 @@ def show_extras():
                 app.addNamedButton('Open', 'tutorial-btn', lambda _: webbrowser.open('https://gbatemp.net/threads/499994/'),
                                    row=PV, column=2)
 
+            def _show_ctxmenu_window():
+                app.showSubWindow('ctxmenu-window')
+                app.hideSubWindow('extras')
+
             if windows:
                 app.setSticky(EASTWEST)
                 with app.labelFrame('Context Menu', colspan=3):
                     app.setSticky(EASTWEST)
                     app.addLabel('ctxmenu-label', 'Add an entry to the right-click menu.', colspan=2)
-                    app.addNamedButton('Add', 'ctxmenu-btn', lambda _: app.showSubWindow('ctxmenu-window'), row=PV,
+                    app.addNamedButton('Add', 'ctxmenu-btn', _show_ctxmenu_window, row=PV,
                                        column=2)
 
             def _show_about():
@@ -990,6 +996,7 @@ with app.subWindow('unmounterror', 'fuse-3ds Error', modal=True, blocking=False)
 def main(_pyi=False, _allow_admin=False):
     global _used_pyinstaller
     _used_pyinstaller = _pyi
+    print('Doing final setup...')
     try:
         # attempt importing all the fusepy stuff used in the mount scripts
         # if it fails, libfuse probably couldn't be found
@@ -1105,7 +1112,6 @@ def main(_pyi=False, _allow_admin=False):
     if windows:
         def add_entry(button: str):
             app.hideSubWindow('ctxmenu-window')
-            app.hideSubWindow('extras')
             if button == 'Add entry':
                 add_reg(_used_pyinstaller)
             elif button == 'Remove entry':
@@ -1135,6 +1141,7 @@ def main(_pyi=False, _allow_admin=False):
 
     app.thread(sh)
 
+    print('Starting the GUI!')
     app.go()
     stop_mount()
     return 0
