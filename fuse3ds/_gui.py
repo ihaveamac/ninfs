@@ -1053,47 +1053,55 @@ def main(_pyi=False, _allow_admin=False):
                            'choose a directory as a mount point instead of a drive letter.')
             exit(1)
 
-    # this will check for the latest non-prerelease, once there is one.
-    # noinspection PyBroadException
-    try:
-        print(f'Checking for updates... (Currently running v{version})')
-        ctx = SSLContext(PROTOCOL_TLSv1_2)
-        release_url = 'https://api.github.com/repos/ihaveamac/fuse-3ds/releases'
-        current_ver: 'Version' = parse_version(version)
-        if not current_ver.is_prerelease:
-            release_url += '/latest'
-        with urlopen(release_url, context=ctx) as u:
-            u: HTTPResponse
-            res: List[Dict[str, Any]] = json.loads(u.read().decode('utf-8'))
-            latest_rel = res[0] if current_ver.is_prerelease else res
-            latest_ver: str = latest_rel['tag_name']
-            if parse_version(latest_ver) > current_ver:
-                name: str = latest_rel['name']
-                url: str = latest_rel['html_url']
-                info_all: str = latest_rel['body']
-                info = info_all[:info_all.find('------')].strip().replace('\r\n', '\n')
+    def show_update(name: str, info: str, url: str):
+        def update_press(button: str):
+            if button == 'Open release page':
+                webbrowser.open(url)
+                app.queueFunction(app.stop)
+            app.destroySubWindow('update')
 
-                def update_press(button: str):
-                    if button == 'Open release page':
-                        webbrowser.open(url)
-                        app.queueFunction(app.stop)
-                    app.destroySubWindow('update')
+        with app.subWindow('update', 'fuse-3ds Update', modal=True):
+            app.addLabel('update-label1', f'A new version of fuse-3ds is available. You have v{version}.')
+            app.addButtons(['Open release page', 'Close'], update_press)
+            with app.labelFrame(name):
+                app.addMessage('update-info', info)
+                app.setMessageAlign('update-info', 'left')
+                app.setMessageAspect('update-info', 300)
+            app.setResizable(False)
 
-                with app.subWindow('update', 'fuse-3ds Update', modal=True):
-                    app.addLabel('update-label1', f'A new version of fuse-3ds is available. You have v{version}.')
-                    app.addButtons(['Open release page', 'Close'], update_press)
-                    with app.labelFrame(name):
-                        app.addMessage('update-info', info)
-                        app.setMessageAlign('update-info', 'left')
-                    app.setResizable(False)
+        app.showSubWindow('update')
 
-                app.queueFunction(app.showSubWindow, 'update')
-            else:
-                print(f'No new version. (Latest is {latest_ver})')
+    def update_check():
+        # this will check for the latest non-prerelease, once there is one.
+        # noinspection PyBroadException
+        try:
+            print(f'UPDATE: Checking for updates... (Currently running v{version})')
+            ctx = SSLContext(PROTOCOL_TLSv1_2)
+            release_url = 'https://api.github.com/repos/ihaveamac/fuse-3ds/releases'
+            current_ver: 'Version' = parse_version(version)
+            if not current_ver.is_prerelease:
+                release_url += '/latest'
+            with urlopen(release_url, context=ctx) as u:
+                u: HTTPResponse
+                res: List[Dict[str, Any]] = json.loads(u.read().decode('utf-8'))
+                latest_rel = res[0] if current_ver.is_prerelease else res
+                latest_ver: str = latest_rel['tag_name']
+                if parse_version(latest_ver) > current_ver:
+                    name: str = latest_rel['name']
+                    url: str = latest_rel['html_url']
+                    info_all: str = latest_rel['body']
+                    info = info_all[:info_all.find('------')].strip().replace('\r\n', '\n')
 
-    except Exception:
-        print('Failed to check for update')
-        print_exc()
+                    print(f'UPDATE: Update to {latest_ver} is available.')
+                    app.queueFunction(show_update, name, info, url)
+                else:
+                    print(f'UPDATE: No new version. (Latest is {latest_ver})')
+
+        except Exception:
+            print('UPDATE: Failed to check for update')
+            print_exc()
+
+    app.thread(update_check)
 
     to_use = 'default'
 
@@ -1106,7 +1114,6 @@ def main(_pyi=False, _allow_admin=False):
                 if mt is not None:
                     mount_type = mount_types_rv[mt]
                     to_use = mount_type
-                    # app.setEntry(mount_type + ITEM, fn)
                     file_to_use = fn
                 else:
                     show_unknowntype(fn)
@@ -1123,7 +1130,6 @@ def main(_pyi=False, _allow_admin=False):
                     # at least one entry
                     mount_type = SD
             to_use = mount_type
-            # app.setEntry(mount_type + ITEM, fn)
             file_to_use = fn
         except Exception:
             print('Failed to get type of', fn)
@@ -1134,7 +1140,6 @@ def main(_pyi=False, _allow_admin=False):
         if to_use == 'default':
             app.queueFunction(app.showFrame, 'default')
         else:
-            # app.queueFunction(app.setOptionBox, 'TYPE', mount_type)
             app.queueFunction(detect_type, file_to_use)
         app.queueFunction(app.hideFrame, 'loading')
 
