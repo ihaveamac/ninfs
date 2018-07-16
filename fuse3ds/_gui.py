@@ -424,6 +424,8 @@ current_type = 'default'
 
 
 def check_mount_button(mount_type: str):
+    if mount_type not in types_list:
+        return
     if not b9_found and mount_type in types_requiring_b9:
         app.disableButton(MOUNT)
     else:

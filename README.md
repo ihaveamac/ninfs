@@ -50,7 +50,7 @@ Python does not have to be installed, but [WinFsp](http://www.secfs.net/winfsp/d
   * With GUI support: `py -3 -m pip install --upgrade https://github.com/ihaveamac/fuse-3ds/archive/master.zip#egg=fuse-3ds[gui]`
 
 ### macOS
-OS X 10.11 El Capitan and later are supported. Older releases may work, but support is not guaranteed.
+OS X 10.11 El Capitan and later is recommended. Older releases may work, but support is not guaranteed.
 
 * Install the latest version of Python 3. The recommended way is [Homebrew](https://brew.sh). You can also use an installer from [python.org](https://www.python.org/downloads/) or a tool like [pyenv](https://github.com/pyenv/pyenv).
 * Install the latest version of [FUSE for macOS](https://github.com/osxfuse/osxfuse/releases/latest).
