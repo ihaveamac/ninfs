@@ -8,6 +8,7 @@ from errno import ENOENT
 from math import ceil
 from stat import S_IFDIR, S_IFREG
 from sys import argv
+from threading import Thread
 from typing import BinaryIO, TYPE_CHECKING
 
 from pyctr.crypto import CryptoEngine
@@ -25,8 +26,6 @@ if TYPE_CHECKING:
 
 class NCCHContainerMount(LoggingMixIn, Operations):
     fd = 0
-    _exefs_mounted = False
-    _romfs_mounted = False
     romfs_fuse = None
     exefs_fuse = None
 
@@ -109,10 +108,10 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                     decompress = exh_flag[0] & 1
                 exefs_vfp = _c.VirtualFileWrapper(self, '/exefs.bin', exefs_region.size)
                 exefs_fuse = ExeFSMount(exefs_vfp, self._g_stat, decompress_code=decompress, strict=True)
-                exefs_fuse.init(path)
                 self.exefs_fuse = exefs_fuse
             except Exception as e:
                 print(f'Failed to mount ExeFS: {type(e).__name__}: {e}')
+                self.exefs_fuse = None
             else:
                 if not self.reader.flags.no_crypto:
                     for n, ent in self.exefs_fuse.reader.entries.items():
@@ -129,6 +128,11 @@ class NCCHContainerMount(LoggingMixIn, Operations):
 
         if _setup_romfs:
             self.setup_romfs()
+
+        if self.exefs_fuse:
+            print('ExeFS: Reading .code...')
+            data = self.exefs_fuse.read('/code.bin', self.exefs_fuse.files['/code.bin'].size, 0, 0)
+            Thread(target=self.exefs_fuse.init, daemon=True, args=(path, data)).start()
 
     def setup_romfs(self):
         if '/romfs.bin' in self.files:

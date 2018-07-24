@@ -44,19 +44,19 @@ class ExeFSMount(LoggingMixIn, Operations):
     destroy = __del__
 
     # TODO: maybe do this in a way that allows for multiprocessing (titledir)
-    def init(self, path):
+    def init(self, path, data=None):
         if self.decompress_code and '/code.bin' in self.files:
-            print('ExeFS: Decompressing .code...', end='', flush=True)
+            print('ExeFS: Decompressing .code...')
             # noinspection PyBroadException
             try:
                 item = self.files['/code.bin']
-                self.code_dec = _decompress_code(self.read('/code.bin', item.size, item.offset, 0))
+                self.code_dec = _decompress_code(data if data else self.read('/code.bin', item.size, item.offset, 0))
                 self.files['/code-decompressed.bin'] = ExeFSEntry(name='code-decompressed', offset=-1,
                                                                   size=len(self.code_dec),
                                                                   hash=sha256(self.code_dec).digest())
-                print(' done!')
+                print('ExeFS: Done!')
             except Exception as e:
-                print(f'\nFailed to decompress .code: {type(e).__name__}: {e}')
+                print(f'ExeFS: Failed to decompress .code: {type(e).__name__}: {e}')
 
     @_c.ensure_lower_path
     def getattr(self, path, fh=None):
