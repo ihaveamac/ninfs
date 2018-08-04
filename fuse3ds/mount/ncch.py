@@ -139,6 +139,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
             # noinspection PyBroadException
             try:
                 romfs_vfp = _c.VirtualFileWrapper(self, '/romfs.bin', self.reader.romfs_region.size)
+                # noinspection PyTypeChecker
                 romfs_fuse = RomFSMount(romfs_vfp, self._g_stat)
                 romfs_fuse.init('/')
                 self.romfs_fuse = romfs_fuse
