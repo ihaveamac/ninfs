@@ -747,11 +747,15 @@ with app.frame('default', row=1, colspan=3):
     with app.labelFrame('Getting started', colspan=3):
         app.setSticky(EASTWEST)
         if has_dnd:
-            app.addLabel('d-label1', 'To get started, drag the file to the box above.', colspan=3)
-            app.addLabel('d-label2', 'You can also click it to manually choose a type.', colspan=3)
+            app.addLabel('d-label1', 'To get started, drag the file to the box above.', colspan=2)
+            app.addLabel('d-label2', 'You can also click it to manually choose a type.', colspan=2)
         else:
-            app.addLabel('d-label1', 'To get started, choose a type to mount above.', colspan=3)
-        app.addLabel('d-label3', 'If you need help, click "Help" at the top-right.', colspan=3)
+            app.addLabel('d-label1', 'To get started, choose a type to mount above.', colspan=2)
+        app.addHorizontalSeparator(colspan=2)
+        app.addLabel('d-label3', 'Need help?')
+        app.addWebLink('View a tutorial here!', 'https://gbatemp.net/threads/499994/', column=1, row=PV)
+        app.setLabelAlign('d-label3', 'right')
+        app.setLinkAlign('View a tutorial here!', 'left')
 app.hideFrame('default')  # to be shown later
 
 
