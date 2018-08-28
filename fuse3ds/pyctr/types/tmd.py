@@ -5,13 +5,14 @@ from ..common import PyCTRError
 from ..util import readbe
 
 if TYPE_CHECKING:
-    from typing import BinaryIO, Iterable
+    from typing import BinaryIO, Iterable, Tuple
 
 __all__ = ['CHUNK_RECORD_SIZE', 'TitleMetadataError', 'InvalidSignatureTypeError', 'InvalidHashError',
            'ContentInfoRecord', 'ContentChunkRecord', 'ContentTypeFlags', 'TitleVersion', 'TitleMetadataReader']
 
 CHUNK_RECORD_SIZE = 0x30
 
+# sig-type: (sig-size, padding)
 signature_types = {
     # RSA_4096 SHA1 (unused on 3DS)
     0x00010000: (0x200, 0x3C),
@@ -26,6 +27,8 @@ signature_types = {
     # ECDSA with SHA256
     0x00010005: (0x3C, 0x40),
 }
+
+BLANK_SIG_PAIR = (0x00010004, b'\xFF' * signature_types[0x00010004][0])
 
 
 class TitleMetadataError(PyCTRError):
@@ -115,7 +118,8 @@ class TitleMetadataReader:
                  'chunk_records', 'content_count')
 
     def __init__(self, *, title_id: str, save_size: int, srl_save_size: int, title_version: TitleVersion,
-                 info_records: 'Iterable[ContentInfoRecord]', chunk_records: 'Iterable[ContentChunkRecord]'):
+                 info_records: 'Iterable[ContentInfoRecord]', chunk_records: 'Iterable[ContentChunkRecord]',
+                 signature: 'Tuple[int, bytes]' = BLANK_SIG_PAIR):
         self.title_id = title_id.lower()
         self.save_size = save_size
         self.srl_save_size = srl_save_size
@@ -123,6 +127,7 @@ class TitleMetadataReader:
         self.info_records = tuple(info_records)
         self.chunk_records = tuple(chunk_records)
         self.content_count = len(self.chunk_records)
+        # self.signature = signature  # TODO: store this differently
 
     def __hash__(self) -> int:
         return hash((self.title_id, self.save_size, self.srl_save_size, self.title_version,
@@ -141,17 +146,19 @@ class TitleMetadataReader:
         except KeyError:
             raise InvalidSignatureTypeError(f'{sig_type:08X}')
 
-        # I may load the signature if I decide to have a function that returns the tmd in the original format.
-        if fp.seekable():
-            fp.seek(sig_size + sig_padding, 1)
-        else:
-            fp.read(sig_size + sig_padding)
+        signature = fp.read(sig_size)
+        try:
+            fp.seek(sig_padding, 1)
+        except Exception:
+            # most streams are probably seekable, but for some that aren't...
+            fp.read(sig_padding)
 
         header = fp.read(0xC4)
 
-        # only values that actually have a use are loaded here.
+        # TODO: read unused values for the purpose of rebuilding the raw tmd
+
+        # only values that actually have a use are loaded here. (currently)
         # several fields in were left in from the Wii tmd and have no function on 3DS.
-        # I may load the extra values if I decide to have a function that returns the tmd in the original format.
         title_id = header[0x4C:0x54].hex()
         save_size = readbe(header[0x5A:0x5E])
         srl_save_size = readbe(header[0x5E:0x62])
@@ -188,7 +195,7 @@ class TitleMetadataReader:
                                                     hash=cr[16:48]))
 
         return cls(title_id=title_id, save_size=save_size, srl_save_size=srl_save_size, title_version=title_version,
-                   info_records=info_records, chunk_records=chunk_records)
+                   info_records=info_records, chunk_records=chunk_records, signature=(sig_type, signature))
 
     @classmethod
     def from_file(cls, fn: str, *, verify_hashes: bool = True) -> 'TitleMetadataReader':
