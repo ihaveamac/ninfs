@@ -83,11 +83,18 @@ seeddb_paths: 'List[str]' = [pjoin(x, 'seeddb.bin') for x in config_dirs]
 with suppress(KeyError):
     seeddb_paths.insert(0, environ['SEEDDB_PATH'])
 
+home = expanduser('~')
+
 # dir to copy to if chosen to copy boot9/seeddb in gui
 if windows:
-    target_dir = pjoin(environ.get('APPDATA'), '3ds')
+    target_dir: str = pjoin(environ.get('APPDATA'), '3ds')
+elif macos:
+    target_dir: str = pjoin(home, 'Library', 'Application Support', '3ds')
+    print(b9_paths)
 else:
-    target_dir = pjoin(expanduser('~'), '.3ds')
+    # maybe this should be moved? don't really want to use one with a name specific to fuse-3ds.
+    # https://github.com/ihaveamac/fuse-3ds/issues/8
+    target_dir: str = pjoin(home, '.3ds')
 
 for p in b9_paths:
     if isfile(p):
@@ -618,7 +625,7 @@ def change_type(*_):
                             app.hideLabelFrame('Advanced options')
 
                     def choose_debug_location(_):
-                        path: str = app.saveBox(fileName='fuse3ds.log', dirName=pjoin(expanduser('~'), 'Desktop'),
+                        path: str = app.saveBox(fileName='fuse3ds.log', dirName=pjoin(home, 'Desktop'),
                                                 fileTypes=(),
                                                 fileExt='.log')
                         if path:
