@@ -13,12 +13,12 @@ Windows, macOS, and Linux are supported.
 ## Setup
 The ARM9 bootROM is required. You can dump it using boot9strap, which can be set up by [3DS Hacks Guide](https://3ds.hacks.guide). It is checked in order of:
 * `BOOT9_PATH` environment variable (if set)
-* `%APPDATA%\3ds\boot9.bin` (Windows-specific, full)
-* `%APPDATA%\3ds\boot9_prot.bin` (Windows-specific, protected)
-* `~/.3ds/boot9.bin` (full)
-* `~/.3ds/boot9_prot.bin` (protected)
-* `~/3ds/boot9.bin` (full)
-* `~/3ds/boot9_prot.bin` (protected)
+* `%APPDATA%\3ds\boot9.bin` (Windows-specific)
+* `~/Library/Application Support/3ds/boot9.bin` (macOS-specific)
+* `~/.3ds/boot9.bin`
+* `~/3ds/boot9.bin`
+
+`boot9_prot.bin` can also be used in all of these locations.
 
 "`~`" means the user's home directory. "`~/3ds`" would mean `/Users/username/3ds` on macOS and `C:\Users\username\3ds` on Windows.
 

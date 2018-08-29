@@ -90,7 +90,6 @@ if windows:
     target_dir: str = pjoin(environ.get('APPDATA'), '3ds')
 elif macos:
     target_dir: str = pjoin(home, 'Library', 'Application Support', '3ds')
-    print(b9_paths)
 else:
     # maybe this should be moved? don't really want to use one with a name specific to fuse-3ds.
     # https://github.com/ihaveamac/fuse-3ds/issues/8
