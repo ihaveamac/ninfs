@@ -115,11 +115,17 @@ class TitleMetadataReader:
     """
 
     __slots__ = ('title_id', 'save_size', 'srl_save_size', 'title_version', 'info_records',
-                 'chunk_records', 'content_count')
+                 'chunk_records', 'content_count', 'signature', '_u_issuer', '_u_version', '_u_ca_crl_version',
+                 '_u_signer_crl_version', '_u_reserved1', '_u_system_version', '_u_title_type', '_u_group_id',
+                 '_u_reserved2', '_u_srl_flag', '_u_reserved3', '_u_access_rights', '_u_boot_count', '_u_padding')
 
+    # arguments prefixed with _u_ are values unused by the 3DS
     def __init__(self, *, title_id: str, save_size: int, srl_save_size: int, title_version: TitleVersion,
                  info_records: 'Iterable[ContentInfoRecord]', chunk_records: 'Iterable[ContentChunkRecord]',
-                 signature: 'Tuple[int, bytes]' = BLANK_SIG_PAIR):
+                 signature=BLANK_SIG_PAIR, _u_issuer='Root-CA00000003-CP0000000b', _u_version=1, _u_ca_crl_version=0,
+                 _u_signer_crl_version=0, _u_reserved1=0, _u_system_version=b'\0' * 8, _u_title_type=b'\0\0\0@',
+                 _u_group_id=b'\0\0', _u_reserved2=b'\0\0\0\0', _u_srl_flag=0, _u_reserved3=b'\0' * 0x31,
+                 _u_access_rights=b'\0' * 4, _u_boot_count=b'\0\0', _u_padding=b'\0\0'):
         self.title_id = title_id.lower()
         self.save_size = save_size
         self.srl_save_size = srl_save_size
@@ -127,7 +133,23 @@ class TitleMetadataReader:
         self.info_records = tuple(info_records)
         self.chunk_records = tuple(chunk_records)
         self.content_count = len(self.chunk_records)
-        # self.signature = signature  # TODO: store this differently
+        self.signature = signature  # TODO: store this differently
+
+        # unused values
+        self._u_issuer = _u_issuer
+        self._u_version = _u_version
+        self._u_ca_crl_version = _u_ca_crl_version
+        self._u_signer_crl_version = _u_signer_crl_version
+        self._u_reserved1 = _u_reserved1
+        self._u_system_version = _u_system_version
+        self._u_title_type = _u_title_type
+        self._u_group_id = _u_group_id
+        self._u_reserved2 = _u_reserved2
+        self._u_srl_flag = _u_srl_flag
+        self._u_reserved3 = _u_reserved3
+        self._u_access_rights = _u_access_rights
+        self._u_boot_count = _u_boot_count
+        self._u_padding = _u_padding
 
     def __hash__(self) -> int:
         return hash((self.title_id, self.save_size, self.srl_save_size, self.title_version,
@@ -154,8 +176,6 @@ class TitleMetadataReader:
             fp.read(sig_padding)
 
         header = fp.read(0xC4)
-
-        # TODO: read unused values for the purpose of rebuilding the raw tmd
 
         # only values that actually have a use are loaded here. (currently)
         # several fields in were left in from the Wii tmd and have no function on 3DS.
@@ -194,8 +214,29 @@ class TitleMetadataReader:
                                                     size=readbe(cr[8:16]),
                                                     hash=cr[16:48]))
 
+        # unused vales are loaded only for use when re-building the binary tmd
+        u_issuer = header[0:0x40].decode('ascii').strip('\0')
+        u_version = header[0x40]
+        u_ca_crl_version = header[0x41]
+        u_signer_crl_version = header[0x42]
+        u_reserved1 = header[0x43]
+        u_system_version = header[0x44:0x4C]
+        u_title_type = header[0x54:0x58]
+        u_group_id = header[0x58:0x5A]
+        u_reserved2 = header[0x62:0x66]
+        u_srl_flag = header[0x66]  # is this one used for anything?
+        u_reserved3 = header[0x67:0x98]
+        u_access_rights = header[0x98:0x9C]
+        u_boot_count = header[0xA0:0xA2]
+        u_padding = header[0xA2:0xA4]
+
         return cls(title_id=title_id, save_size=save_size, srl_save_size=srl_save_size, title_version=title_version,
-                   info_records=info_records, chunk_records=chunk_records, signature=(sig_type, signature))
+                   info_records=info_records, chunk_records=chunk_records, signature=(sig_type, signature),
+                   _u_issuer=u_issuer, _u_version=u_version, _u_ca_crl_version=u_ca_crl_version,
+                   _u_signer_crl_version=u_signer_crl_version, _u_reserved1=u_reserved1,
+                   _u_system_version=u_system_version, _u_title_type=u_title_type, _u_group_id=u_group_id,
+                   _u_reserved2=u_reserved2, _u_srl_flag=u_srl_flag, _u_reserved3=u_reserved3,
+                   _u_access_rights=u_access_rights, _u_boot_count=u_boot_count, _u_padding=u_padding)
 
     @classmethod
     def from_file(cls, fn: str, *, verify_hashes: bool = True) -> 'TitleMetadataReader':
