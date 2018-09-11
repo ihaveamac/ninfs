@@ -676,6 +676,14 @@ def change_type(*_):
 
         check_mount_button(mount_type)
 
+        try:
+            if mount_type in types_requiring_b9:
+                app.showFrame('FOOTER')
+            else:
+                app.hideFrame('FOOTER')
+        except ItemLookupError:
+            pass
+
         if mount_type in {NAND, NANDDSI} and windows:
             app.setRadioButton('mountpoint-choice', 'Directory')
 
@@ -875,6 +883,7 @@ if not b9_found or not seeddb_found:
                 app.setSticky('')
                 app.addNamedButton(OK, 'no-seeddb-ok', lambda _: app.hideSubWindow('no-seeddb'))
                 app.setResizable(False)
+    app.hideFrame('FOOTER')
 
 if windows:
     app.setFont(10)
