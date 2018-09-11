@@ -41,11 +41,15 @@ class TitleMetadataError(PyCTRError):
     """Generic exception for TitleMetadata operations."""
 
 
-class InvalidSignatureTypeError(TitleMetadataError):
+class InvalidTMDError(TitleMetadataError):
+    """Title Metadata is invalid."""
+
+
+class InvalidSignatureTypeError(InvalidTMDError):
     """Invalid signature type was used."""
 
 
-class InvalidHashError(TitleMetadataError):
+class InvalidHashError(InvalidTMDError):
     """Hash mismatch in the Title Metadata."""
 
 
@@ -125,13 +129,14 @@ class TitleMetadataReader:
                  '_u_signer_crl_version', '_u_reserved1', '_u_system_version', '_u_title_type', '_u_group_id',
                  '_u_reserved2', '_u_srl_flag', '_u_reserved3', '_u_access_rights', '_u_boot_count', '_u_padding')
 
-    # arguments prefixed with _u_ are values unused by the 3DS
+    # arguments prefixed with _u_ are values unused by the 3DS and/or are only kept around to generate the final tmd
     def __init__(self, *, title_id: str, save_size: int, srl_save_size: int, title_version: TitleVersion,
                  info_records: 'Iterable[ContentInfoRecord]', chunk_records: 'Iterable[ContentChunkRecord]',
                  signature=BLANK_SIG_PAIR, _u_issuer='Root-CA00000003-CP0000000b', _u_version=1, _u_ca_crl_version=0,
                  _u_signer_crl_version=0, _u_reserved1=0, _u_system_version=b'\0' * 8, _u_title_type=b'\0\0\0@',
                  _u_group_id=b'\0\0', _u_reserved2=b'\0\0\0\0', _u_srl_flag=0, _u_reserved3=b'\0' * 0x31,
                  _u_access_rights=b'\0' * 4, _u_boot_count=b'\0\0', _u_padding=b'\0\0'):
+        # TODO: add checks
         self.title_id = title_id.lower()
         self.save_size = save_size
         self.srl_save_size = srl_save_size
@@ -182,6 +187,8 @@ class TitleMetadataReader:
             fp.read(sig_padding)
 
         header = fp.read(0xC4)
+        if len(header) != 0xC4:
+            raise InvalidTMDError('Header length is not 0xC4')
 
         # only values that actually have a use are loaded here. (currently)
         # several fields in were left in from the Wii tmd and have no function on 3DS.
@@ -194,6 +201,9 @@ class TitleMetadataReader:
         content_info_records_hash = header[0xA4:0xC4]
 
         content_info_records_raw = fp.read(0x900)
+        if len(content_info_records_raw) != 0x900:
+            raise InvalidTMDError('Content info records length is not 0x900')
+
         if verify_hashes:
             real_hash = sha256(content_info_records_raw)
             if content_info_records_hash != real_hash.digest():
@@ -221,7 +231,7 @@ class TitleMetadataReader:
                                                     hash=cr[16:48]))
 
         # unused vales are loaded only for use when re-building the binary tmd
-        u_issuer = header[0:0x40].decode('ascii').strip('\0')
+        u_issuer = header[0:0x40].decode('ascii').rstrip('\0')
         u_version = header[0x40]
         u_ca_crl_version = header[0x41]
         u_signer_crl_version = header[0x42]
