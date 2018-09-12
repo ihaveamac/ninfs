@@ -4,6 +4,7 @@
 # This file is licensed under The MIT License (MIT).
 # You can find the full license text in LICENSE.md in the root of this project.
 
+from enum import IntEnum
 from functools import wraps
 from hashlib import sha256
 from os import environ
@@ -61,6 +62,39 @@ class BootromNotFoundError(CryptoError):
 
 class CorruptBootromError(CryptoError):
     """ARM9 bootROM hash does not match."""
+
+
+class Keyslot(IntEnum):
+    TWLNAND = 0x03
+    CTRNANDOld = 0x04
+    CTRNANDNew = 0x05
+    FIRM = 0x06
+    AGB = 0x07
+
+    NANDDBCMAC = 0x0B
+
+    NCCH93 = 0x18
+    CardSaveCMACNew = 0x19
+    CardSaveNew = 0x1A
+    NCCH96 = 0x1B
+
+    AGBCMAC = 0x24
+    NCCH70 = 0x25
+
+    NCCH = 0x2C
+    UDSLocalWAN = 0x2D
+    StreetPass = 0x2E
+    Save60 = 0x2F
+    SDNANDCMAC = 0x30
+
+    CardSaveCMAC = 0x33
+    SD = 0x34
+
+    CardSave = 0x37
+    BOSS = 0x38
+    DownloadPlay = 0x39
+
+    CommonKey = 0x3D
 
 
 BOOT9_PROT_HASH = '7331f7edece3dd33f2ab4bd0b3a5d607229fd19212c10b734cedcaf78c1a7b98'
