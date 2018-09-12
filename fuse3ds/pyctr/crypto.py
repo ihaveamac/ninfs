@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from typing import Dict, List, Union
 
 __all__ = ['CryptoError', 'OTPLengthError', 'CorruptBootromError', 'KeyslotMissingError', 'TicketLengthError',
-           'BootromNotFoundError', 'CorruptOTPError', 'CryptoEngine']
+           'BootromNotFoundError', 'CorruptOTPError', 'Keyslot', 'CryptoEngine']
 
 
 class CryptoError(PyCTRError):

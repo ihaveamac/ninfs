@@ -18,7 +18,7 @@ from sys import exit, argv
 from traceback import print_exc
 from typing import BinaryIO, AnyStr
 
-from pyctr.crypto import CryptoEngine
+from pyctr.crypto import CryptoEngine, Keyslot
 from pyctr.types.exefs import ExeFSReader, InvalidExeFSError
 from pyctr.util import readbe, readle, roundup
 from . import _common as _c
@@ -88,7 +88,7 @@ class NANDImageMount(LoggingMixIn, Operations):
             # these blocks are assumed to be entirely 00, so no need to xor anything
             ctrn_block_0x1d = nand_fp.read(0x10)
             ctrn_block_0x1e = nand_fp.read(0x10)
-            for ks in (0x04, 0x05):
+            for ks in (Keyslot.CTRNANDOld, Keyslot.CTRNANDNew):
                 ctr_counter_offs = self.crypto.create_ecb_cipher(ks).decrypt(ctrn_block_0x1d)
                 ctr_counter = int.from_bytes(ctr_counter_offs, 'big') - 0xB9301D
 
@@ -177,14 +177,15 @@ class NANDImageMount(LoggingMixIn, Operations):
 
         # including padding for crypto
         if self.ctr_twl:
-            twl_mbr = self.crypto.create_ctr_cipher(0x03, self.ctr_twl + 0x1B).decrypt(ncsd_header[0xB0:0x100])[0xE:0x50]
+            twl_mbr = self.crypto.create_ctr_cipher(Keyslot.TWLNAND,
+                                                    self.ctr_twl + 0x1B).decrypt(ncsd_header[0xB0:0x100])[0xE:0x50]
             if twl_mbr[0x40:0x42] == b'\x55\xaa':
                 twl_partitions = [[readle(twl_mbr[i + 8:i + 12]) * 0x200,
                                    readle(twl_mbr[i + 12:i + 16]) * 0x200] for i in range(0, 0x40, 0x10)]
             else:
                 twl_partitions = None
 
-            self.files['/twlmbr.bin'] = {'size': 0x42, 'offset': 0x1BE, 'keyslot': 0x03, 'type': 'twlmbr',
+            self.files['/twlmbr.bin'] = {'size': 0x42, 'offset': 0x1BE, 'keyslot': Keyslot.TWLNAND, 'type': 'twlmbr',
                                          'content': twl_mbr}
         else:
             twl_partitions = None
@@ -198,7 +199,8 @@ class NANDImageMount(LoggingMixIn, Operations):
                   f'offset:{part[0]:08x} size:{part[1]:08x} ', end='')
             if idx == 0:
                 if self.ctr_twl:
-                    self.files['/twl_full.img'] = {'size': part[1], 'offset': part[0], 'keyslot': 0x03, 'type': 'enc'}
+                    self.files['/twl_full.img'] = {'size': part[1], 'offset': part[0], 'keyslot': Keyslot.TWLNAND,
+                                                   'type': 'enc'}
                     print('/twl_full.img')
                     if twl_partitions:
                         twl_part_fstype = 0
@@ -207,19 +209,20 @@ class NANDImageMount(LoggingMixIn, Operations):
                                 print(f'twl  idx:{t_idx}                      '
                                       f'offset:{t_part[0]:08x} size:{t_part[1]:08x} ', end='')
                                 if twl_part_fstype == 0:
-                                    self.files['/twln.img'] = {'size': t_part[1], 'offset': t_part[0], 'keyslot': 0x03,
-                                                               'type': 'enc'}
+                                    self.files['/twln.img'] = {'size': t_part[1], 'offset': t_part[0],
+                                                               'keyslot': Keyslot.TWLNAND, 'type': 'enc'}
                                     print('/twln.img')
                                     twl_part_fstype += 1
                                 elif twl_part_fstype == 1:
-                                    self.files['/twlp.img'] = {'size': t_part[1], 'offset': t_part[0], 'keyslot': 0x03,
-                                                               'type': 'enc'}
+                                    self.files['/twlp.img'] = {'size': t_part[1], 'offset': t_part[0],
+                                                               'keyslot': Keyslot.TWLNAND, 'type': 'enc'}
                                     print('/twlp.img')
                                     twl_part_fstype += 1
                                 else:
                                     self.files[f'/twl_unk{twl_part_fstype}.img'] = {'size': t_part[1],
                                                                                     'offset': t_part[0],
-                                                                                    'keyslot': 0x03, 'type': 'enc'}
+                                                                                    'keyslot': Keyslot.TWLNAND,
+                                                                                    'type': 'enc'}
                                     print(f'/twl_unk{twl_part_fstype}.img')
                                     twl_part_fstype += 1
                 else:
@@ -228,13 +231,13 @@ class NANDImageMount(LoggingMixIn, Operations):
             elif self.ctr:
                 if ncsd_part_fstype[idx] == 3:
                     # boot9 hardcoded this keyslot, i'll do this properly later
-                    self.files[f'/firm{firm_idx}.bin'] = {'size': part[1], 'offset': part[0], 'keyslot': 0x06,
+                    self.files[f'/firm{firm_idx}.bin'] = {'size': part[1], 'offset': part[0], 'keyslot': Keyslot.FIRM,
                                                           'type': 'enc'}
                     print(f'/firm{firm_idx}.bin')
                     firm_idx += 1
 
                 elif ncsd_part_fstype[idx] == 1 and ncsd_part_crypttype[idx] >= 2:
-                    ctrnand_keyslot = 0x04 if ncsd_part_crypttype[idx] == 2 else 0x05
+                    ctrnand_keyslot = Keyslot.CTRNANDOld if ncsd_part_crypttype[idx] == 2 else Keyslot.CTRNANDNew
                     self.files['/ctrnand_full.img'] = {'size': part[1], 'offset': part[0], 'keyslot': ctrnand_keyslot,
                                                        'type': 'enc'}
                     print('/ctrnand_full.img')
@@ -265,7 +268,8 @@ class NANDImageMount(LoggingMixIn, Operations):
                                     ctr_part_fstype += 1
 
                 elif ncsd_part_fstype[idx] == 4:
-                    self.files['/agbsave.bin'] = {'size': part[1], 'offset': part[0], 'keyslot': 0x07, 'type': 'enc'}
+                    self.files['/agbsave.bin'] = {'size': part[1], 'offset': part[0], 'keyslot': Keyslot.AGB,
+                                                  'type': 'enc'}
                     print('/agbsave.bin')
 
             else:
@@ -356,7 +360,7 @@ class NANDImageMount(LoggingMixIn, Operations):
             before = offset % 16
             after = (offset + size) % 16
             data = (b'\0' * before) + data + (b'\0' * after)
-            iv = (self.ctr if fi['keyslot'] > 0x03 else self.ctr_twl) + (real_offset >> 4)
+            iv = (self.ctr if fi['keyslot'] > Keyslot.TWLNAND else self.ctr_twl) + (real_offset >> 4)
             data = self.crypto.create_ctr_cipher(fi['keyslot'], iv).decrypt(data)[before:len(data) - after]
 
         elif fi['type'] in {'keysect', 'twlmbr', 'info'}:
@@ -406,7 +410,7 @@ class NANDImageMount(LoggingMixIn, Operations):
             self.f.write(data)
 
         elif fi['type'] == 'enc':
-            twl = fi['keyslot'] < 0x04
+            twl = fi['keyslot'] < Keyslot.CTRNANDOld
             before = offset % 16
             if twl:
                 after = 16 - ((offset + real_len) % 16)

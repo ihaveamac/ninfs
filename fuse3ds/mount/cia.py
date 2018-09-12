@@ -21,7 +21,6 @@ from typing import BinaryIO, Dict
 
 from pyctr.crypto import CryptoEngine
 from pyctr.types.tmd import TitleMetadataReader, CHUNK_RECORD_SIZE
-from pyctr.util import readbe
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
 from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context

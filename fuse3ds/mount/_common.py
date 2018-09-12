@@ -13,9 +13,7 @@ from sys import exit, platform
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import BinaryIO, Generator, Tuple, Union
-else:
-    BinaryIO = object  # so it doesn't affect anything at runtime
+    from typing import Generator, Tuple, Union
 
 windows = platform in {'win32', 'cygwin'}
 macos = platform == 'darwin'
@@ -124,7 +122,7 @@ def _raise_if_closed(method):
     return decorator
 
 
-class VirtualFileWrapper(BufferedIOBase, BinaryIO):
+class VirtualFileWrapper(BufferedIOBase):
     """Wrapper for a FUSE Operations class for things that need a file-like object."""
 
     _seek = 0

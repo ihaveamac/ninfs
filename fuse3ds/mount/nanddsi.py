@@ -17,7 +17,7 @@ from struct import pack
 from sys import exit, argv
 from typing import BinaryIO
 
-from pyctr.crypto import CryptoEngine
+from pyctr.crypto import CryptoEngine, Keyslot
 from pyctr.util import readbe, readle
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
@@ -81,7 +81,7 @@ class TWLNandImageMount(LoggingMixIn, Operations):
                       twl_consoleid_list[1] ^ 0xE65B601D,
                       twl_consoleid_list[1]]
 
-        self.crypto.set_keyslot('x', 0x03, pack('<4I', *key_x_list))
+        self.crypto.set_keyslot('x', Keyslot.TWLNAND, pack('<4I', *key_x_list))
 
         nand_fp.seek(0)
         header_enc = nand_fp.read(0x200)
@@ -102,12 +102,12 @@ class TWLNandImageMount(LoggingMixIn, Operations):
             # attempt to generate counter
             block_0x1c = readbe(header_enc[0x1C0:0x1D0])
             blk_xored = block_0x1c ^ 0x1804060FE03B77080000896F06000002
-            ctr_offs = self.crypto.create_ecb_cipher(0x03).decrypt(blk_xored.to_bytes(0x10, 'little'))
+            ctr_offs = self.crypto.create_ecb_cipher(Keyslot.TWLNAND).decrypt(blk_xored.to_bytes(0x10, 'little'))
             self.ctr = int.from_bytes(ctr_offs, 'big') - 0x1C
 
             # try the counter
             block_0x1d = header_enc[0x1D0:0x1E0]
-            out = self.crypto.create_ctr_cipher(0x03, self.ctr + 0x1D).decrypt(block_0x1d)
+            out = self.crypto.create_ctr_cipher(Keyslot.TWLNAND, self.ctr + 0x1D).decrypt(block_0x1d)
             if out != b'\xce<\x06\x0f\xe0\xbeMx\x06\x00\xb3\x05\x01\x00\x00\x02':
                 exit('Counter could not be automatically generated. Please provide the CID, '
                      'or ensure the provided Console ID is correct.')
@@ -120,7 +120,7 @@ class TWLNandImageMount(LoggingMixIn, Operations):
         self.files['/stage2_footer.bin'] = {'offset': 0x4E400, 'size': 0x400, 'type': 'dec'}
         self.files['/diag_area.bin'] = {'offset': 0xFFA00, 'size': 0x400, 'type': 'dec'}
 
-        header = self.crypto.create_ctr_cipher(0x03, self.ctr).decrypt(header_enc)
+        header = self.crypto.create_ctr_cipher(Keyslot.TWLNAND, self.ctr).decrypt(header_enc)
         mbr = header[0x1BE:0x200]
         mbr_sig = mbr[0x40:0x42]
         if mbr_sig != b'\x55\xaa':
@@ -183,7 +183,7 @@ class TWLNandImageMount(LoggingMixIn, Operations):
             after = (offset + size) % 16
             data = (b'\0' * before) + data + (b'\0' * after)
             iv = self.ctr + (real_offset >> 4)
-            data = self.crypto.create_ctr_cipher(0x03, iv).decrypt(data)[before:len(data) - after]
+            data = self.crypto.create_ctr_cipher(Keyslot.TWLNAND, iv).decrypt(data)[before:len(data) - after]
 
         return data
 
@@ -217,7 +217,7 @@ class TWLNandImageMount(LoggingMixIn, Operations):
                 after = 0
             iv = self.ctr + (real_offset >> 4)
             data = (b'\0' * before) + data + (b'\0' * after)
-            out_data = self.crypto.create_ctr_cipher(0x03, iv).encrypt(data)[before:real_len - after]
+            out_data = self.crypto.create_ctr_cipher(Keyslot.TWLNAND, iv).encrypt(data)[before:real_len - after]
             self.f.seek(real_offset)
             self.f.write(out_data)
 

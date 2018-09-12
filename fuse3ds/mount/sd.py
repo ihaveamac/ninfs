@@ -17,7 +17,7 @@ from struct import unpack
 from sys import exit, argv
 from typing import TYPE_CHECKING
 
-from pyctr.crypto import CryptoEngine
+from pyctr.crypto import CryptoEngine, Keyslot
 from pyctr.util import readbe
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
@@ -55,8 +55,8 @@ class SDFilesystemMount(LoggingMixIn, Operations):
 
         print('Root dir: ' + self.root_dir)
 
-        self.crypto.set_keyslot('y', 0x34, readbe(key_y))
-        print('Key:      ' + self.crypto.key_normal[0x34].hex())
+        self.crypto.set_keyslot('y', Keyslot.SD, readbe(key_y))
+        print('Key:      ' + self.crypto.key_normal[Keyslot.SD].hex())
 
         self.root = os.path.realpath(sd_dir + '/' + self.root_dir)
         self.root_len = len(self.root)
@@ -151,7 +151,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         f.seek(offset - before)
         data = f.read(size + before)
         iv = self.path_to_iv(path) + (offset >> 4)
-        return self.crypto.create_ctr_cipher(0x34, iv).decrypt(data)[before:]
+        return self.crypto.create_ctr_cipher(Keyslot.SD, iv).decrypt(data)[before:]
 
     def readdir(self, path, fh):
         yield from ('.', '..')
@@ -233,7 +233,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
 
         before = offset % 16
         iv = self.path_to_iv(path) + (offset >> 4)
-        out_data = self.crypto.create_ctr_cipher(0x34, iv).decrypt((b'\0' * before) + data)[before:]
+        out_data = self.crypto.create_ctr_cipher(Keyslot.SD, iv).decrypt((b'\0' * before) + data)[before:]
         f.seek(offset)
         return f.write(out_data)
 

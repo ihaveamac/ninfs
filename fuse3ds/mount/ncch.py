@@ -17,7 +17,7 @@ from sys import argv
 from threading import Thread
 from typing import BinaryIO, TYPE_CHECKING
 
-from pyctr.crypto import CryptoEngine
+from pyctr.crypto import CryptoEngine, Keyslot
 from pyctr.types.ncch import NCCHReader, FIXED_SYSTEM_KEY
 from pyctr.util import readbe, roundup
 from . import _common as _c
@@ -60,12 +60,12 @@ class NCCHContainerMount(LoggingMixIn, Operations):
             #   happens if it happens.
             if self.reader.flags.fixed_crypto_key:
                 normal_key = FIXED_SYSTEM_KEY if self.reader.program_id & (0x10 << 32) else 0x0
-                self.crypto.set_normal_key(0x2C, normal_key.to_bytes(0x10, 'big'))
+                self.crypto.set_normal_key(Keyslot.NCCH, normal_key.to_bytes(0x10, 'big'))
             else:
                 if self.reader.flags.uses_seed:
                     self.reader.load_seed_from_seeddb()
 
-                self.crypto.set_keyslot('y', 0x2C, readbe(self.reader.get_key_y(original=True)))
+                self.crypto.set_keyslot('y', Keyslot.NCCH, readbe(self.reader.get_key_y(original=True)))
                 self.crypto.set_keyslot('y', self.reader.extra_keyslot,
                                         readbe(self.reader.get_key_y()))
 
@@ -85,7 +85,8 @@ class NCCHContainerMount(LoggingMixIn, Operations):
 
         if self.reader.check_for_extheader():
             self.files['/extheader.bin'] = {'size': 0x800, 'offset': 0x200, 'enctype': 'normal',
-                                            'keyslot': 0x2C, 'iv': (self.reader.partition_id << 64 | (0x01 << 56))}
+                                            'keyslot': Keyslot.NCCH,
+                                            'iv': (self.reader.partition_id << 64 | (0x01 << 56))}
 
         plain_region = self.reader.plain_region
         if plain_region.offset:
@@ -98,10 +99,10 @@ class NCCHContainerMount(LoggingMixIn, Operations):
         exefs_region = self.reader.exefs_region
         if exefs_region.offset:
             exefs_type = 'exefs'
-            if self.reader.extra_keyslot == 0x2C:
+            if self.reader.extra_keyslot == Keyslot.NCCH:
                 exefs_type = 'normal'
             self.files['/exefs.bin'] = {'size': exefs_region.size, 'offset': exefs_region.offset, 'enctype': exefs_type,
-                                        'keyslot': 0x2C, 'keyslot_extra': self.reader.extra_keyslot,
+                                        'keyslot': Keyslot.NCCH, 'keyslot_extra': self.reader.extra_keyslot,
                                         'iv': (self.reader.partition_id << 64 | (0x02 << 56)),
                                         'keyslot_normal_range': [(0, 0x200)]}
 
