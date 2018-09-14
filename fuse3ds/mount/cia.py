@@ -19,7 +19,7 @@ from struct import unpack
 from sys import argv
 from typing import BinaryIO, Dict
 
-from pyctr.crypto import CryptoEngine
+from pyctr.crypto import CryptoEngine, Keyslot
 from pyctr.types.tmd import TitleMetadataReader, CHUNK_RECORD_SIZE
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
@@ -191,7 +191,8 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
             # read to block size
             self.f.seek(real_offset - before)
             # adding 0x10 to the size fixes some kind of decryption bug
-            data = self.crypto.create_cbc_cipher(0x40, iv).decrypt(self.f.read(size + 0x10))[before:real_size + before]
+            data = self.crypto.create_cbc_cipher(Keyslot.DecryptedTitlekey,
+                                                 iv).decrypt(self.f.read(size + 0x10))[before:real_size + before]
 
         else:
             from pprint import pformat

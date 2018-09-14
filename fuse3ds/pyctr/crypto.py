@@ -96,6 +96,9 @@ class Keyslot(IntEnum):
 
     CommonKey = 0x3D
 
+    # anything after 0x3F is custom to PyCTR
+    DecryptedTitlekey = 0x40
+
 
 BOOT9_PROT_HASH = '7331f7edece3dd33f2ab4bd0b3a5d607229fd19212c10b734cedcaf78c1a7b98'
 

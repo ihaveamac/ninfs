@@ -15,7 +15,7 @@ from stat import S_IFDIR, S_IFREG
 from sys import exit, argv
 from typing import TYPE_CHECKING
 
-from pyctr.crypto import CryptoEngine
+from pyctr.crypto import CryptoEngine, Keyslot
 from pyctr.types.tmd import TitleMetadataReader, CHUNK_RECORD_SIZE
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
@@ -69,7 +69,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
                 exit('Failed to convert --dec-key input to bytes. Non-hex character likely found, or is not '
                      '32 hex characters.')
             # noinspection PyUnboundLocalVariable
-            self.crypto.set_normal_key(0x40, titlekey)
+            self.crypto.set_normal_key(Keyslot.DecryptedTitlekey, titlekey)
         else:
             with open(self.rp('cetk'), 'rb') as tik:
                 # load ticket
@@ -178,7 +178,8 @@ class CDNContentsMount(LoggingMixIn, Operations):
                 # read to block size
                 f.seek(offset - before)
                 # adding 0x10 to the size fixes some kind of decryption bug
-                data = self.crypto.create_cbc_cipher(0x40, iv).decrypt(f.read(size + 0x10))[before:real_size + before]
+                data = self.crypto.create_cbc_cipher(Keyslot.DecryptedTitlekey,
+                                                     iv).decrypt(f.read(size + 0x10))[before:real_size + before]
 
             else:
                 from pprint import pformat
