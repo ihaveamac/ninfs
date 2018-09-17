@@ -12,7 +12,7 @@ from ..common import PyCTRError
 from ..util import readbe
 
 if TYPE_CHECKING:
-    from typing import BinaryIO, Iterable, Tuple
+    from typing import BinaryIO, Iterable
 
 __all__ = ['CHUNK_RECORD_SIZE', 'TitleMetadataError', 'InvalidSignatureTypeError', 'InvalidHashError',
            'ContentInfoRecord', 'ContentChunkRecord', 'ContentTypeFlags', 'TitleVersion', 'TitleMetadataReader']
@@ -49,9 +49,35 @@ class InvalidTMDError(TitleMetadataError):
 class InvalidSignatureTypeError(InvalidTMDError):
     """Invalid signature type was used."""
 
+    def __init__(self, sig_type):
+        super().__init__(sig_type)
+
+    def __str__(self):
+        return f'{self.args[0]:#010x}'
+
 
 class InvalidHashError(InvalidTMDError):
     """Hash mismatch in the Title Metadata."""
+
+
+class InvalidInfoRecordError(InvalidHashError):
+    """Hash mismatch in the Content Info Records."""
+
+    def __init__(self, info_record):
+        super().__init__(info_record)
+
+    def __str__(self):
+        return f'Invalid info record: {self.args[0]}'
+
+
+class UnusualInfoRecordError(InvalidTMDError):
+    """Encountered Content Info Record that attempts to hash a Content Chunk Record that has already been hashed."""
+
+    def __init__(self, info_record, chunk_record):
+        super().__init__(info_record, chunk_record)
+
+    def __str__(self):
+        return f'Attempted to hash twice: {self.args[0]}, {self.args[1]}'
 
 
 class ContentTypeFlags(NamedTuple):
@@ -195,7 +221,7 @@ class TitleMetadataReader:
         try:
             sig_size, sig_padding = signature_types[sig_type]
         except KeyError:
-            raise InvalidSignatureTypeError(f'{sig_type:08X}')
+            raise InvalidSignatureTypeError(sig_type)
 
         signature = fp.read(sig_size)
         try:
@@ -227,26 +253,38 @@ class TitleMetadataReader:
             if content_info_records_hash != real_hash.digest():
                 raise InvalidHashError('Content Info Records hash is invalid')
 
-        # the hashes of this is sort of based on assumption. I need to figure out how hashes in the info records
-        #   work more. of course, in practice, not more than one info record is used, so this is not urgent.
-        info_records = []
-        for ir in (content_info_records_raw[i:i + 0x24] for i in range(0, 0x900, 0x24)):
-            if ir != b'\0' * 0x24:
-                info_records.append(ContentInfoRecord(index_offset=readbe(ir[0:2]),
-                                                      command_count=readbe(ir[2:4]),
-                                                      hash=ir[4:36]))
-
         content_chunk_records_raw = fp.read(content_count * CHUNK_RECORD_SIZE)
-        # TODO: verify hashes of chunk_records (needs more testing)
 
         chunk_records = []
-        for cr in (content_chunk_records_raw[i:i + CHUNK_RECORD_SIZE] for i in
-                   range(0, content_count * CHUNK_RECORD_SIZE, CHUNK_RECORD_SIZE)):
-            chunk_records.append(ContentChunkRecord(id=cr[0:4].hex(),
-                                                    cindex=readbe(cr[4:6]),
-                                                    type=ContentTypeFlags.from_int(readbe(cr[6:8])),
-                                                    size=readbe(cr[8:16]),
-                                                    hash=cr[16:48]))
+        for cr_raw in (content_chunk_records_raw[i:i + CHUNK_RECORD_SIZE] for i in
+                       range(0, content_count * CHUNK_RECORD_SIZE, CHUNK_RECORD_SIZE)):
+            chunk_records.append(ContentChunkRecord(id=cr_raw[0:4].hex(),
+                                                    cindex=readbe(cr_raw[4:6]),
+                                                    type=ContentTypeFlags.from_int(readbe(cr_raw[6:8])),
+                                                    size=readbe(cr_raw[8:16]),
+                                                    hash=cr_raw[16:48]))
+
+        info_records = []
+        for ir_raw in (content_info_records_raw[i:i + 0x24] for i in range(0, 0x900, 0x24)):
+            if ir_raw != b'\0' * 0x24:
+                info_records.append(ContentInfoRecord(index_offset=readbe(ir_raw[0:2]),
+                                                      command_count=readbe(ir_raw[2:4]),
+                                                      hash=ir_raw[4:36]))
+
+        if verify_hashes:
+            chunk_records_hashed = set()
+            for ir in info_records:
+                to_hash = []
+                for cr in chunk_records[ir.index_offset:ir.index_offset + ir.command_count]:
+                    if cr in chunk_records_hashed:
+                        raise InvalidTMDError('attempting to hash chunk record twice')
+
+                    chunk_records_hashed.add(cr)
+                    to_hash.append(cr)
+
+                hashed = sha256(b''.join(bytes(x) for x in to_hash))
+                if hashed.digest() != ir.hash:
+                    raise InvalidInfoRecordError(ir)
 
         # unused vales are loaded only for use when re-building the binary tmd
         u_issuer = header[0:0x40].decode('ascii').rstrip('\0')
