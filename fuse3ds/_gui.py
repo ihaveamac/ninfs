@@ -18,7 +18,7 @@ from os.path import abspath, dirname, expanduser, getsize, isfile, isdir, ismoun
 from shutil import get_terminal_size
 from ssl import PROTOCOL_TLSv1_2, SSLContext
 from subprocess import Popen, check_call, CalledProcessError
-from sys import argv, executable, exit, platform, version_info, maxsize
+from sys import argv, executable, exit, platform, version_info, maxsize, stderr
 from time import sleep
 from traceback import print_exc
 from typing import TYPE_CHECKING
@@ -28,6 +28,8 @@ try:
     from appJar import gui
     from appJar.appjar import ItemLookupError
 except ImportError as e:
+    print_exc()
+    print(file=stderr)
     if 'tkinter' in e.args[0].lower():
         exit('Could not import tkinter, please install python3-tk (or equivalent for your distribution).')
     else:
