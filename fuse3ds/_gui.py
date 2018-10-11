@@ -121,21 +121,41 @@ else:
     config_dir = pjoin(config_root, 'fuse-3ds')
 
 makedirs(config_dir, exist_ok=True)
-update_config_path = pjoin(config_dir, 'update.cfg')
 update_config = ConfigParser()
-if not update_config.read(update_config_path):
-    print('Creating new update config...')
-    update_config['update'] = {'check_updates_online': True, 'ignored_update': '0.0'}
+
+configs = {'update': update_config}
+
+
+def init_config(kind: str, defaults):
+    config_path = pjoin(config_dir, kind + '.cfg')
+    if not configs[kind].read(config_path):
+        print('Creating new', kind, 'config...')
+        configs[kind].update(defaults)
+        write_config(kind)
+    else:
+        print('Loaded', kind, 'config.')
+
+
+def write_config(kind: str, section=None, option=None):
+    config_path = pjoin(config_dir, kind + '.cfg')
+    if section:
+        configs[kind][section] = option
     try:
-        with open(update_config_path, 'w', encoding='utf-8') as o:
-            update_config.write(o)
-            print('Wrote new update config to', update_config_path)
+        with open(config_path, 'w', encoding='utf-8') as o:
+            configs[kind].write(o)
+            print('Wrote', kind, 'config to', config_path)
+            return True
     except Exception:
         print_exc()
         print()
-        print('Failed to write new config to', update_config_path)
-else:
-    print('Loaded update config from', update_config_path)
+        print('Failed to write', kind, 'config to', config_path)
+        return False
+
+
+init_config('update', {'update': {'check_updates_online': True, 'ignored_update': 'v0.0'}})
+
+print(dict(update_config['update']))
+
 
 for p in b9_paths:
     if isfile(p):
