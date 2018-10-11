@@ -96,12 +96,28 @@ home = expanduser('~')
 # dir to copy to if chosen to copy boot9/seeddb in gui
 if windows:
     target_dir: str = pjoin(environ.get('APPDATA'), '3ds')
+    config_dir: str = pjoin(environ.get('APPDATA'), 'fuse-3ds')
 elif macos:
     target_dir: str = pjoin(home, 'Library', 'Application Support', '3ds')
+    config_dir: str = pjoin(home, 'Library', 'Application Support', 'fuse-3ds')
 else:
-    # maybe this should be moved? don't really want to use one with a name specific to fuse-3ds.
-    # https://github.com/ihaveamac/fuse-3ds/issues/8
     target_dir: str = pjoin(home, '.3ds')
+    config_root = environ.get('XDG_CONFIG_HOME')
+    if not config_root:
+        # check other paths in XDG_CONFIG_DIRS to see if fuse-3ds already exists in one of them
+        config_roots: str = environ.get('XDG_CONFIG_DIRS')
+        if not config_roots:
+            config_roots = '/etc/xdg'
+        config_paths = config_roots.split(':')
+        for p in config_paths:
+            d = pjoin(p, 'fuse-3ds')
+            if isdir(d):
+                config_root = p
+                break
+    # check again to see if it was set
+    if not config_root:
+        config_root = pjoin(home, '.config')
+    config_dir = pjoin(config_root, 'fuse-3ds')
 
 for p in b9_paths:
     if isfile(p):
