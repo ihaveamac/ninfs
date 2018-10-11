@@ -136,10 +136,10 @@ def init_config(kind: str, defaults):
         print('Loaded', kind, 'config.')
 
 
-def write_config(kind: str, section=None, option=None):
+def write_config(kind: str, section=None, option=None, value=None):
     config_path = pjoin(config_dir, kind + '.cfg')
     if section:
-        configs[kind][section] = option
+        configs[kind][section][option] = str(value)
     try:
         with open(config_path, 'w', encoding='utf-8') as o:
             configs[kind].write(o)
@@ -153,8 +153,6 @@ def write_config(kind: str, section=None, option=None):
 
 
 init_config('update', {'update': {'check_updates_online': True, 'ignored_update': 'v0.0'}})
-
-print(dict(update_config['update']))
 
 
 for p in b9_paths:
@@ -477,7 +475,7 @@ def press(button: str):
             print_exc()
             app.showSubWindow('unmounterror')
             app.enableButton(UNMOUNT)
-    elif button == 'Help & Extras':
+    elif button == 'Settings & Help':
         show_extras()
 
 
@@ -805,7 +803,7 @@ app.setSticky('new')
 # this is here to force the width to be set
 app.addOptionBox('TYPE', ('- Choose a type or drag a file/directory here -',), row=0, colspan=2)
 app.setOptionBoxChangeFunction('TYPE', change_type)
-app.addButton('Help & Extras', press, row=0, column=2)
+app.addButton('Settings & Help', press, row=0, column=2)
 try:
     app.setOptionBoxDropTarget('TYPE', detect_type)
     has_dnd = True
@@ -973,6 +971,19 @@ def show_extras():
     except ItemLookupError:
         with app.subWindow('extras', 'fuse-3ds Extras', modal=True, blocking=False) as sw:
             app.setSticky(EASTWEST)
+            with app.labelFrame('Settings'):
+                def checkbox_update(name: str):
+                    if name == 'update-check':
+                        option = app.getCheckBox('update-check')
+                        if not write_config('update', 'update', 'check_updates_online', option):
+                            app.errorBox('fuse-3ds Error', 'Failed to write to config. Is the path read-only? '
+                                                           'Check the output for more details.')
+
+                app.addNamedCheckBox('Check for updates at launch', 'update-check')
+                app.setCheckBox('update-check', update_config.getboolean('update', 'check_updates_online'))
+                app.setCheckBoxChangeFunction('update-check', checkbox_update)
+
+            app.setSticky(EASTWEST)
             with app.labelFrame('Update SeedDB', colspan=3):
                 app.setSticky(EASTWEST)
                 app.addLabel('updateseeddb-label', 'Update SeedDB to a newer database.', colspan=2)
@@ -982,7 +993,8 @@ def show_extras():
             with app.labelFrame('Tutorial', colspan=3):
                 app.setSticky(EASTWEST)
                 app.addLabel('tutorial-label', 'View a tutorial on GBAtemp.', colspan=2)
-                app.addNamedButton('Open', 'tutorial-btn', lambda _: webbrowser.open('https://gbatemp.net/threads/499994/'),
+                app.addNamedButton('Open', 'tutorial-btn',
+                                   lambda _: webbrowser.open('https://gbatemp.net/threads/499994/'),
                                    row=PV, column=2)
 
             def _show_ctxmenu_window():
@@ -1136,16 +1148,20 @@ def main(_pyi=False, _allow_admin=False):
                            'choose a directory as a mount point instead of a drive letter.')
             exit(1)
 
-    def show_update(name: str, info: str, url: str):
+    def show_update(name: str, ver: str, info: str, url: str):
         def update_press(button: str):
             if button == 'Open release page':
                 webbrowser.open(url)
                 app.queueFunction(app.stop)
+            elif button == 'Ignore this update':
+                if not write_config('update', 'update', 'ignored_update', ver):
+                    app.errorBox('fuse-3ds Error', 'Failed to write to config. Is the path read-only? '
+                                                   'Check the output for more details.')
             app.destroySubWindow('update')
 
         with app.subWindow('update', 'fuse-3ds Update', modal=True):
             app.addLabel('update-label1', f'A new version of fuse-3ds is available. You have v{version}.')
-            app.addButtons(['Open release page', 'Close'], update_press)
+            app.addButtons(['Open release page', 'Ignore this update', 'Close'], update_press)
             with app.labelFrame(name):
                 app.addMessage('update-info', info)
                 app.setMessageAlign('update-info', 'left')
@@ -1180,7 +1196,7 @@ def main(_pyi=False, _allow_admin=False):
                             print(f'UPDATE: Update to {latest_ver} is available but ignored.')
                         else:
                             print(f'UPDATE: Update to {latest_ver} is available.')
-                            app.queueFunction(show_update, name, info, url)
+                            app.queueFunction(show_update, name, latest_ver, info, url)
                     else:
                         print(f'UPDATE: No new version. (Latest is {latest_ver})')
 
