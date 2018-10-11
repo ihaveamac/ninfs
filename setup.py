@@ -2,7 +2,7 @@
 
 import sys
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 if sys.hexversion < 0x030601f0:
     sys.exit('Python 3.6.1+ is required.')
@@ -13,13 +13,14 @@ with open('README.md', 'r', encoding='utf-8') as f:
 setup(
     name='fuse-3ds',
     version='1.3b1.dev1',
-    packages=['fuse3ds', 'fuse3ds.pyctr', 'fuse3ds.pyctr.types', 'fuse3ds.mount'],
+    packages=find_packages(),
     url='https://github.com/ihaveamac/fuse-3ds',
     license='MIT',
     author='Ian Burgwin',
-    author_email='',
+    author_email='ian@ianburgwin.net',
     description='FUSE Filesystem Python scripts for Nintendo 3DS files',
     long_description=readme,
+    long_description_content_type='text/markdown',
     classifiers=[
         'Topic :: Utilities',
         'License :: OSI Approved :: MIT License',
