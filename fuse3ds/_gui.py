@@ -1134,37 +1134,43 @@ def main(_pyi=False, _allow_admin=False):
 
         app.showSubWindow('update')
 
-    def update_check():
-        # this will check for the latest non-prerelease, once there is one.
-        # noinspection PyBroadException
-        try:
-            print(f'UPDATE: Checking for updates... (Currently running v{version})')
-            ctx = SSLContext(PROTOCOL_TLSv1_2)
-            release_url = 'https://api.github.com/repos/ihaveamac/fuse-3ds/releases'
-            current_ver: 'Version' = parse_version(version)
-            if not current_ver.is_prerelease:
-                release_url += '/latest'
-            with urlopen(release_url, context=ctx) as u:
-                u: HTTPResponse
-                res: List[Dict[str, Any]] = json.loads(u.read().decode('utf-8'))
-                latest_rel = res[0] if current_ver.is_prerelease else res
-                latest_ver: str = latest_rel['tag_name']
-                if parse_version(latest_ver) > current_ver:
-                    name: str = latest_rel['name']
-                    url: str = latest_rel['html_url']
-                    info_all: str = latest_rel['body']
-                    info = info_all[:info_all.find('------')].strip().replace('\r\n', '\n')
+    if update_config.getboolean('update', 'check_updates_online'):
+        def update_check():
+            # this will check for the latest non-prerelease, once there is one.
+            # noinspection PyBroadException
+            try:
+                print(f'UPDATE: Checking for updates... (Currently running v{version})')
+                ctx = SSLContext(PROTOCOL_TLSv1_2)
+                release_url = 'https://api.github.com/repos/ihaveamac/fuse-3ds/releases'
+                current_ver: 'Version' = parse_version(version)
+                if not current_ver.is_prerelease:
+                    release_url += '/latest'
+                with urlopen(release_url, context=ctx) as u:
+                    u: HTTPResponse
+                    res: List[Dict[str, Any]] = json.loads(u.read().decode('utf-8'))
+                    latest_rel = res[0] if current_ver.is_prerelease else res
+                    latest_ver: str = latest_rel['tag_name']
+                    if parse_version(latest_ver) > current_ver:
+                        name: str = latest_rel['name']
+                        url: str = latest_rel['html_url']
+                        info_all: str = latest_rel['body']
+                        info = info_all[:info_all.find('------')].strip().replace('\r\n', '\n')
 
-                    print(f'UPDATE: Update to {latest_ver} is available.')
-                    app.queueFunction(show_update, name, info, url)
-                else:
-                    print(f'UPDATE: No new version. (Latest is {latest_ver})')
+                        if latest_ver == update_config['update']['ignored_update']:
+                            print(f'UPDATE: Update to {latest_ver} is available but ignored.')
+                        else:
+                            print(f'UPDATE: Update to {latest_ver} is available.')
+                            app.queueFunction(show_update, name, info, url)
+                    else:
+                        print(f'UPDATE: No new version. (Latest is {latest_ver})')
 
-        except Exception:
-            print('UPDATE: Failed to check for update')
-            print_exc()
+            except Exception:
+                print('UPDATE: Failed to check for update')
+                print_exc()
 
-    app.thread(update_check)
+        app.thread(update_check)
+    else:
+        print('UPDATE: Online update check disabled.')
 
     to_use = 'default'
 
