@@ -10,6 +10,7 @@ print('Importing dependencies...')
 
 import json
 import webbrowser
+from configparser import ConfigParser
 from contextlib import suppress
 from glob import iglob
 from hashlib import sha256
@@ -118,6 +119,23 @@ else:
     if not config_root:
         config_root = pjoin(home, '.config')
     config_dir = pjoin(config_root, 'fuse-3ds')
+
+makedirs(config_dir, exist_ok=True)
+update_config_path = pjoin(config_dir, 'update.cfg')
+update_config = ConfigParser()
+if not update_config.read(update_config_path):
+    print('Creating new update config...')
+    update_config['update'] = {'check_updates_online': True, 'ignored_update': '0.0'}
+    try:
+        with open(update_config_path, 'w', encoding='utf-8') as o:
+            update_config.write(o)
+            print('Wrote new update config to', update_config_path)
+    except Exception:
+        print_exc()
+        print()
+        print('Failed to write new config to', update_config_path)
+else:
+    print('Loaded update config from', update_config_path)
 
 for p in b9_paths:
     if isfile(p):
