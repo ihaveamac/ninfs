@@ -12,7 +12,7 @@ with open('README.md', 'r', encoding='utf-8') as f:
 
 setup(
     name='fuse-3ds',
-    version='1.3b1.dev1',
+    version='1.3',
     packages=find_packages(),
     url='https://github.com/ihaveamac/fuse-3ds',
     license='MIT',
