@@ -59,6 +59,7 @@ Versions of macOS supported by Apple are highly recommended. Mac OS X Snow Leopa
   * With GUI support: `python3 -m pip install --upgrade https://github.com/ihaveamac/fuse-3ds/archive/master.zip#egg=fuse-3ds[gui]`
 
 ### Linux
+* Arch Linux: [fuse-3ds](https://aur.archlinux.org/packages/fuse-3ds/) is available in the AUR.
 * Recent distributions should have Python 3.6.1 or later pre-installed, or included in its repositories. If not, you can use an extra repository (e.g. [deadsnakes's PPA](https://launchpad.net/%7Edeadsnakes/+archive/ubuntu/ppa) for Ubuntu), [build from source](https://www.python.org/downloads/source/), or use a tool like [pyenv](https://github.com/pyenv/pyenv).
 * Most distributions should have fuse enabled/installed by default. Use your package manager if it isn't.
 * Install fuse-3ds with `python3 -m pip install --upgrade --user https://github.com/ihaveamac/fuse-3ds/archive/master.zip`.
