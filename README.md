@@ -51,6 +51,11 @@ Python does not have to be installed, but [WinFsp](http://www.secfs.net/winfsp/d
   * With GUI support: `py -3 -m pip install --upgrade https://github.com/ihaveamac/fuse-3ds/archive/master.zip#egg=fuse-3ds[gui]`
 
 ### macOS
+A standalone application bundle with a GUI is available for use. You can download the DMG from [GitHub](https://github.com/ihaveamac/fuse-3ds/releases).
+
+Python does not have to be installed, but [FUSE for macOS](https://osxfuse.github.io/) is still required.
+
+#### Install with existing Python
 Versions of macOS supported by Apple are highly recommended. Mac OS X Snow Leopard is the lowest version that should work.
 
 * Install the latest version of Python 3. The recommended way is [Homebrew](https://brew.sh). You can also use an installer from [python.org](https://www.python.org/downloads/) or a tool like [pyenv](https://github.com/pyenv/pyenv).
@@ -65,6 +70,7 @@ Versions of macOS supported by Apple are highly recommended. Mac OS X Snow Leopa
 * Install fuse-3ds with `python3 -m pip install --upgrade --user https://github.com/ihaveamac/fuse-3ds/archive/master.zip`.
   * `--user` is not needed if you are using a virtual environment.
   * With GUI support: `python3 -m pip install --upgrade --user https://github.com/ihaveamac/fuse-3ds/archive/master.zip#egg=fuse-3ds[gui]`
+* You can add a desktop entry with `python3 -m fuse3ds --install-desktop-entry`. If you want to install to a location other than the default (`$XDG_DATA_HOME`), you can add another argument with a path like `/usr/local/share`.
 
 ## Usage
 ### Graphical user interface
