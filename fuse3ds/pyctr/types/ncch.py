@@ -40,7 +40,7 @@ def get_seed(f: 'BinaryIO', program_id: int) -> bytes:
     """Get a seed in a seeddb.bin from an I/O stream."""
     tid_bytes = program_id.to_bytes(0x8, 'little')
     f.seek(0)
-    seed_count = readle(f.read(2))
+    seed_count = readle(f.read(4))
     f.seek(0x10)
     for _ in range(seed_count):
         entry = f.read(0x20)

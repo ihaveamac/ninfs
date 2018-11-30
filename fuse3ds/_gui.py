@@ -250,6 +250,8 @@ if version_info[3] != 'final':
 pybits = 64 if maxsize > 0xFFFFFFFF else 32
 
 app = gui('fuse-3ds v' + version, showIcon=False, handleArgs=False)
+if windows:
+    app.setIcon(pjoin(dirname(__file__), 'data', 'windows.ico'))
 
 
 def run_mount(module_type: str, item: str, mountpoint: str, extra_args: list = ()):
@@ -345,8 +347,8 @@ def press(button: str):
                         'fuse-3ds Warning',
                         'You chose drive letter when using the NAND mount.\n'
                         '\n'
-                        'Using a directory mount over a drive letter for NAND is highly\n'
-                        'recommended because some tools like OSFMount will not be\n'
+                        'Using a directory mount over a drive letter for NAND is highly '
+                        'recommended because some tools like OSFMount will not be '
                         'able to read from files in a mount using a drive letter.\n'
                         '\n'
                         'Are you sure you want to continue?'
@@ -759,8 +761,8 @@ with app.frame('loading', row=1, colspan=3):
 
 def show_unknowntype(path: str):
     app.warningBox('fuse-3ds Error',
-                   "The type of the given file couldn't be detected.\n"
-                   "If you know it is a compatibile file, choose the \n"
+                   "The type of the given file couldn't be detected."
+                   "If you know it is a compatibile file, choose the "
                    "correct type and file an issue on GitHub if it works.\n\n"
                    + path)
 
@@ -1099,8 +1101,8 @@ with app.subWindow('unmounterror', 'fuse-3ds Error', modal=True, blocking=False)
 
 
     app.addLabel('unmounterror-label', 'Failed to unmount. Please check the output.\n\n'
-                                       'You can kill the process if it is not responding.\n'
-                                       'This should be used as a last resort.'
+                                       'You can kill the process if it is not responding. '
+                                       'This should be used as a last resort. '
                                        'The process should be unmounted normally.', colspan=2)
     app.addNamedButton(OK, 'unmounterror-ok', unmount_ok)
     app.addNamedButton('Kill process', 'unmounterror-kill', kill_process, row=PV, column=1)

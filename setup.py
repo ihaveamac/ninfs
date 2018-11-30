@@ -12,7 +12,7 @@ with open('README.md', 'r', encoding='utf-8') as f:
 
 setup(
     name='fuse-3ds',
-    version='1.3',
+    version='1.3.1.dev1',
     packages=find_packages(),
     url='https://github.com/ihaveamac/fuse-3ds',
     license='MIT',
@@ -21,6 +21,7 @@ setup(
     description='FUSE Filesystem Python scripts for Nintendo 3DS files',
     long_description=readme,
     long_description_content_type='text/markdown',
+    package_data={'fuse3ds': ['*.ico']},
     classifiers=[
         'Topic :: Utilities',
         'License :: OSI Approved :: MIT License',
@@ -30,7 +31,7 @@ setup(
     ],
     install_requires=['pycryptodomex'],
     # fusepy should be added here once the main repo has a new release with Windows support.
-    extras_require={'gui': ['appJar']},
+    extras_require={'gui': ['appJar>=0.93']},
     entry_points={'console_scripts': ['fuse3ds = fuse3ds.main:gui',
                                       # not putting in gui_scripts since the cmd window is required and trying to
                                       # remove it breaks some other stuff with subprocess management ?!?
