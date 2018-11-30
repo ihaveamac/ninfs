@@ -1,14 +1,16 @@
+#!/usr/bin/env python3
+
 # This file is a part of fuse-3ds.
 #
 # Copyright (c) 2017-2018 Ian Burgwin
 # This file is licensed under The MIT License (MIT).
 # You can find the full license text in LICENSE.md in the root of this project.
 
-#!/usr/bin/env python3
-
 from importlib import import_module
-from os.path import basename, dirname, realpath
-from sys import exit, argv, path, platform, hexversion, version_info, stderr
+from inspect import cleandoc
+from os import environ, makedirs
+from os.path import basename, dirname, expanduser, join as pjoin, realpath
+from sys import exit, argv, path, platform, hexversion, version_info
 
 windows = platform in {'win32', 'cygwin'}
 
@@ -84,6 +86,37 @@ def mount(mount_type: str, return_doc: bool = False) -> int:
     except RuntimeError as e:
         if e.args == (1,):
             pass  # assuming failed to mount and the reason would be displayed in the terminal
+
+
+def create_desktop_entry(prefix: str = None):
+    desktop_file = cleandoc('''
+    [Desktop Entry]
+    Name=fuse-3ds
+    Comment=Mount Nintendo 3DS contents
+    Exec=python3 -mfuse3ds gui
+    Terminal=true
+    Type=Application
+    Icon=fuse3ds
+    Categories=Utility;
+    ''')
+    if not prefix:
+        home = expanduser('~')
+        prefix = environ.get('XDG_DATA_HOME', pjoin(home, '.local', 'share'))
+
+    app_dir = pjoin(prefix, 'applications')
+    makedirs(app_dir, exist_ok=True)
+
+    with open(pjoin(app_dir, 'fuse3ds.desktop'), 'w', encoding='utf-8') as o:
+        print('Writing', o.name)
+        o.write(desktop_file)
+
+    for s in ('1024x1024', '128x128', '64x64', '32x32', '16x16'):
+        img_dir = pjoin(prefix, 'icons', 'hicolor', s, 'apps')
+        makedirs(img_dir, exist_ok=True)
+        with open(pjoin(dirname(__file__), 'data', s + '.png'), 'rb') as i, \
+                open(pjoin(img_dir, 'fuse3ds.png'), 'wb') as o:
+            print('Writing', o.name)
+            o.write(i.read())
 
 
 def main():

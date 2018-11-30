@@ -21,7 +21,7 @@ setup(
     description='FUSE Filesystem Python scripts for Nintendo 3DS files',
     long_description=readme,
     long_description_content_type='text/markdown',
-    package_data={'fuse3ds': ['*.ico']},
+    package_data={'fuse3ds': ['data/*.png', 'data/*.ico']},
     classifiers=[
         'Topic :: Utilities',
         'License :: OSI Approved :: MIT License',
