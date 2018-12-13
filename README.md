@@ -51,7 +51,7 @@ Python does not have to be installed, but [WinFsp](http://www.secfs.net/winfsp/d
   * With GUI support: `py -3 -m pip install --upgrade https://github.com/ihaveamac/fuse-3ds/archive/master.zip#egg=fuse-3ds[gui]`
 
 ### macOS
-A standalone application bundle with a GUI is available for use. You can download the DMG from [GitHub](https://github.com/ihaveamac/fuse-3ds/releases).
+A standalone application bundle with a GUI is available for use. OS X 10.9.5 Mavericks or later is required. You can download the DMG from [GitHub](https://github.com/ihaveamac/fuse-3ds/releases).
 
 Python does not have to be installed, but [FUSE for macOS](https://osxfuse.github.io/) is still required.
 
