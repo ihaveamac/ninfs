@@ -102,7 +102,7 @@ class Keyslot(IntEnum):
 
 BOOT9_PROT_HASH = '7331f7edece3dd33f2ab4bd0b3a5d607229fd19212c10b734cedcaf78c1a7b98'
 
-DEV_COMMON_KEY_0 = bytes.fromhex('85215E96CB95A9ECA4B4DE601CB562C7')
+DEV_COMMON_KEY_0 = bytes.fromhex('55A3F872BDC80C555A654381139E153B')
 
 common_key_y = (
     # eShop
