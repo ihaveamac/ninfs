@@ -59,7 +59,7 @@ setup(
                                       'mount_nanddsi = fuse3ds.main:main',
                                       'mount_nandswitch = fuse3ds.main:main',
                                       'mount_nds = fuse3ds.main:main']},
-    ext_modules=[Extension('fuse3ds.hac.ccrypto', sources=['fuse3ds/hac/ccrypto.cpp', 'fuse3ds/hac/aes.cpp'],
+    ext_modules=[Extension('fuse3ds.hac._crypto', sources=['fuse3ds/hac/_crypto.cpp', 'fuse3ds/hac/aes.cpp'],
                            extra_compile_args=['/Ox' if sys.platform == 'win32' else '-O3',
                                                '' if sys.platform == 'win32' else '-std=c++11'])]
 )

@@ -204,7 +204,7 @@ def main(prog: str = None, args: list = None):
     with open(a.nand, 'r+b') as f, open(a.keys, 'r', encoding='utf-8') as k:
         mount = NANDImageMount(nand_fp=f, g_stat=nand_stat, keys=k.read(), readonly=a.ro)
         if _c.macos or _c.windows:
-            opts['fstypename'] = 'NAND'
+            opts['fstypename'] = 'HACFS'
             # assuming / is the path separator since macos. but if windows gets support for this,
             #   it will have to be done differently.
             if _c.macos:

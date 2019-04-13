@@ -488,9 +488,9 @@ static void load_lcrypto() {
     PySys_WriteStdout("Found and using openssl lib.\n");
 }
 
-static struct PyModuleDef ccrypto_module = {
+static struct PyModuleDef _crypto_module = {
     PyModuleDef_HEAD_INIT,
-    "ccrypto",
+    "_crypto",
     NULL,
     -1,
     NULL,
@@ -500,13 +500,13 @@ static struct PyModuleDef ccrypto_module = {
     unload_lcrypto,
 };
 
-PyMODINIT_FUNC PyInit_ccrypto(void) {
+PyMODINIT_FUNC PyInit__crypto(void) {
     load_lcrypto();
     PyObject *m;
     if (PyType_Ready(&XTSNType) < 0)
         return NULL;
 
-    m = PyModule_Create(&ccrypto_module);
+    m = PyModule_Create(&_crypto_module);
     if (m == NULL)
         return NULL;
 

@@ -244,7 +244,7 @@ def main(prog: str = None, args: list = None):
     with open(a.nand, f'r{"" if a.ro else "+"}b') as f:
         mount = TWLNandImageMount(nand_fp=f, g_stat=nand_stat, consoleid=a.console_id, cid=a.cid, readonly=a.ro)
         if _c.macos or _c.windows:
-            opts['fstypename'] = 'DSiFS'
+            opts['fstypename'] = 'TWLFS'
             # assuming / is the path separator since macos. but if windows gets support for this,
             #   it will have to be done differently.
             if _c.macos:

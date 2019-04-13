@@ -470,7 +470,7 @@ def main(prog: str = None, args: list = None):
         # noinspection PyTypeChecker
         mount = NANDImageMount(nand_fp=f, dev=a.dev, g_stat=nand_stat, readonly=a.ro, otp=a.otp, cid=a.cid)
         if _c.macos or _c.windows:
-            opts['fstypename'] = 'NAND'
+            opts['fstypename'] = 'CTRFS'
             # assuming / is the path separator since macos. but if windows gets support for this,
             #   it will have to be done differently.
             if _c.macos:

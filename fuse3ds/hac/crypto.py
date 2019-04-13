@@ -12,10 +12,10 @@ if TYPE_CHECKING:
 
 try:
     # noinspection PyProtectedMember
-    from .ccrypto import XTSN
+    from ._crypto import XTSN
 except ImportError:
     try:
-        from ccrypto import XTSN
+        from _crypto import XTSN
     except ImportError:
         exit("Couldn't load ccrypto. The extension needs to be compiled.")
 
