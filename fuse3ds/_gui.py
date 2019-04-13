@@ -174,8 +174,9 @@ CCI = 'CTR Cart Image (".3ds", ".cci")'
 CDN = 'CDN contents ("cetk", "tmd", and contents)'
 CIA = 'CTR Importable Archive (".cia")'
 EXEFS = 'Executable Filesystem (".exefs", "exefs.bin")'
-NAND = 'NAND backup ("nand.bin")'
-NANDDSI = 'Nintendo DSi NAND backup ("nand_dsi.bin")'
+NANDCTR = 'NAND backup ("nand.bin")'
+NANDTWL = 'Nintendo DSi NAND backup ("nand_dsi.bin")'
+NANDHAC = 'Nintendo Switch NAND backup ("rawnand.bin")'
 NCCH = 'NCCH (".cxi", ".cfa", ".ncch", ".app")'
 ROMFS = 'Read-only Filesystem (".romfs", "romfs.bin")'
 SD = 'SD Card Contents ("Nintendo 3DS" from SD)'
@@ -183,16 +184,18 @@ SRL = 'Nintendo DS ROM image (".nds", ".srl")'
 THREEDSX = '3DSX Homebrew (".3dsx")'
 TITLEDIR = 'Titles directory ("title" from NAND or SD)'
 
-mount_types = {CCI: 'cci', CDN: 'cdn', CIA: 'cia', EXEFS: 'exefs', NAND: 'nand', NANDDSI: 'nanddsi', NCCH: 'ncch',
-               ROMFS: 'romfs', SD: 'sd', SRL: 'srl', THREEDSX: 'threedsx', TITLEDIR: 'titledir'}
+mount_types = {CCI: 'cci', CDN: 'cdn', CIA: 'cia', EXEFS: 'exefs', NANDCTR: 'nandctr', NANDHAC: 'nandhac',
+               NANDTWL: 'nandtwl', NCCH: 'ncch', ROMFS: 'romfs', SD: 'sd', SRL: 'srl', THREEDSX: 'threedsx',
+               TITLEDIR: 'titledir'}
 
 mount_types_rv: 'Dict[str, str]' = {y: x for x, y in mount_types.items()}
 
-ctr_types = (CCI, CDN, CIA, EXEFS, NAND, NCCH, ROMFS, SD, THREEDSX, TITLEDIR)
-twl_types = (NANDDSI, SRL)
+ctr_types = (CCI, CDN, CIA, EXEFS, NANDCTR, NCCH, ROMFS, SD, THREEDSX, TITLEDIR)
+twl_types = (NANDTWL, SRL)
+hac_types = (NANDHAC,)
 types_list = ctr_types + twl_types
 
-types_requiring_b9 = {CCI, CDN, CIA, NAND, NCCH, SD, TITLEDIR}
+types_requiring_b9 = {CCI, CDN, CIA, NANDCTR, NCCH, SD, TITLEDIR}
 
 if windows:
     from ctypes import windll
@@ -342,7 +345,7 @@ def press(button: str):
 
         if windows:
             if app.getRadioButton('mountpoint-choice') == 'Drive letter':
-                if mount_type in {NAND, NANDDSI}:
+                if mount_type in {NANDCTR, NANDHAC, NANDTWL}:
                     res = app.okBox(
                         'fuse-3ds Warning',
                         'You chose drive letter when using the NAND mount.\n'
@@ -399,16 +402,26 @@ def press(button: str):
                     app.enableButton(MOUNT)
                     return
                 extra_args.extend(('--dec-key', key))
-        elif mount_type == NAND:
-            otp = app.getEntry(NAND + 'otp')
-            aw = app.getCheckBox(NAND + 'aw')
+        elif mount_type == NANDCTR:
+            otp = app.getEntry(NANDCTR + 'otp')
+            aw = app.getCheckBox(NANDCTR + 'aw')
             if otp:
                 extra_args.extend(('--otp', otp))
             if not aw:
                 extra_args.append('-r')
-        elif mount_type == NANDDSI:
-            consoleid = app.getEntry(NANDDSI + 'consoleid')
-            aw = app.getCheckBox(NANDDSI + 'aw')
+        elif mount_type == NANDHAC:
+            bis = app.getEntry(NANDHAC + 'bis')
+            aw = app.getCheckBox(NANDHAC + 'aw')
+            if not bis:
+                app.warningBox('fuse-3ds Error', 'BIS keys are required.')
+                app.enableButton(MOUNT)
+                return
+            extra_args.extend(('--keys', bis))
+            if not aw:
+                extra_args.append('-r')
+        elif mount_type == NANDTWL:
+            consoleid = app.getEntry(NANDTWL + 'consoleid')
+            aw = app.getCheckBox(NANDTWL + 'aw')
             if consoleid:
                 if consoleid.lower().startswith('fw'):
                     app.warningBox('fuse-3ds Error', 'A real Console ID does not start with FW. '
@@ -550,40 +563,56 @@ def change_type(*_):
                 app.addLabel(EXEFS + LABEL3, 'Options', row=3, column=0)
                 app.addNamedCheckBox('Decompress .code', EXEFS + 'decompress', row=3, column=1, colspan=1)
 
-        elif mount_type == NAND:
-            with app.frame(NAND, row=1, colspan=3):
-                app.addLabel(NAND + LABEL1, FILE, row=0, column=0)
-                app.addFileEntry(NAND + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
-                app.setEntryDefault(NAND + ITEM, DRAGFILE)
+        elif mount_type == NANDCTR:
+            with app.frame(NANDCTR, row=1, colspan=3):
+                app.addLabel(NANDCTR + LABEL1, FILE, row=0, column=0)
+                app.addFileEntry(NANDCTR + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
+                app.setEntryDefault(NANDCTR + ITEM, DRAGFILE)
 
-                app.addLabel(NAND + LABEL2, 'OTP file*', row=2, column=0)
-                app.addFileEntry(NAND + 'otp', row=2, column=1, colspan=2).theButton.config(text=BROWSE)
-                app.setEntryDefault(NAND + 'otp', DRAGFILE)
+                app.addLabel(NANDCTR + LABEL2, 'OTP file*', row=2, column=0)
+                app.addFileEntry(NANDCTR + 'otp', row=2, column=1, colspan=2).theButton.config(text=BROWSE)
+                app.setEntryDefault(NANDCTR + 'otp', DRAGFILE)
 
-                app.addLabel(NAND + 'label4', '*Not required if backup has essential.exefs from GodMode9.', row=3,
+                app.addLabel(NANDCTR + 'label4', '*Not required if backup has essential.exefs from GodMode9.', row=3,
                              colspan=3)
 
-                app.addLabel(NAND + 'label5', 'Options', row=4, column=0)
-                app.addNamedCheckBox('Allow writing', NAND + 'aw', row=4, column=1, colspan=1)
+                app.addLabel(NANDCTR + 'label5', 'Options', row=4, column=0)
+                app.addNamedCheckBox('Allow writing', NANDCTR + 'aw', row=4, column=1, colspan=1)
 
                 if has_dnd:
-                    app.setEntryDropTarget(NAND + 'otp', make_dnd_entry_check(NAND + 'otp'))
+                    app.setEntryDropTarget(NANDCTR + 'otp', make_dnd_entry_check(NANDCTR + 'otp'))
 
-        elif mount_type == NANDDSI:
-            with app.frame(NANDDSI, row=1, colspan=3):
-                app.addLabel(NANDDSI + LABEL1, FILE, row=0, column=0)
-                app.addFileEntry(NANDDSI + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
-                app.setEntryDefault(NANDDSI + ITEM, DRAGFILE)
+        elif mount_type == NANDHAC:
+            with app.frame(NANDHAC, row=1, colspan=3):
+                app.addLabel(NANDHAC + LABEL1, FILE, row=0, column=0)
+                app.addFileEntry(NANDHAC + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
+                app.setEntryDefault(NANDHAC + ITEM, DRAGFILE)
 
-                app.addLabel(NANDDSI + LABEL2, 'Console ID*', row=2, column=0)
-                app.addEntry(NANDDSI + 'consoleid', row=2, column=1, colspan=2)
-                app.setEntryDefault(NANDDSI + 'consoleid', 'If required, input Console ID as hexstring')
+                app.addLabel(NANDHAC + LABEL2, 'BIS Keys', row=2, column=0)
+                app.addFileEntry(NANDHAC + 'bis', row=2, column=1, colspan=2).theButton.config(text=BROWSE)
+                app.setEntryDefault(NANDHAC + 'bis', DRAGFILE)
 
-                app.addLabel(NANDDSI + LABEL3, '*Not required if backup has nocash footer with ConsoleID/CID.', row=3,
+                app.addLabel(NANDHAC + LABEL3, 'Options', row=4, column=0)
+                app.addNamedCheckBox('Allow writing', NANDHAC + 'aw', row=4, column=1, colspan=1)
+
+                if has_dnd:
+                    app.setEntryDropTarget(NANDHAC + 'bis', make_dnd_entry_check(NANDHAC + 'bis'))
+
+        elif mount_type == NANDTWL:
+            with app.frame(NANDTWL, row=1, colspan=3):
+                app.addLabel(NANDTWL + LABEL1, FILE, row=0, column=0)
+                app.addFileEntry(NANDTWL + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
+                app.setEntryDefault(NANDTWL + ITEM, DRAGFILE)
+
+                app.addLabel(NANDTWL + LABEL2, 'Console ID*', row=2, column=0)
+                app.addEntry(NANDTWL + 'consoleid', row=2, column=1, colspan=2)
+                app.setEntryDefault(NANDTWL + 'consoleid', 'If required, input Console ID as hexstring')
+
+                app.addLabel(NANDTWL + LABEL3, '*Not required if backup has nocash footer with ConsoleID/CID.', row=3,
                              colspan=3)
 
-                app.addLabel(NANDDSI + 'label4', 'Options', row=5, column=0)
-                app.addNamedCheckBox('Allow writing', NANDDSI + 'aw', row=5, column=1, colspan=1)
+                app.addLabel(NANDTWL + 'label4', 'Options', row=5, column=0)
+                app.addNamedCheckBox('Allow writing', NANDTWL + 'aw', row=5, column=1, colspan=1)
 
         elif mount_type == NCCH:
             with app.frame(NCCH, row=1, colspan=3):
@@ -740,7 +769,7 @@ def change_type(*_):
         except ItemLookupError:
             pass
 
-        if mount_type in {NAND, NANDDSI} and windows:
+        if mount_type in {NANDCTR, NANDHAC, NANDTWL} and windows:
             app.setRadioButton('mountpoint-choice', 'Directory')
 
 
@@ -816,7 +845,8 @@ except Exception as e:
 
 app.changeOptionBox('TYPE', (f'- Choose a type{" or drag a file/directory here" if has_dnd else ""} -',
                              '- Nintendo 3DS -', *ctr_types,
-                             '- Nintendo DS / DSi -', *twl_types))
+                             '- Nintendo DS / DSi -', *twl_types,
+                             '- Nintendo Switch -', *hac_types),)
 
 with app.frame('default', row=1, colspan=3):
     app.setSticky(EASTWEST)

@@ -14,7 +14,7 @@ def _():
     import _gui
     import fmt_detect
     import reg_shell
-    from mount import _common, cci, cdn, cia, exefs, nand, nanddsi, ncch, romfs, sd, srl, threedsx, titledir
+    from mount import _common, cci, cdn, cia, exefs, nandctr, nandtwl, ncch, romfs, sd, srl, threedsx, titledir
     from pyctr.types import crypto, exefs, ncch, romfs, smdh, tmd, util
 
 

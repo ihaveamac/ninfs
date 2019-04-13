@@ -101,20 +101,20 @@ Windows users can use a drive letter like `F:` as a mountpoint, or use `*` and a
   `mount_cia game.cia mountpoint`
 * Mount an ExeFS:  
   `mount_exefs exefs.bin mountpoint`
-* Mount a NAND backup with `essential.exefs` embedded:    
-  `mount_nand nand.bin mountpoint`
-* Mount a NAND backup with an OTP file (Counter is automatically generated):  
-  `mount_nand --otp otp.bin nand.bin mountpoint`
-* Mount a NAND backup with OTP and CID files:  
-  `mount_nand --otp otp.bin --cid nand_cid.bin nand.bin mountpoint`
-* Mount a NAND backup with OTP file and a CID hexstring:  
-  `mount_nand --otp otp.bin --cid 7468616E6B7334636865636B696E6721 nand.bin mountpoint`
+* Mount a 3DS NAND backup with `essential.exefs` embedded:    
+  `mount_nandctr nand.bin mountpoint`
+* Mount a 3DS NAND backup with an OTP file (Counter is automatically generated):  
+  `mount_nandctr --otp otp.bin nand.bin mountpoint`
+* Mount a 3DS NAND backup with OTP and CID files:  
+  `mount_nandctr --otp otp.bin --cid nand_cid.bin nand.bin mountpoint`
+* Mount a 3DS NAND backup with OTP file and a CID hexstring:  
+  `mount_nandctr --otp otp.bin --cid 7468616E6B7334636865636B696E6721 nand.bin mountpoint`
 * Mount a DSi NAND backup (Counter is automatically generated):  
-  `mount_nanddsi --console-id 4E696E74656E646F nand_dsi.bin mountpoint`
+  `mount_nandtwl --console-id 4E696E74656E646F nand_dsi.bin mountpoint`
 * Mount a DSi NAND backup with a Console ID hexstring and specified CID hexstring:  
-  `mount_nanddsi --console-id 4E696E74656E646F --cid 576879446F657344536945786973743F nand_dsi.bin mountpoint`
+  `mount_nandtwl --console-id 4E696E74656E646F --cid 576879446F657344536945786973743F nand_dsi.bin mountpoint`
 * Mount a DSi NAND backup with a Console ID file and specified CID file:  
-  `mount_nanddsi --console-id ConsoleID.bin --cid CID.bin nand_dsi.bin mountpoint`
+  `mount_nandtwl --console-id ConsoleID.bin --cid CID.bin nand_dsi.bin mountpoint`
 * Mount an NCCH container (.app, .cxi, .cfa, .ncch):  
   `mount_ncch content.cxi mountpoint`
 * Mount a RomFS:  
@@ -133,7 +133,10 @@ Windows users can use a drive letter like `F:` as a mountpoint, or use `*` and a
 * [OSFMount](https://www.osforensics.com/tools/mount-disk-images.html) for Windows can mount FAT12/FAT16 partitions in NAND backups.
 
 # License/Credits
-`fuse3ds` is under the MIT license. fusepy is under the ISC license ([taken from `setup.py`](https://github.com/fusepy/fusepy/blob/b5f87a1855119d55c755c2c4c8b1da346365629d/setup.py)).
+* `fuse3ds` is under the MIT license.
+  * `fuse.py` is under the ISC license ([taken from `setup.py`](https://github.com/fusepy/fusepy/blob/b5f87a1855119d55c755c2c4c8b1da346365629d/setup.py)).
+  * `hac/aes.cpp` and `hac/aes.hpp` are from @openluopworld's [aes_128](https://github.com/openluopworld/aes_128) commit `b5b7f55`, and uses the MIT License.
+  * `hac/ccrypto.cpp` AES-XTS part is by @luigoalma, based on @plutooo's [crypto module](https://gist.github.com/plutooo/fd4b22e7f533e780c1759057095d7896); Python module implementation by me(@ihaveamac).
 
 Special thanks to @Stary2001 for help with NAND crypto (especially TWL), and @d0k3 for SD crypto.
 

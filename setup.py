@@ -2,7 +2,7 @@
 
 import sys
 
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages, Extension
 
 if sys.hexversion < 0x030601f0:
     sys.exit('Python 3.6.1+ is required.')
@@ -39,8 +39,9 @@ setup(
                                       'mount_cdn = fuse3ds.main:main',
                                       'mount_cia = fuse3ds.main:main',
                                       'mount_exefs = fuse3ds.main:main',
-                                      'mount_nand = fuse3ds.main:main',
-                                      'mount_nanddsi = fuse3ds.main:main',
+                                      'mount_nandctr = fuse3ds.main:main',
+                                      'mount_nandtwl = fuse3ds.main:main',
+                                      'mount_nandhac = fuse3ds.main:main',
                                       'mount_ncch = fuse3ds.main:main',
                                       'mount_romfs = fuse3ds.main:main',
                                       'mount_sd = fuse3ds.main:main',
@@ -54,5 +55,11 @@ setup(
                                       'mount_csu = fuse3ds.main:main',
                                       'mount_cxi = fuse3ds.main:main',
                                       'mount_cfa = fuse3ds.main:main',
-                                      'mount_nds = fuse3ds.main:main',]}
+                                      'mount_nand = fuse3ds.main:main',
+                                      'mount_nanddsi = fuse3ds.main:main',
+                                      'mount_nandswitch = fuse3ds.main:main',
+                                      'mount_nds = fuse3ds.main:main']},
+    ext_modules=[Extension('fuse3ds.hac.ccrypto', sources=['fuse3ds/hac/ccrypto.cpp', 'fuse3ds/hac/aes.cpp'],
+                           extra_compile_args=['/Ox' if sys.platform == 'win32' else '-O3',
+                                               '' if sys.platform == 'win32' else '-std=c++11'])]
 )

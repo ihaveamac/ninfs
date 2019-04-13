@@ -13,3 +13,6 @@ docs-build/
 *.txt
 pyctr-test.py
 build_*.py
+*.so
+*.pyd
+*.dll

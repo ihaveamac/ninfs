@@ -16,9 +16,10 @@ windows = platform in {'win32', 'cygwin'}
 
 python_cmd = 'py -3' if windows else 'python3'
 
-mount_types = ('cci', 'cdn', 'cia', 'exefs', 'nand', 'nanddsi', 'ncch', 'romfs', 'sd', 'srl', 'threedsx', 'titledir')
+mount_types = ('cci', 'cdn', 'cia', 'exefs', 'nandctr', 'nandhac', 'nandtwl', 'ncch', 'romfs', 'sd', 'srl', 'threedsx',
+               'titledir')
 mount_aliases = {'3ds': 'cci', '3dsx': 'threedsx', 'app': 'ncch', 'csu': 'cci', 'cxi': 'ncch', 'cfa': 'ncch',
-                 'nds': 'srl'}
+                 'nand': 'nandctr', 'nandswitch': 'nandhac', 'nanddsi': 'nandtwl',  'nds': 'srl'}
 
 _path = dirname(realpath(__file__))
 if _path not in path:
