@@ -30,7 +30,7 @@ from .exefs import ExeFSMount
 nand_size = {0x200000: 0x3AF00000, 0x280000: 0x4D800000}
 
 
-class NANDImageMount(LoggingMixIn, Operations):
+class CTRNandImageMount(LoggingMixIn, Operations):
     fd = 0
 
     _essentials_mounted = False
@@ -468,7 +468,7 @@ def main(prog: str = None, args: list = None):
 
     with open(a.nand, f'r{"" if a.ro else "+"}b') as f:
         # noinspection PyTypeChecker
-        mount = NANDImageMount(nand_fp=f, dev=a.dev, g_stat=nand_stat, readonly=a.ro, otp=a.otp, cid=a.cid)
+        mount = CTRNandImageMount(nand_fp=f, dev=a.dev, g_stat=nand_stat, readonly=a.ro, otp=a.otp, cid=a.cid)
         if _c.macos or _c.windows:
             opts['fstypename'] = 'CTRFS'
             # assuming / is the path separator since macos. but if windows gets support for this,

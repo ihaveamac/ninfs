@@ -29,7 +29,7 @@ bis_key_ids = defaultdict(lambda: -1, {
 })
 
 
-class NANDImageMount(LoggingMixIn, Operations):
+class HACNandImageMount(LoggingMixIn, Operations):
     fd = 0
 
     def __init__(self, nand_fp: 'BinaryIO', g_stat: os.stat_result, keys: str, readonly: bool = False):
@@ -202,7 +202,7 @@ def main(prog: str = None, args: list = None):
     nand_stat = os.stat(a.nand)
 
     with open(a.nand, 'r+b') as f, open(a.keys, 'r', encoding='utf-8') as k:
-        mount = NANDImageMount(nand_fp=f, g_stat=nand_stat, keys=k.read(), readonly=a.ro)
+        mount = HACNandImageMount(nand_fp=f, g_stat=nand_stat, keys=k.read(), readonly=a.ro)
         if _c.macos or _c.windows:
             opts['fstypename'] = 'HACFS'
             # assuming / is the path separator since macos. but if windows gets support for this,
