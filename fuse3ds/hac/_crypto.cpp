@@ -9,7 +9,9 @@
 #include <Python.h>
 
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <mutex>
 #include <inttypes.h>
 
 extern "C" {
@@ -19,20 +21,12 @@ extern "C" {
 #if defined _WIN16 || defined _WIN32 || defined _WIN64
 #include <windows.h>
 typedef HMODULE DYHandle;
-#ifdef _WIN64
-#define LIBCRYPTO "libcrypto-1_1-x64.dll"
-#else
-#define LIBCRYPTO "libcrypto-1_1.dll"
-#endif
+#define PATH_MAX MAX_PATH
 #elif defined __linux__ || (defined __APPLE__ && defined __MACH__)
+#include <limits.h>
 #include <dlfcn.h>
 typedef void* DYHandle;
 #define WINAPI
-#ifdef __linux__
-#define LIBCRYPTO "libcrypto.so"
-#else
-#define LIBCRYPTO "libcrypto.dylib"
-#endif
 #endif
 
 typedef uint8_t u8;
@@ -93,7 +87,17 @@ class DynamicHelper {
 public:
     inline bool LoadLib(const char *name) {
         #if defined _WIN16 || defined _WIN32 || defined _WIN64
-        handle = LoadLibraryExA(name, NULL, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
+        int length = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, name, -1, NULL, 0);
+        if(!length) return false;
+        wchar_t *path = (wchar_t * )calloc(length * sizeof(wchar_t), 1);
+        if(!path) return false;
+        length = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, name, -1, path, length);
+        if(!length) {
+            free(path);
+            return false;
+        }
+        handle = LoadLibraryExW(path, NULL, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
+        free(path);
         #elif defined __linux__ || (defined __APPLE__ && defined __MACH__)
         handle = dlopen(name, RTLD_NOW);
         #endif
@@ -115,6 +119,56 @@ public:
         *ptr = (void*)GetProcAddress(handle, name);
         #elif defined __linux__ || (defined __APPLE__ && defined __MACH__)
         *ptr = dlsym(handle, name);
+        #endif
+    }
+    static std::string GetPathByAddress(const void* addr) {
+        #if defined _WIN16 || defined _WIN32 || defined _WIN64
+        DYHandle _handle = 0;
+        if(!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR)addr, &_handle))
+            return std::string("");
+        wchar_t *wpath = (wchar_t * )calloc(PATH_MAX * sizeof(wchar_t), 1);
+        if(!wpath) {
+            free(wpath);
+            return std::string("");
+        }
+        if(!GetModuleFileNameW(_handle, wpath, PATH_MAX)) {
+            free(wpath);
+            return std::string("");
+        }
+        int length = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wpath, PATH_MAX, NULL, 0, NULL, NULL);
+        if(!length) {
+            free(wpath);
+            return std::string("");
+        }
+        char *path = (char * )calloc(length, 1);
+        if(!path) {
+            free(wpath);
+            return std::string("");
+        }
+        length = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wpath, PATH_MAX, path, length, NULL, NULL);
+        free(wpath);
+        if(!length) {
+            free(path);
+            return std::string("");
+        }
+        std::string outpath(path);
+        free(path);
+        auto found = outpath.find_last_of("/\\");
+        if(found == std::string::npos) return std::string("");
+        return std::string(outpath.substr(0, found + 1));
+        #elif defined __linux__ || (defined __APPLE__ && defined __MACH__)
+        Dl_info info;
+        if(!dladdr(addr, &info)) return std::string("");
+        if(!info.dli_fname) return std::string("");
+        char* path = realpath(info.dli_fname, NULL);
+        if(!path) return std::string("");
+        std::string outpath(path);
+        free(path);
+        auto found = outpath.find_last_of("/");
+        if(found == std::string::npos) return std::string("");
+        return std::string(outpath.substr(0, found + 1));
+        #else
+        return std::string("");
         #endif
     }
     inline bool HasHandle() {return handle != NULL;}
@@ -456,36 +510,82 @@ static void unload_lcrypto(void* unused) {
 
 static void load_lcrypto() {
     if(!lib_to_load) return;
-    lib_to_load = false;
-    if(!lcrypto.LoadLib(LIBCRYPTO)) return;
-    lcrypto.GetFunctionPtr("EVP_CIPHER_CTX_new", (void**)&EVP_CIPHER_CTX_new);
-    lcrypto.GetFunctionPtr("EVP_aes_128_ecb", (void**)&EVP_aes_128_ecb);
-    lcrypto.GetFunctionPtr("EVP_CipherInit_ex", (void**)&EVP_CipherInit_ex);
-    lcrypto.GetFunctionPtr("EVP_CIPHER_CTX_key_length", (void**)&EVP_CIPHER_CTX_key_length);
-    lcrypto.GetFunctionPtr("EVP_CIPHER_CTX_set_padding", (void**)&EVP_CIPHER_CTX_set_padding);
-    lcrypto.GetFunctionPtr("EVP_CipherUpdate", (void**)&EVP_CipherUpdate);
-    lcrypto.GetFunctionPtr("EVP_CipherFinal_ex", (void**)&EVP_CipherFinal_ex);
-    lcrypto.GetFunctionPtr("EVP_CIPHER_CTX_free", (void**)&EVP_CIPHER_CTX_free);
-    lcrypto.GetFunctionPtr("OpenSSL_version_num", (void**)&OpenSSL_version_num);
+    static std::recursive_mutex loadlock;
+    #if (defined _WIN16 || defined _WIN32) && !defined _WIN64
+    static const char* const names[] = {
+        "libcrypto-1_1.dll", "libcrypto.dll"
+    };
+    #elif defined _WIN64
+    static const char* const names[] = {
+        "libcrypto-1_1-x64.dll", "libcrypto-x64.dll", "libcrypto-1_1.dll", "libcrypto.dll"
+    };
+    #elif defined __linux__
+    static const char* const names[] = {
+        "libcrypto.so.1.1", "libcrypto.so"
+    };
+    #elif defined __APPLE__ && defined __MACH__
+    static const char* const names[] = {
+        "libcrypto.1.1.dylib", "libcrypto.dylib"
+    };
+    #else
+    static const char* const names[] = {};
+    #endif
+    loadlock.lock();
+    bool found = false;
+    try {
+        std::string *paths[2] = {nullptr, nullptr};
+        std::string modulepath("");
+        try {
+            modulepath = std::move(DynamicHelper::GetPathByAddress((const void * )&load_lcrypto));
+            paths[0] = &modulepath;
+        } catch(...) {}
+        for(size_t i = 0; !found && i < (sizeof(paths) / sizeof(paths[0])); i++) {
+            try {
+                for(size_t j = 0; !found && j < (sizeof(names) / sizeof(names[0])); j++) {
+                    if(paths[i]) {
+                        if(!lcrypto.LoadLib((*paths[i] + names[j]).c_str())) continue;
+                    } else {
+                        if(!lcrypto.LoadLib(names[j])) continue;
+                    }
+                    lcrypto.GetFunctionPtr("EVP_CIPHER_CTX_new", (void**)&EVP_CIPHER_CTX_new);
+                    lcrypto.GetFunctionPtr("EVP_aes_128_ecb", (void**)&EVP_aes_128_ecb);
+                    lcrypto.GetFunctionPtr("EVP_CipherInit_ex", (void**)&EVP_CipherInit_ex);
+                    lcrypto.GetFunctionPtr("EVP_CIPHER_CTX_key_length", (void**)&EVP_CIPHER_CTX_key_length);
+                    lcrypto.GetFunctionPtr("EVP_CIPHER_CTX_set_padding", (void**)&EVP_CIPHER_CTX_set_padding);
+                    lcrypto.GetFunctionPtr("EVP_CipherUpdate", (void**)&EVP_CipherUpdate);
+                    lcrypto.GetFunctionPtr("EVP_CipherFinal_ex", (void**)&EVP_CipherFinal_ex);
+                    lcrypto.GetFunctionPtr("EVP_CIPHER_CTX_free", (void**)&EVP_CIPHER_CTX_free);
+                    lcrypto.GetFunctionPtr("OpenSSL_version_num", (void**)&OpenSSL_version_num);
 
-    if(!EVP_CIPHER_CTX_new || !EVP_aes_128_ecb || !EVP_CipherInit_ex ||
-      !EVP_CIPHER_CTX_key_length || !EVP_CIPHER_CTX_set_padding ||
-      !EVP_CipherUpdate || !EVP_CipherFinal_ex || !EVP_CIPHER_CTX_free ||
-      !OpenSSL_version_num) {
-        lcrypto.Unload();
-        return;
+                    if(!EVP_CIPHER_CTX_new || !EVP_aes_128_ecb || !EVP_CipherInit_ex ||
+                      !EVP_CIPHER_CTX_key_length || !EVP_CIPHER_CTX_set_padding ||
+                      !EVP_CipherUpdate || !EVP_CipherFinal_ex || !EVP_CIPHER_CTX_free ||
+                      !OpenSSL_version_num) {
+                        lcrypto.Unload();
+                        continue;
+                    }
+
+                    //check at bare minimum, 1.1, any variant
+                    if(OpenSSL_version_num() < 0x10100000LU) {
+                        lcrypto.Unload();
+                        PySys_WriteStderr("[HAC] Found openssl lib, but below version 1.1.\n      Not using\n");
+                        continue;
+                    }
+                    found = true;
+                }
+            } catch(...) {
+                lcrypto.Unload();
+            }
+        }
+    } catch(...) {}
+
+    if(found) {
+        XTSN_methods[0].ml_meth = (PyCFunction)py_xtsn_openssl_decrypt;
+        XTSN_methods[1].ml_meth = (PyCFunction)py_xtsn_openssl_encrypt;
+        PySys_WriteStdout("[HAC] Found and using openssl lib.\n");
+        lib_to_load = false;
     }
-
-    //check at bare minimum, 1.1, any variant
-    if(OpenSSL_version_num() < 0x10100000LU) {
-        lcrypto.Unload();
-        PySys_WriteStderr("Found openssl lib, but below version 1.1.\nNot using\n");
-        return;
-    }
-
-    XTSN_methods[0].ml_meth = (PyCFunction)py_xtsn_openssl_decrypt;
-    XTSN_methods[1].ml_meth = (PyCFunction)py_xtsn_openssl_encrypt;
-    PySys_WriteStdout("Found and using openssl lib.\n");
+    loadlock.unlock();
 }
 
 static struct PyModuleDef _crypto_module = {
