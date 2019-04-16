@@ -253,7 +253,6 @@ int (WINAPI *EVP_CipherInit_ex)(void*, void*, void*, const void*, void*, int) = 
 int (WINAPI *EVP_CIPHER_CTX_key_length)(void*) = NULL;
 void (WINAPI *EVP_CIPHER_CTX_set_padding)(void*, int) = NULL;
 int (WINAPI *EVP_CipherUpdate)(void*, void*, int*, const void*, int) = NULL;
-int (WINAPI *EVP_CipherFinal_ex)(void*, void*, int*) = NULL;
 void (WINAPI *EVP_CIPHER_CTX_free)(void*) = NULL;
 unsigned long (WINAPI *OpenSSL_version_num)() = NULL;
 
@@ -270,7 +269,7 @@ bool openssl_crypt(const u8* key, const u8* data, u8* out) {
         if(EVP_CIPHER_CTX_key_length(ctx) != 16) break;
         EVP_CIPHER_CTX_set_padding(ctx, 0);
         int foo;
-        if(!EVP_CipherUpdate(ctx, out, &foo, data, 16) && !EVP_CipherFinal_ex(ctx, out + foo, &foo)) break;
+        if(!EVP_CipherUpdate(ctx, out, &foo, data, 16)) break;
         ret = true;
     } while(0);
     EVP_CIPHER_CTX_free(ctx);
@@ -530,7 +529,11 @@ static void load_lcrypto() {
     #else
     static const char* const names[] = {};
     #endif
-    loadlock.lock();
+    try {loadlock.lock();} catch(...) {return;}
+    if(!lib_to_load) {
+        loadlock.unlock();
+        return;
+    }
     bool found = false;
     try {
         std::string *paths[2] = {nullptr, nullptr};
@@ -553,14 +556,12 @@ static void load_lcrypto() {
                     lcrypto.GetFunctionPtr("EVP_CIPHER_CTX_key_length", (void**)&EVP_CIPHER_CTX_key_length);
                     lcrypto.GetFunctionPtr("EVP_CIPHER_CTX_set_padding", (void**)&EVP_CIPHER_CTX_set_padding);
                     lcrypto.GetFunctionPtr("EVP_CipherUpdate", (void**)&EVP_CipherUpdate);
-                    lcrypto.GetFunctionPtr("EVP_CipherFinal_ex", (void**)&EVP_CipherFinal_ex);
                     lcrypto.GetFunctionPtr("EVP_CIPHER_CTX_free", (void**)&EVP_CIPHER_CTX_free);
                     lcrypto.GetFunctionPtr("OpenSSL_version_num", (void**)&OpenSSL_version_num);
 
                     if(!EVP_CIPHER_CTX_new || !EVP_aes_128_ecb || !EVP_CipherInit_ex ||
                       !EVP_CIPHER_CTX_key_length || !EVP_CIPHER_CTX_set_padding ||
-                      !EVP_CipherUpdate || !EVP_CipherFinal_ex || !EVP_CIPHER_CTX_free ||
-                      !OpenSSL_version_num) {
+                      !EVP_CipherUpdate || !EVP_CIPHER_CTX_free || !OpenSSL_version_num) {
                         lcrypto.Unload();
                         continue;
                     }
