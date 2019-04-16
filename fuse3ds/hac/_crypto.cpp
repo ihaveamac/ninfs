@@ -270,7 +270,7 @@ bool openssl_crypt(const u8* key, const u8* data, u8* out) {
         if(EVP_CIPHER_CTX_key_length(ctx) != 16) break;
         EVP_CIPHER_CTX_set_padding(ctx, 0);
         int foo;
-        if(!EVP_CipherUpdate(ctx, out, &foo, data, 16) && !EVP_CipherFinal_ex(ctx, out + foo, &foo)) break;
+        if(!EVP_CipherUpdate(ctx, out, &foo, data, 16)) break;
         ret = true;
     } while(0);
     EVP_CIPHER_CTX_free(ctx);
@@ -530,7 +530,11 @@ static void load_lcrypto() {
     #else
     static const char* const names[] = {};
     #endif
-    loadlock.lock();
+    try {loadlock.lock();} catch(...) {return;}
+    if(!lib_to_load) {
+        loadlock.unlock();
+        return;
+    }
     bool found = false;
     try {
         std::string *paths[2] = {nullptr, nullptr};
