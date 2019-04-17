@@ -1,4 +1,4 @@
-# This file is a part of fuse-3ds.
+# This file is a part of ninfs.
 #
 # Copyright (c) 2017-2019 Ian Burgwin
 # This file is licensed under The MIT License (MIT).
@@ -14,11 +14,15 @@ import winreg
 # these do not use winreg due to administrator access being required.
 base = r'''Windows Registry Editor Version 5.00
 
-[HKEY_CLASSES_ROOT\*\shell\Mount with fuse-3ds\command]
+[HKEY_CLASSES_ROOT\*\shell\Mount with ninfs\command]
 @="\"{exec}\" {extra} gui \"%1\""
+
+[-HKEY_CLASSES_ROOT\*\shell\Mount with fuse-3ds]
 '''
 
 base_del = r'''Windows Registry Editor Version 5.00
+
+[-HKEY_CLASSES_ROOT\*\shell\Mount with ninfs]
 
 [-HKEY_CLASSES_ROOT\*\shell\Mount with fuse-3ds]
 '''
@@ -26,7 +30,7 @@ base_del = r'''Windows Registry Editor Version 5.00
 
 def call_regedit(data: str):
     # this does not use winreg due to administrator access being required.
-    t = NamedTemporaryFile('w', delete=False, encoding='cp1252', suffix='-fuse3ds.reg')
+    t = NamedTemporaryFile('w', delete=False, encoding='cp1252', suffix='-ninfs.reg')
     try:
         t.write(data)
         t.close()  # need to close so regedit can open it

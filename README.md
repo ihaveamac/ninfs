@@ -1,9 +1,27 @@
-# fuse-3ds
-fuse-3ds is the best and most efficient way to extract data for Nintendo 3DS games and NANDs. It works by presenting a virtual filesystem with the contents of your games, NAND, or SD card contents, and you can browse and copy out just the files that you need.
+# ninfs
+ninfs (formerly fuse-3ds) is a FUSE program to extract data from Nintendo game consoles. It works by presenting a virtual filesystem with the contents of your games, NAND, or SD card contents, and you can browse and copy out just the files that you need.
 
 Windows, macOS, and Linux are supported.
 
-<p align="center"><img src="https://github.com/ihaveamac/fuse-3ds/raw/master/resources/ciamount-mac.png" width="882"></p>
+<p align="center"><img src="https://github.com/ihaveamac/ninfs/raw/master/resources/ciamount-mac.png" width="882"></p>
+
+## Supported types
+* Nintendo 3DS:
+  * CTR Cart Image (".3ds", ".cci")
+  * CDN contents ("cetk", "tmd", and contents)
+  * CTR Importable Archive (".cia")
+  * Executable Filesystem (".exefs", "exefs.bin")
+  * Nintendo 3DS NAND backup ("nand.bin")
+  * NCCH (".cxi", ".cfa", ".ncch", ".app")
+  * Read-only Filesystem (".romfs", "romfs.bin")
+  * SD Card Contents ("Nintendo 3DS" from SD)
+  * 3DSX Homebrew (".3dsx")
+  * Titles directory ("title" from NAND or SD)
+* Nintendo DS / DSi
+  * Nintendo DSi NAND backup ("nand_dsi.bin")
+  * Nintendo DS ROM image (".nds", ".srl")
+* Nintendo Switch
+  * Nintendo Switch NAND backup ("rawnand.bin")
 
 ## Example uses
 * Mount a NAND backup and browse CTRNAND, TWLNAND, and others, and write back to them without having to extract and decrypt them first.
@@ -11,7 +29,7 @@ Windows, macOS, and Linux are supported.
 * Extract a game's files out of a CIA, CCI (".3ds"), NCCH, RomFS, raw CDN contents, just by mounting them and browsing its files. Or use the virtual decrypted file and start playing the game in [Citra](https://citra-emu.org) right away.
 
 ## Setup
-The ARM9 bootROM is required. You can dump it using boot9strap, which can be set up by [3DS Hacks Guide](https://3ds.hacks.guide). It is checked in order of:
+For 3DS types, The ARM9 bootROM is required. You can dump it using boot9strap, which can be set up by [3DS Hacks Guide](https://3ds.hacks.guide). It is checked in order of:
 * `BOOT9_PATH` environment variable (if set)
 * `%APPDATA%\3ds\boot9.bin` (Windows-specific)
 * `~/Library/Application Support/3ds/boot9.bin` (macOS-specific)
@@ -38,20 +56,20 @@ Python 3.6.1+ and pycryptodomex are required. appJar is required for the GUI.
 ### Windows
 Windows 7 or later is required.
 
-A standalone executable with a GUI is available for use. You can get a single executable for download from [GitHub](https://github.com/ihaveamac/fuse-3ds/releases) or the [GBAtemp Download Center](https://gbatemp.net/download/fuse-3ds.34706/) A window will appear allowing you to choose mount options easily.
+A standalone executable with a GUI is available for use. You can get a single executable for download from [GitHub](https://github.com/ihaveamac/ninfs/releases) or the [GBAtemp Download Center](https://gbatemp.net/download/ninfs.34706/) A window will appear allowing you to choose mount options easily.
 
 Python does not have to be installed, but [WinFsp](http://www.secfs.net/winfsp/download/) is still required.
 
-<p align="center"><img src="https://github.com/ihaveamac/fuse-3ds/raw/master/resources/mainwindow-win.png"></p>
+<p align="center"><img src="https://github.com/ihaveamac/ninfs/raw/master/resources/mainwindow-win.png"></p>
 
 #### Install with existing Python
 * Install the latest version of [Python 3](https://www.python.org/downloads/). The x86-64 version is preferred on 64-bit Windows.
 * Install the latest version of [WinFsp](http://www.secfs.net/winfsp/download/).
-* Install fuse-3ds with `py -3 -m pip install --upgrade https://github.com/ihaveamac/fuse-3ds/archive/master.zip`.
-  * With GUI support: `py -3 -m pip install --upgrade https://github.com/ihaveamac/fuse-3ds/archive/master.zip#egg=fuse-3ds[gui]`
+* Install ninfs with `py -3 -m pip install --upgrade https://github.com/ihaveamac/ninfs/archive/master.zip`.
+  * With GUI support: `py -3 -m pip install --upgrade https://github.com/ihaveamac/ninfs/archive/master.zip#egg=ninfs[gui]`
 
 ### macOS
-A standalone application bundle with a GUI is available for use. OS X 10.9.5 Mavericks or later is required. You can download the DMG from [GitHub](https://github.com/ihaveamac/fuse-3ds/releases).
+A standalone application bundle with a GUI is available for use. OS X 10.9.5 Mavericks or later is required. You can download the DMG from [GitHub](https://github.com/ihaveamac/ninfs/releases).
 
 Python does not have to be installed, but [FUSE for macOS](https://osxfuse.github.io/) is still required.
 
@@ -60,26 +78,26 @@ Versions of macOS supported by Apple are highly recommended. Mac OS X Snow Leopa
 
 * Install the latest version of Python 3. The recommended way is [Homebrew](https://brew.sh). You can also use an installer from [python.org](https://www.python.org/downloads/) or a tool like [pyenv](https://github.com/pyenv/pyenv).
 * Install the latest version of [FUSE for macOS](https://github.com/osxfuse/osxfuse/releases/latest).
-* Install fuse-3ds with `python3 -m pip install --upgrade https://github.com/ihaveamac/fuse-3ds/archive/master.zip`.
-  * With GUI support: `python3 -m pip install --upgrade https://github.com/ihaveamac/fuse-3ds/archive/master.zip#egg=fuse-3ds[gui]`
+* Install ninfs with `python3 -m pip install --upgrade https://github.com/ihaveamac/ninfs/archive/master.zip`.
+  * With GUI support: `python3 -m pip install --upgrade https://github.com/ihaveamac/ninfs/archive/master.zip#egg=ninfs[gui]`
 
 ### Linux
-* Arch Linux: fuse-3ds is available in the AUR: [normal](https://aur.archlinux.org/packages/fuse-3ds/), [with gui](https://aur.archlinux.org/packages/fuse-3ds-gui/), [git](https://aur.archlinux.org/packages/fuse-3ds-git/), [git with gui](https://aur.archlinux.org/packages/fuse-3ds-gui-git/)
+* Arch Linux: ninfs is available in the AUR: [normal](https://aur.archlinux.org/packages/ninfs/), [with gui](https://aur.archlinux.org/packages/ninfs-gui/), [git](https://aur.archlinux.org/packages/ninfs-git/), [git with gui](https://aur.archlinux.org/packages/ninfs-gui-git/)
 * Recent distributions should have Python 3.6.1 or later pre-installed, or included in its repositories. If not, you can use an extra repository (e.g. [deadsnakes's PPA](https://launchpad.net/%7Edeadsnakes/+archive/ubuntu/ppa) for Ubuntu), [build from source](https://www.python.org/downloads/source/), or use a tool like [pyenv](https://github.com/pyenv/pyenv).
 * Most distributions should have fuse enabled/installed by default. Use your package manager if it isn't.
-* Install fuse-3ds with `python3 -m pip install --upgrade --user https://github.com/ihaveamac/fuse-3ds/archive/master.zip`.
+* Install ninfs with `python3 -m pip install --upgrade --user https://github.com/ihaveamac/ninfs/archive/master.zip`.
   * `--user` is not needed if you are using a virtual environment.
-  * With GUI support: `python3 -m pip install --upgrade --user https://github.com/ihaveamac/fuse-3ds/archive/master.zip#egg=fuse-3ds[gui]`
-* You can add a desktop entry with `python3 -m fuse3ds --install-desktop-entry`. If you want to install to a location other than the default (`$XDG_DATA_HOME`), you can add another argument with a path like `/usr/local/share`.
+  * With GUI support: `python3 -m pip install --upgrade --user https://github.com/ihaveamac/ninfs/archive/master.zip#egg=ninfs[gui]`
+* You can add a desktop entry with `python3 -m ninfs --install-desktop-entry`. If you want to install to a location other than the default (`$XDG_DATA_HOME`), you can add another argument with a path like `/usr/local/share`.
 
 ## Usage
 ### Graphical user interface
-A GUI can be used, if fuse-3ds was installed with GUI support, by specifying the type to be `gui` (e.g. Windows: `py -3 -mfuse3ds gui`, \*nix: `python3 -mfuse3ds gui`). The GUI controls mounting and unmounting.
+A GUI can be used, if ninfs was installed with GUI support, by specifying the type to be `gui` (e.g. Windows: `py -3 -mninfs gui`, \*nix: `python3 -mninfs gui`). The GUI controls mounting and unmounting.
 
 ### Command line
 The main way to run a mount script after installing is using "`mount_<type>`" (e.g. `mount_cci game.3ds mountpoint`). Use `-h` to view arguments for a script.
 
-If it doesn't work, the other way is to use `<python-cmd> -mfuse3ds <type>` (e.g. Windows: `py -3 -mfuse3ds cci game.3ds mountpoint`, \*nix: `python3 -mfuse3ds cci game.3ds mountpoint`).
+If it doesn't work, the other way is to use `<python-cmd> -mninfs <type>` (e.g. Windows: `py -3 -mninfs cci game.3ds mountpoint`, \*nix: `python3 -mninfs cci game.3ds mountpoint`).
 
 Windows users can use a drive letter like `F:` as a mountpoint, or use `*` and a drive letter will be automatically chosen.
 

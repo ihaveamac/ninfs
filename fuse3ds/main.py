@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# This file is a part of fuse-3ds.
+# This file is a part of ninfs.
 #
 # Copyright (c) 2017-2019 Ian Burgwin
 # This file is licensed under The MIT License (MIT).
@@ -28,7 +28,7 @@ if _path not in path:
 from __init__ import __version__ as version
 
 # this should stay as str.format so it runs on older versions
-print('fuse-3ds v{} - https://github.com/ihaveamac/fuse-3ds'.format(version))
+print('ninfs v{} - https://github.com/ihaveamac/ninfs'.format(version))
 
 if hexversion < 0x030601F0:
     exit('Python {0[0]}.{0[1]}.{0[2]} is not supported. Please use Python 3.6.1 or later.'.format(version_info))
@@ -92,12 +92,12 @@ def mount(mount_type: str, return_doc: bool = False) -> int:
 def create_desktop_entry(prefix: str = None):
     desktop_file = cleandoc('''
     [Desktop Entry]
-    Name=fuse-3ds
-    Comment=Mount Nintendo 3DS contents
+    Name=ninfs
+    Comment=Mount Nintendo contents
     Exec=python3 -mfuse3ds gui
     Terminal=true
     Type=Application
-    Icon=fuse3ds
+    Icon=ninfs
     Categories=Utility;
     ''')
     if not prefix:
@@ -107,7 +107,7 @@ def create_desktop_entry(prefix: str = None):
     app_dir = pjoin(prefix, 'applications')
     makedirs(app_dir, exist_ok=True)
 
-    with open(pjoin(app_dir, 'fuse3ds.desktop'), 'w', encoding='utf-8') as o:
+    with open(pjoin(app_dir, 'ninfs.desktop'), 'w', encoding='utf-8') as o:
         print('Writing', o.name)
         o.write(desktop_file)
 
@@ -115,7 +115,7 @@ def create_desktop_entry(prefix: str = None):
         img_dir = pjoin(prefix, 'icons', 'hicolor', s, 'apps')
         makedirs(img_dir, exist_ok=True)
         with open(pjoin(dirname(__file__), 'data', s + '.png'), 'rb') as i, \
-                open(pjoin(img_dir, 'fuse3ds.png'), 'wb') as o:
+                open(pjoin(img_dir, 'ninfs.png'), 'wb') as o:
             print('Writing', o.name)
             o.write(i.read())
 

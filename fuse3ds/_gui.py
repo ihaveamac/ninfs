@@ -1,4 +1,4 @@
-# This file is a part of fuse-3ds.
+# This file is a part of ninfs.
 #
 # Copyright (c) 2017-2019 Ian Burgwin
 # This file is licensed under The MIT License (MIT).
@@ -95,6 +95,7 @@ with suppress(KeyError):
 home = expanduser('~')
 
 # dir to copy to if chosen to copy boot9/seeddb in gui
+# config_dir is fuse-3ds because it is the previous name of this project, maybe later I'll support a new ninfs dir
 if windows:
     target_dir: str = pjoin(environ.get('APPDATA'), '3ds')
     config_dir: str = pjoin(environ.get('APPDATA'), 'fuse-3ds')
@@ -215,11 +216,11 @@ if windows:
         res = windll.user32.MessageBoxW(None, (
             'This is being run with the wrong Python executable.\n'
             'This should be installed as a module, then run using the py launcher on Python 3.6.1 or later.\n\n'
-            'Click OK to open the fuse-3ds repository on GitHub:\n'
-            'https://github.com/ihaveamac/fuse-3ds'),
-                                        'fuse-3ds', 0x00000010 | 0x00000001)
+            'Click OK to open the ninfs repository on GitHub:\n'
+            'https://github.com/ihaveamac/ninfs'),
+                                        'ninfs', 0x00000010 | 0x00000001)
         if res == 1:
-            webbrowser.open('https://github.com/ihaveamac/fuse-3ds')
+            webbrowser.open('https://github.com/ihaveamac/ninfs')
         exit(1)
 
 
@@ -252,7 +253,7 @@ if version_info[3] != 'final':
     pyver += f'{version_info[3][0]}{version_info[4]}'
 pybits = 64 if maxsize > 0xFFFFFFFF else 32
 
-app = gui('fuse-3ds v' + version, showIcon=False, handleArgs=False)
+app = gui('ninfs v' + version, showIcon=False, handleArgs=False)
 if windows:
     app.setIcon(pjoin(dirname(__file__), 'data', 'windows.ico'))
 
@@ -347,7 +348,7 @@ def press(button: str):
             if app.getRadioButton('mountpoint-choice') == 'Drive letter':
                 if mount_type in {NANDCTR, NANDHAC, NANDTWL}:
                     res = app.okBox(
-                        'fuse-3ds Warning',
+                        'ninfs Warning',
                         'You chose drive letter when using the NAND mount.\n'
                         '\n'
                         'Using a directory mount over a drive letter for NAND is highly '
@@ -394,11 +395,11 @@ def press(button: str):
                 try:
                     _res = bytes.fromhex(key)
                 except ValueError:
-                    app.warningBox('fuse-3ds Error', 'The given titlekey was not a valid hexstring.')
+                    app.warningBox('ninfs Error', 'The given titlekey was not a valid hexstring.')
                     app.enableButton(MOUNT)
                     return
                 if len(_res) != 16:
-                    app.warningBox('fuse-3ds Error', 'The given titlekey must be 32 characters.')
+                    app.warningBox('ninfs Error', 'The given titlekey must be 32 characters.')
                     app.enableButton(MOUNT)
                     return
                 extra_args.extend(('--dec-key', key))
@@ -413,7 +414,7 @@ def press(button: str):
             bis = app.getEntry(NANDHAC + 'bis')
             aw = app.getCheckBox(NANDHAC + 'aw')
             if not bis:
-                app.warningBox('fuse-3ds Error', 'BIS keys are required.')
+                app.warningBox('ninfs Error', 'BIS keys are required.')
                 app.enableButton(MOUNT)
                 return
             extra_args.extend(('--keys', bis))
@@ -424,18 +425,18 @@ def press(button: str):
             aw = app.getCheckBox(NANDTWL + 'aw')
             if consoleid:
                 if consoleid.lower().startswith('fw'):
-                    app.warningBox('fuse-3ds Error', 'A real Console ID does not start with FW. '
+                    app.warningBox('ninfs Error', 'A real Console ID does not start with FW. '
                                                      'It is a 16-character hexstring.')
                     app.enableButton(MOUNT)
                     return
                 try:
                     _res = bytes.fromhex(consoleid)
                 except ValueError:
-                    app.warningBox('fuse-3ds Error', 'The given Console ID was not a valid hexstring.')
+                    app.warningBox('ninfs Error', 'The given Console ID was not a valid hexstring.')
                     app.enableButton(MOUNT)
                     return
                 if len(_res) != 8:
-                    app.warningBox('fuse-3ds Error', 'The given Console ID must be 16 characters.')
+                    app.warningBox('ninfs Error', 'The given Console ID must be 16 characters.')
                     app.enableButton(MOUNT)
                     return
                 extra_args.extend(('--console-id', consoleid))
@@ -445,7 +446,7 @@ def press(button: str):
             movable = app.getEntry(SD + 'movable')
             aw = app.getCheckBox(SD + 'aw')
             if not movable:
-                app.warningBox('fuse-3ds Error', 'A movable.sed is required.')
+                app.warningBox('ninfs Error', 'A movable.sed is required.')
                 app.enableButton(MOUNT)
                 return
             extra_args.extend(('--movable', movable))
@@ -715,7 +716,7 @@ def change_type(*_):
                             app.hideLabelFrame('Advanced options')
 
                     def choose_debug_location(_):
-                        path: str = app.saveBox(fileName='fuse3ds.log', dirName=pjoin(home, 'Desktop'),
+                        path: str = app.saveBox(fileName='ninfs.log', dirName=pjoin(home, 'Desktop'),
                                                 fileTypes=(),
                                                 fileExt='.log')
                         if path:
@@ -789,7 +790,7 @@ with app.frame('loading', row=1, colspan=3):
 
 
 def show_unknowntype(path: str):
-    app.warningBox('fuse-3ds Error',
+    app.warningBox('ninfs Error',
                    "The type of the given file couldn't be detected."
                    "If you know it is a compatibile file, choose the "
                    "correct type and file an issue on GitHub if it works.\n\n"
@@ -870,7 +871,7 @@ def select_seeddb(sw):
     path: str = app.openBox(title='Choose SeedDB', fileTypes=())
     if path:
         if getsize(path) % 0x10:
-            app.warningBox('fuse-3ds Error',
+            app.warningBox('ninfs Error',
                            'The size for the selected SeedDB is not aligned to 0x10.')
             # shouldn't be calling this directly but i seem to have encounered a bug with parent=
             # noinspection PyProtectedMember
@@ -882,7 +883,7 @@ def select_seeddb(sw):
             makedirs(target_dir, exist_ok=True)
             with open(target, 'wb') as o:
                 o.write(data)
-            app.infoBox('fuse-3ds', 'SeedDB was copied to:\n\n' + target)
+            app.infoBox('ninfs', 'SeedDB was copied to:\n\n' + target)
             seeddb_found = target
             with suppress(ItemLookupError):
                 app.hideLabel('no-seeddb')
@@ -905,7 +906,7 @@ if not b9_found or not seeddb_found:
                 path: str = app.openBox(title='Choose boot9', fileTypes=(), parent='no-b9')
                 if path:
                     if getsize(path) not in {0x8000, 0x10000}:
-                        app.warningBox('fuse-3ds Error',
+                        app.warningBox('ninfs Error',
                                        'The size for the selected boot9 match is not 0x8000 or 0x10000.')
                         # shouldn't be calling this directly but i seem to have encounered a bug with parent=
                         # noinspection PyProtectedMember
@@ -916,7 +917,7 @@ if not b9_found or not seeddb_found:
                         try:
                             fn = b9_hashes[sha256(data).hexdigest()]
                         except KeyError:
-                            app.warningBox('fuse-3ds Error', 'boot9 hash did not match. Please re-dump boot9.')
+                            app.warningBox('ninfs Error', 'boot9 hash did not match. Please re-dump boot9.')
                             # noinspection PyProtectedMember
                             app._bringToFront(sw)
                             return
@@ -924,7 +925,7 @@ if not b9_found or not seeddb_found:
                         makedirs(target_dir, exist_ok=True)
                         with open(target, 'wb') as o:
                             o.write(data)
-                        app.infoBox('fuse-3ds', 'boot9 was copied to:\n\n' + target)
+                        app.infoBox('ninfs', 'boot9 was copied to:\n\n' + target)
                         b9_found = target
                         app.hideLabel('no-b9')
                         app.hideButton('fix-b9')
@@ -934,7 +935,7 @@ if not b9_found or not seeddb_found:
                         app.hideSubWindow('no-b9')
 
 
-            with app.subWindow('no-b9', 'fuse-3ds Error', modal=True) as sw:
+            with app.subWindow('no-b9', 'ninfs Error', modal=True) as sw:
                 app.addLabel('boot9 was not found. It is needed for encryption.\n'
                              'Mount types that use encryption have been disabled.\n'
                              '\n'
@@ -955,7 +956,7 @@ if not b9_found or not seeddb_found:
             app.addNamedButton('Fix SeedDB', 'fix-seeddb', lambda _: app.showSubWindow('no-seeddb'), row=PV,
                                column=2)
 
-            with app.subWindow('no-seeddb', 'fuse-3ds Error', modal=True) as sw:
+            with app.subWindow('no-seeddb', 'ninfs Error', modal=True) as sw:
                 app.addLabel('SeedDB was not found. It is needed for encryption\n'
                              'of newer digital titles.\n'
                              '\n'
@@ -980,19 +981,19 @@ app.setResizable(False)
 
 # failed to mount subwindow
 def show_mounterror():
-    app.warningBox('fuse-3ds Error', 'Failed to mount. Please check the output.')
+    app.warningBox('ninfs Error', 'Failed to mount. Please check the output.')
 
 
 # exited with error subwindow
 def show_exiterror(errcode: int):
-    app.warningBox('fuse-3ds Error',
+    app.warningBox('ninfs Error',
                    f'The mount process exited with an error code ({errcode}). Please check the output.')
 
 
 # failed to mount to directory subwindow
 if windows:
     def show_mounterror_dir_win():
-        app.warningBox('fuse-3ds Error',
+        app.warningBox('ninfs Error',
                        'Failed to mount to the given mount point.\n'
                        'Please make sure the directory is empty or does not exist.')
 
@@ -1001,14 +1002,14 @@ def show_extras():
     try:
         app.showSubWindow('extras')
     except ItemLookupError:
-        with app.subWindow('extras', 'fuse-3ds Extras', modal=True, blocking=False) as sw:
+        with app.subWindow('extras', 'ninfs Extras', modal=True, blocking=False) as sw:
             app.setSticky(EASTWEST)
             with app.labelFrame('Settings'):
                 def checkbox_update(name: str):
                     if name == 'update-check':
                         option = app.getCheckBox('update-check')
                         if not write_config('update', 'update', 'check_updates_online', option):
-                            app.errorBox('fuse-3ds Error', 'Failed to write to config. Is the path read-only? '
+                            app.errorBox('ninfs Error', 'Failed to write to config. Is the path read-only? '
                                                            'Check the output for more details.')
 
                 app.addNamedCheckBox('Check for updates at launch', 'update-check')
@@ -1054,7 +1055,7 @@ def show_extras():
             app.setResizable(False)
 
         app.setSticky(EASTWEST)
-        with app.subWindow('about', 'fuse-3ds', modal=True, blocking=False):
+        with app.subWindow('about', 'ninfs', modal=True, blocking=False):
             app.setSticky(EASTWEST)
             if windows:
                 _ver = win32_ver()
@@ -1075,13 +1076,13 @@ def show_extras():
                 os_ver = ''
             if os_ver:
                 os_ver += '\n'
-            app.addMessage('about-msg', f'fuse-3ds v{version}\n'
+            app.addMessage('about-msg', f'ninfs v{version}\n'
                                         f'Running on Python {pyver} {pybits}-bit\n'
                                         f'{os_ver}'
                                         f'\n'
-                                        f'fuse-3ds is released under the MIT license.', colspan=4)
+                                        f'ninfs is released under the MIT license.', colspan=4)
             app.setMessageAspect('about-msg', 500)
-            app.addWebLink('View fuse-3ds on GitHub', 'https://github.com/ihaveamac/fuse-3ds', colspan=4)
+            app.addWebLink('View ninfs on GitHub', 'https://github.com/ihaveamac/ninfs', colspan=4)
             app.addLabel('These libraries are used in the project:', colspan=4)
             app.addWebLink('appJar', 'https://github.com/jarvisteach/appJar')
             app.addWebLink('PyCryptodome', 'https://github.com/Legrandin/pycryptodome', row=PV, column=1)
@@ -1097,10 +1098,10 @@ def show_extras():
                 elif button == 'Remove entry':
                     del_reg()
 
-            with app.subWindow('ctxmenu-window', 'fuse-3ds', modal=True):
+            with app.subWindow('ctxmenu-window', 'ninfs', modal=True):
                 msg = (
                     'A new entry can be added to the Windows context menu when you right-click on a file, providing an '
-                    'easy way to mount various files in Windows Explorer using fuse-3ds.\n'
+                    'easy way to mount various files in Windows Explorer using ninfs.\n'
                     '\n'
                     'This will modify the registry to add it.')
                 if _used_pyinstaller:
@@ -1115,16 +1116,16 @@ def show_extras():
 
 # file/directory not set error
 def show_noitemerror():
-    app.infoBox('fuse-3ds Error', 'Select a file or directory to mount.')
+    app.infoBox('ninfs Error', 'Select a file or directory to mount.')
 
 
 # mountpoint not set error
 def show_nomperror():
-    app.infoBox('fuse-3ds Error', 'Select an empty directory to be the mount point.')
+    app.infoBox('ninfs Error', 'Select an empty directory to be the mount point.')
 
 
 # failed to unmount subwindow
-with app.subWindow('unmounterror', 'fuse-3ds Error', modal=True, blocking=False):
+with app.subWindow('unmounterror', 'ninfs Error', modal=True, blocking=False):
     def unmount_ok(_):
         app.hideSubWindow('unmounterror')
         app.enableButton(UNMOUNT)
@@ -1152,14 +1153,14 @@ def main(_pyi=False, _allow_admin=False):
     except EnvironmentError:
         # TODO: probably check if this was really "Unable to find libfuse" (this is aliased to OSError)
         if windows:
-            res = app.yesNoBox('fuse-3ds',
+            res = app.yesNoBox('ninfs',
                                'Failed to import fusepy. WinFsp needs to be installed.\n\n'
                                'Would you like to open the WinFsp download page?\n'
                                'http://www.secfs.net/winfsp/download/')
             if res:
                 webbrowser.open('http://www.secfs.net/winfsp/download/')
         elif macos:
-            res = app.yesNoBox('fuse-3ds',
+            res = app.yesNoBox('ninfs',
                                'Failed to import fusepy. FUSE for macOS needs to be installed.\n\n'
                                'Would you like to open the FUSE for macOS download page?\n'
                                'https://osxfuse.github.io')
@@ -1172,7 +1173,7 @@ def main(_pyi=False, _allow_admin=False):
     if windows and not _allow_admin:
         isadmin: int = windll.shell32.IsUserAnAdmin()
         if isadmin and uac_enabled():
-            app.warningBox('fuse-3ds',
+            app.warningBox('ninfs',
                            'This should not be run as administrator.\n'
                            'The mount point may not be accessible by your account normally, '
                            'only by the administrator.\n\n'
@@ -1187,12 +1188,12 @@ def main(_pyi=False, _allow_admin=False):
                 app.queueFunction(app.stop)
             elif button == 'Ignore this update':
                 if not write_config('update', 'update', 'ignored_update', ver):
-                    app.errorBox('fuse-3ds Error', 'Failed to write to config. Is the path read-only? '
+                    app.errorBox('ninfs Error', 'Failed to write to config. Is the path read-only? '
                                                    'Check the output for more details.')
             app.destroySubWindow('update')
 
-        with app.subWindow('update', 'fuse-3ds Update', modal=True):
-            app.addLabel('update-label1', f'A new version of fuse-3ds is available. You have v{version}.')
+        with app.subWindow('update', 'ninfs Update', modal=True):
+            app.addLabel('update-label1', f'A new version of ninfs is available. You have v{version}.')
             app.addButtons(['Open release page', 'Ignore this update', 'Close'], update_press)
             with app.labelFrame(name):
                 app.addMessage('update-info', info)
@@ -1209,7 +1210,7 @@ def main(_pyi=False, _allow_admin=False):
             try:
                 print(f'UPDATE: Checking for updates... (Currently running v{version})')
                 ctx = SSLContext(PROTOCOL_TLSv1_2)
-                release_url = 'https://api.github.com/repos/ihaveamac/fuse-3ds/releases'
+                release_url = 'https://api.github.com/repos/ihaveamac/ninfs/releases'
                 current_ver: 'Version' = parse_version(version)
                 if not current_ver.is_prerelease:
                     release_url += '/latest'

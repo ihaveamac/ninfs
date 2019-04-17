@@ -1,4 +1,4 @@
-# This file is a part of fuse-3ds.
+# This file is a part of ninfs.
 #
 # Copyright (c) 2017-2019 Ian Burgwin
 # This file is licensed under The MIT License (MIT).

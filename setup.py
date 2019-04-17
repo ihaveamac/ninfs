@@ -20,14 +20,14 @@ else:
         libcrypto = 'libcrypto-1_1-x64.dll'
 
 setup(
-    name='fuse-3ds',
-    version='1.3.1',
+    name='ninfs',
+    version='1.4b1.dev0',
     packages=find_packages(),
-    url='https://github.com/ihaveamac/fuse-3ds',
+    url='https://github.com/ihaveamac/ninfs',
     license='MIT',
     author='Ian Burgwin',
     author_email='ian@ianburgwin.net',
-    description='FUSE Filesystem Python scripts for Nintendo 3DS files',
+    description='FUSE filesystem Python scripts for Nintendo console files',
     long_description=readme,
     long_description_content_type='text/markdown',
     package_data={'fuse3ds': ['data/*.png', 'data/*.ico'], 'fuse3ds.hac': ['openssl-license.txt', libcrypto]},

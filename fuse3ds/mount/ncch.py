@@ -1,4 +1,4 @@
-# This file is a part of fuse-3ds.
+# This file is a part of ninfs.
 #
 # Copyright (c) 2017-2019 Ian Burgwin
 # This file is licensed under The MIT License (MIT).
@@ -340,7 +340,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
             print('--------------------------------------------------',
                   'Warning: unknown file type (this should not happen!)',
                   'Please file an issue or contact the developer with the details below.',
-                  '  https://github.com/ihaveamac/fuse-3ds/issues',
+                  '  https://github.com/ihaveamac/ninfs/issues',
                   '--------------------------------------------------',
                   f'{path!r}: {pformat(fi)!r}', sep='\n')
 
