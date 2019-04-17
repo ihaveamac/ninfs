@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import platform
 import sys
 
 from setuptools import setup, find_packages, Extension
@@ -9,6 +10,14 @@ if sys.hexversion < 0x030601f0:
 
 with open('README.md', 'r', encoding='utf-8') as f:
     readme = f.read()
+
+if sys.platform == 'darwin':
+    libcrypto = 'libcrypto.1.1.dylib'
+else:
+    if platform.architecture()[0] == '32bit':
+        libcrypto = 'libcrypto-1_1.dll'
+    else:
+        libcrypto = 'libcrypto-1_1-x64.dll'
 
 setup(
     name='fuse-3ds',
@@ -21,7 +30,7 @@ setup(
     description='FUSE Filesystem Python scripts for Nintendo 3DS files',
     long_description=readme,
     long_description_content_type='text/markdown',
-    package_data={'fuse3ds': ['data/*.png', 'data/*.ico']},
+    package_data={'fuse3ds': ['data/*.png', 'data/*.ico'], 'fuse3ds.hac': ['openssl-license.txt', libcrypto]},
     classifiers=[
         'Topic :: Utilities',
         'License :: OSI Approved :: MIT License',
