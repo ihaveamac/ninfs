@@ -539,7 +539,7 @@ static void load_lcrypto() {
         std::string *paths[2] = {nullptr, nullptr};
         std::string modulepath("");
         try {
-            modulepath = std::move(DynamicHelper::GetPathByAddress((const void * )&load_lcrypto));
+            modulepath = DynamicHelper::GetPathByAddress((const void * )&load_lcrypto);
             paths[0] = &modulepath;
         } catch(...) {}
         for(size_t i = 0; !found && i < (sizeof(paths) / sizeof(paths[0])); i++) {
