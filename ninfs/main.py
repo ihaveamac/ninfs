@@ -38,7 +38,7 @@ def exit_print_types():
     print('Please provide a mount type as the first argument.')
     print(' ', ', '.join(mount_types))
     print()
-    print('Want to use a GUI? Use "gui" as the type! (e.g. {} -mfuse3ds gui)'.format(python_cmd))
+    print('Want to use a GUI? Use "gui" as the type! (e.g. {} -mninfs gui)'.format(python_cmd))
     exit(1)
 
 
@@ -94,7 +94,7 @@ def create_desktop_entry(prefix: str = None):
     [Desktop Entry]
     Name=ninfs
     Comment=Mount Nintendo contents
-    Exec=python3 -mfuse3ds gui
+    Exec=python3 -mninfs gui
     Terminal=true
     Type=Application
     Icon=ninfs
