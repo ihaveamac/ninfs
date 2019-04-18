@@ -12,12 +12,14 @@ with open('README.md', 'r', encoding='utf-8') as f:
     readme = f.read()
 
 if sys.platform == 'darwin':
-    libcrypto = 'libcrypto.1.1.dylib'
-else:
+    libcrypto = ['libcrypto.1.1.dylib']
+elif sys.platform == 'win32':
     if platform.architecture()[0] == '32bit':
-        libcrypto = 'libcrypto-1_1.dll'
+        libcrypto = ['libcrypto-1_1.dll']
     else:
-        libcrypto = 'libcrypto-1_1-x64.dll'
+        libcrypto = ['libcrypto-1_1-x64.dll']
+else:
+    libcrypto = []
 
 setup(
     name='ninfs',
@@ -30,7 +32,7 @@ setup(
     description='FUSE filesystem Python scripts for Nintendo console files',
     long_description=readme,
     long_description_content_type='text/markdown',
-    package_data={'ninfs': ['data/*.png', 'data/*.ico'], 'ninfs.hac': ['openssl-license.txt', libcrypto]},
+    package_data={'ninfs': ['data/*.png', 'data/*.ico'], 'ninfs.hac': ['openssl-license.txt'] + libcrypto},
     classifiers=[
         'Topic :: Utilities',
         'License :: OSI Approved :: MIT License',
