@@ -10,6 +10,7 @@ venv*/
 *.egg-info/
 __pycache__/
 docs-build/
+.DS_Store
 pyctr-test.py
 build_*.py
 *.so
