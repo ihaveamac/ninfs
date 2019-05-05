@@ -150,6 +150,10 @@ Windows users can use a drive letter like `F:` as a mountpoint, or use `*` and a
 * wwylele's [3ds-save-tool](https://github.com/wwylele/3ds-save-tool) can be used to extract game saves and extra data (DISA and DIFF, respectively).
 * [OSFMount](https://www.osforensics.com/tools/mount-disk-images.html) for Windows can mount FAT12/FAT16 partitions in NAND backups.
 
+## Related tools
+* Maschell's [fuse-wiiu](https://github.com/Maschell/fuse-wiiu) can be used to mount Wii U contents.
+* koolkdev's [wfslib](https://github.com/koolkdev/wfslib) has wfs-fuse to mount the Wii U mlc dumps and usb devices.
+
 # License/Credits
 * `ninfs` is under the MIT license.
   * `fuse.py` is under the ISC license ([taken from `setup.py`](https://github.com/fusepy/fusepy/blob/b5f87a1855119d55c755c2c4c8b1da346365629d/setup.py)).
