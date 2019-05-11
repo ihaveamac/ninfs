@@ -22,9 +22,10 @@ extern "C" {
 #include <windows.h>
 typedef HMODULE DYHandle;
 #define PATH_MAX MAX_PATH
-#elif defined __linux__ || (defined __APPLE__ && defined __MACH__)
+#else
 #include <limits.h>
 #include <dlfcn.h>
+#define __ldl__ 1
 typedef void* DYHandle;
 #define WINAPI
 #endif
@@ -98,7 +99,7 @@ public:
         }
         handle = LoadLibraryExW(path, NULL, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
         free(path);
-        #elif defined __linux__ || (defined __APPLE__ && defined __MACH__)
+        #elif defined __ldl__
         handle = dlopen(name, RTLD_NOW);
         #endif
         return handle != NULL;
@@ -107,7 +108,7 @@ public:
         if(handle) {
             #if defined _WIN16 || defined _WIN32 || defined _WIN64
             FreeLibrary(handle);
-            #elif defined __linux__ || (defined __APPLE__ && defined __MACH__)
+            #elif defined __ldl__
             dlclose(handle);
             #endif
             handle = 0;
@@ -117,7 +118,7 @@ public:
         *ptr = NULL;
         #if defined _WIN16 || defined _WIN32 || defined _WIN64
         *ptr = (void*)GetProcAddress(handle, name);
-        #elif defined __linux__ || (defined __APPLE__ && defined __MACH__)
+        #elif defined __ldl__
         *ptr = dlsym(handle, name);
         #endif
     }
@@ -156,7 +157,7 @@ public:
         auto found = outpath.find_last_of("/\\");
         if(found == std::string::npos) return std::string("");
         return std::string(outpath.substr(0, found + 1));
-        #elif defined __linux__ || (defined __APPLE__ && defined __MACH__)
+        #elif defined __ldl__
         Dl_info info;
         if(!dladdr(addr, &info)) return std::string("");
         if(!info.dli_fname) return std::string("");
@@ -518,13 +519,13 @@ static void load_lcrypto() {
     static const char* const names[] = {
         "libcrypto-1_1-x64.dll", "libcrypto-x64.dll", "libcrypto-1_1.dll", "libcrypto.dll"
     };
-    #elif defined __linux__
-    static const char* const names[] = {
-        "libcrypto.so.1.1", "libcrypto.so"
-    };
     #elif defined __APPLE__ && defined __MACH__
     static const char* const names[] = {
         "libcrypto.1.1.dylib", "libcrypto.dylib"
+    };
+    #elif defined __ldl__
+    static const char* const names[] = {
+        "libcrypto.so", "libcrypto.so.1.1", "libcrypto.so.111"
     };
     #else
     static const char* const names[] = {};
