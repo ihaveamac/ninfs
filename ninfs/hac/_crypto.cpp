@@ -213,7 +213,7 @@ public:
         *p->Hi() = PyLong_AsUnsignedLongLongMask(_hi);
         Py_DECREF(_hi);
 
-        return Py_CLEANUP_SUPPORTED;
+        return 1;
     }
 };
 
