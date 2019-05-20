@@ -148,6 +148,7 @@ Windows users can use a drive letter like `F:` as a mountpoint, or use `*` and a
 
 ## Useful tools
 * wwylele's [3ds-save-tool](https://github.com/wwylele/3ds-save-tool) can be used to extract game saves and extra data (DISA and DIFF, respectively).
+  * wwylele's [save3ds](https://github.com/wwylele/save3ds) is a FUSE mount for 3DS save files. Currently only supports macOS and Linux.
 * [OSFMount](https://www.osforensics.com/tools/mount-disk-images.html) for Windows can mount FAT12/FAT16 partitions in NAND backups.
 
 ## Related tools
