@@ -12,8 +12,8 @@ if TYPE_CHECKING:
 
 def detect_format(header: bytes) -> 'Optional[str]':
     """Attempt to detect the format of a file format based on the 0x200 header."""
-    if len(header) != 0x200:
-        raise RuntimeError('given header is not 0x200 bytes')
+    if len(header) not in {0x200, 0x400}:
+        raise RuntimeError('given header is not 0x200 or 0x400 bytes')
 
     magic_0x100 = header[0x100:0x104]
     if magic_0x100 == b'NCCH':
@@ -21,7 +21,7 @@ def detect_format(header: bytes) -> 'Optional[str]':
 
     elif magic_0x100 == b'NCSD':
         if header[0x108:0x110] == b'\0' * 8:
-            return 'nand'
+            return 'nandctr'
         else:
             return 'cci'
 
@@ -38,6 +38,12 @@ def detect_format(header: bytes) -> 'Optional[str]':
 
     elif header[0:4] == b'3DSX':
         return 'threedsx'
+
+    # Not entirely sure if this is always the same.
+    # https://dsibrew.org/wiki/Bootloader#Stage_2
+    elif header[0x220:0x240] == bytes.fromhex('00080000 10640200 00807B03 00660200 '
+                                              '006E0200 88750200 00807B03 00760200'):
+        return 'nandtwl'
 
     # exefs is last because it's the hardest to do
     # this should work with any official files

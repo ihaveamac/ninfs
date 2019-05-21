@@ -812,7 +812,7 @@ def detect_type(fn: str):
     # noinspection PyBroadException
     try:
         with open(fn, 'rb') as f:
-            mt = detect_format(f.read(0x200))
+            mt = detect_format(f.read(0x400))
             if mt is not None:
                 mount_type = mount_types_rv[mt]
             else:
@@ -1257,7 +1257,7 @@ def main(_pyi=False, _allow_admin=False):
         # noinspection PyBroadException
         try:
             with open(fn, 'rb') as f:
-                mt = detect_format(f.read(0x200))
+                mt = detect_format(f.read(0x400))
                 if mt is not None:
                     mount_type = mount_types_rv[mt]
                     to_use = mount_type
