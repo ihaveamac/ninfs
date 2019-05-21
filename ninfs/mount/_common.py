@@ -9,6 +9,7 @@ from argparse import ArgumentParser, SUPPRESS
 from errno import EROFS
 from functools import wraps
 from io import BufferedIOBase
+from os import stat
 from sys import exit, platform
 from typing import TYPE_CHECKING
 
@@ -166,3 +167,77 @@ class VirtualFileWrapper(BufferedIOBase):
     @_raise_if_closed
     def seekable(self) -> bool:
         return True
+
+
+class SplitFileHandler:
+    _fake_seek = 0
+    _seek_info = (0, 0)
+
+    def __init__(self, names):
+        self._files = []
+        curr_offset = 0
+        self._names = tuple(names)
+        for idx, f in enumerate(self._names):
+            s = stat(f)
+            self._files.append((idx, curr_offset, s.st_size))
+            curr_offset += s.st_size
+        self._total_size = curr_offset
+
+    def _calc_seek(self, pos):
+        for idx, info in enumerate(self._files):
+            if info[1] <= pos < info[1] + info[2]:
+                self._fake_seek = pos
+                self._seek_info = (idx, pos - info[1])
+                break
+
+    def seek(self, pos, whence=0):
+        if whence == 0:
+            if pos > self._seek_info:
+                raise ValueError('SplitFileHandler does not support expanding files')
+            elif pos < 0:
+                raise ValueError('negative seek value')
+            self._calc_seek(pos)
+        elif whence == 1:
+            if self._fake_seek + pos > self._total_size:
+                raise ValueError('SplitFileHandler does not support expanding files')
+            elif self._fake_seek - pos < 0:
+                pos = 0
+            self._calc_seek(self._fake_seek + pos)
+        elif whence == 2:
+            if pos > 0:
+                raise ValueError('SplitFileHandler does not support expanding files')
+            elif self._total_size + pos < 0:
+                pos = -self._total_size
+            self._calc_seek(self._total_size + pos)
+        else:
+            if isinstance(whence, int):
+                raise ValueError(f'whence value {whence} unsupported')
+            else:
+                raise TypeError(f'an integer is required (got type {type(whence).__name__})')
+        return self._fake_seek
+
+    def read(self, count=-1):
+        if count == -1:
+            count = self._total_size - count
+        if self._fake_seek + count > self._total_size:
+            count = self._total_size - self._fake_seek
+
+        left = count
+        curr = self._seek_info
+
+        full_data = []
+
+        while left:
+            info = self._files[curr[0]]
+            real_seek = self._fake_seek - info[1]
+            to_read = min(info[2] - real_seek, left)
+
+            with open(self._names[curr[0]], 'rb') as f:
+                f.seek(real_seek)
+                full_data.append(f.read(to_read))
+
+            self._fake_seek += to_read
+            curr = self._files[curr[0] + 1]
+            left -= to_read
+
+        return b''.join(full_data)
