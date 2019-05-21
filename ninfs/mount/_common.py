@@ -210,6 +210,9 @@ class SplitFileHandler(BufferedIOBase):
                 raise TypeError(f'an integer is required (got type {type(whence).__name__})')
         return self._fake_seek
 
+    def tell(self):
+        return self._fake_seek
+
     def read(self, count=-1):
         if count == -1:
             count = self._total_size - count
@@ -238,3 +241,26 @@ class SplitFileHandler(BufferedIOBase):
                 break  # EOF
 
         return b''.join(full_data)
+
+    def write(self, data: bytes):
+        left = len(data)
+        total = left
+        curr = self._seek_info
+
+        while left:
+            info = self._files[curr[0]]
+            real_seek = self._fake_seek - info[1]
+            to_write = min(info[2] - real_seek, left)
+
+            with open(self._names[curr[0]], 'rb+') as f:
+                f.seek(real_seek)
+                f.write(data[total - left:total - left + to_write])
+
+            self._fake_seek += to_write
+            try:
+                curr = self._files[curr[0] + 1]
+                left -= to_write
+            except IndexError:
+                break  # EOF
+
+        return total - left
