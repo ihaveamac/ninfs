@@ -411,6 +411,12 @@ def press(button: str):
             if not aw:
                 extra_args.append('-r')
         elif mount_type == NANDHAC:
+            try:
+                int(item[-2:])
+                # since int conversion succeded, assume this is a split file
+                extra_args.append('--split-files')
+            except ValueError:
+                pass
             bis = app.getEntry(NANDHAC + 'bis')
             aw = app.getCheckBox(NANDHAC + 'aw')
             if not bis:
@@ -593,7 +599,10 @@ def change_type(*_):
                 app.addFileEntry(NANDHAC + 'bis', row=2, column=1, colspan=2).theButton.config(text=BROWSE)
                 app.setEntryDefault(NANDHAC + 'bis', DRAGFILE)
 
-                app.addLabel(NANDHAC + LABEL3, 'Options', row=4, column=0)
+                app.addLabel(NANDCTR + LABEL3, 'Multi-part backups are supported (e.g. rawnand.bin.00)', row=3,
+                             colspan=3)
+
+                app.addLabel(NANDHAC + 'label4', 'Options', row=4, column=0)
                 app.addNamedCheckBox('Allow writing', NANDHAC + 'aw', row=4, column=1, colspan=1)
 
                 if has_dnd:
