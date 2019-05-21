@@ -136,9 +136,14 @@ class NCCHContainerMount(LoggingMixIn, Operations):
         if _setup_romfs:
             self.setup_romfs()
 
-        if self.exefs_fuse and '/code.bin' in self.exefs_fuse.files and self.exefs_fuse.decompress_code:
-            print('ExeFS: Reading .code...')
-            data = self.exefs_fuse.read('/code.bin', self.exefs_fuse.files['/code.bin'].size, 0, 0)
+        if self.exefs_fuse and '/code.bin' in self.exefs_fuse.files:
+            if self.exefs_fuse.decompress_code:
+                # the data is read here to avoid an issue with threading
+                # (yes i am kind of lazy)
+                print('ExeFS: Reading .code...')
+                data = self.exefs_fuse.read('/code.bin', self.exefs_fuse.files['/code.bin'].size, 0, 0)
+            else:
+                data = None
             Thread(target=self.exefs_fuse.init, daemon=True, args=(path, data)).start()
 
     def setup_romfs(self):
