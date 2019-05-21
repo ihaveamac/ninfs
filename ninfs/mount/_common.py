@@ -192,21 +192,15 @@ class SplitFileHandler(BufferedIOBase):
 
     def seek(self, pos, whence=0):
         if whence == 0:
-            if pos > self._total_size:
-                raise ValueError('SplitFileHandler does not support expanding files')
-            elif pos < 0:
+            if pos < 0:
                 raise ValueError('negative seek value')
             self._calc_seek(pos)
         elif whence == 1:
-            if self._fake_seek + pos > self._total_size:
-                raise ValueError('SplitFileHandler does not support expanding files')
-            elif self._fake_seek - pos < 0:
+            if self._fake_seek - pos < 0:
                 pos = 0
             self._calc_seek(self._fake_seek + pos)
         elif whence == 2:
-            if pos > 0:
-                raise ValueError('SplitFileHandler does not support expanding files')
-            elif self._total_size + pos < 0:
+            if self._total_size + pos < 0:
                 pos = -self._total_size
             self._calc_seek(self._total_size + pos)
         else:
