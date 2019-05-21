@@ -169,7 +169,7 @@ class VirtualFileWrapper(BufferedIOBase):
         return True
 
 
-class SplitFileHandler:
+class SplitFileHandler(BufferedIOBase):
     _fake_seek = 0
     _seek_info = (0, 0)
 
@@ -192,7 +192,7 @@ class SplitFileHandler:
 
     def seek(self, pos, whence=0):
         if whence == 0:
-            if pos > self._seek_info:
+            if pos > self._total_size:
                 raise ValueError('SplitFileHandler does not support expanding files')
             elif pos < 0:
                 raise ValueError('negative seek value')
@@ -237,7 +237,10 @@ class SplitFileHandler:
                 full_data.append(f.read(to_read))
 
             self._fake_seek += to_read
-            curr = self._files[curr[0] + 1]
-            left -= to_read
+            try:
+                curr = self._files[curr[0] + 1]
+                left -= to_read
+            except IndexError:
+                break  # EOF
 
         return b''.join(full_data)
