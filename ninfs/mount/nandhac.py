@@ -18,7 +18,7 @@ from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_conte
 from . import _common as _c
 
 if TYPE_CHECKING:
-    from typing import BinaryIO, List
+    from typing import BinaryIO, List, TextIO
 
 bis_key_ids = defaultdict(lambda: -1, {
     'PRODINFO': 0,
@@ -199,6 +199,7 @@ def main(prog: str = None, args: list = None):
     parser = ArgumentParser(prog=prog, description='Mount Nintendo Switch NAND images.',
                             parents=(_c.default_argp, _c.readonly_argp, _c.main_args('nand', 'NAND image')))
     parser.add_argument('--keys', help='keys text file from biskeydump')
+    parser.add_argument('-S', '--split-files', help='treat as part of a split file', action='store_true')
 
     a = parser.parse_args(args)
     opts = dict(_c.parse_fuse_opts(a.o))
@@ -206,9 +207,7 @@ def main(prog: str = None, args: list = None):
     if a.do:
         logging.basicConfig(level=logging.DEBUG, filename=a.do)
 
-    nand_stat = os.stat(a.nand)
-
-    with open(a.nand, 'r+b') as f, open(a.keys, 'r', encoding='utf-8') as k:
+    def do_thing(f: 'BinaryIO', k: 'TextIO', nand_stat: os.stat_result):
         mount = HACNandImageMount(nand_fp=f, g_stat=nand_stat, keys=k.read(), readonly=a.ro)
         if _c.macos or _c.windows:
             opts['fstypename'] = 'HACFS'
@@ -222,3 +221,32 @@ def main(prog: str = None, args: list = None):
                 opts['volname'] = 'Nintendo Switch NAND'
         FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=a.ro, nothreads=True, debug=a.d,
              fsname=os.path.realpath(a.nand).replace(',', '_'), **opts)
+
+    with open(a.keys, 'r', encoding='utf-8') as k:
+        if a.split_files:
+            # make sure the ending is an integer
+            try:
+                int(a.nand[-2:])
+            except ValueError:
+                exit('Could not find a part number at the end of the filename.\n'
+                     'A multi-part Nintendo Switch NAND backup should have filenames in the format of '
+                     '"filename.bin.XX", where XX is the part number.')
+
+            # try to find all the parts, starting with 00
+            base = a.nand[:-2]
+            count = 0
+            while True:
+                if os.path.isfile(base + format(count, '02')):
+                    count += 1
+                else:
+                    break
+
+            if count == 0:
+                exit('Could not find the first part of the multi-part backup.')
+
+            handler = _c.SplitFileHandler(base + format(x, '02') for x in range(count))
+            do_thing(handler, k, os.stat(base + '00'))
+
+        else:
+            with open(a.nand, 'r+b') as f:
+                do_thing(f, k, os.stat(a.nand))
