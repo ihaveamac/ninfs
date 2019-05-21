@@ -34,7 +34,10 @@ def parse_biskeydump(keys: str):
         # new format
         elif l.startswith('bis_key'):
             keyinfo, key = l.split(" = ")
-            key_idx = int(keyinfo.split("_")[2])
+            try:
+                key_idx = int(keyinfo.split("_")[2])
+            except ValueError:
+                continue  # some lines such as "bis_key_source_XX" may cause this exception
             bis_keys[key_idx][0] = bytes.fromhex(key[:32])
             bis_keys[key_idx][1] = bytes.fromhex(key[32:])
     return bis_keys
