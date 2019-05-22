@@ -217,13 +217,13 @@ public:
     }
 };
 
-template<bool (*crypher)(const u8*, const u8*, u8*)>
+template<bool (*crypher)(const u8*, const u8*, u8*, void*)>
 class Tweak : public bigint128 {
 public:
-    inline Tweak(SectorOffset& offset, u8 *roundkeys_tweak) {
+    inline Tweak(SectorOffset& offset, u8 *roundkeys_tweak, void* ctx) {
         v64[1] = be64(offset.v64[0]);
         v64[0] = be64(offset.v64[1]);
-        if(!crypher(roundkeys_tweak, v8, v8)) throw false;
+        if(!crypher(roundkeys_tweak, v8, v8, ctx)) throw false;
     }
     inline void Update() {
         int flag = v8[15] & 0x80;
@@ -254,6 +254,7 @@ int (WINAPI *EVP_CipherInit_ex)(void*, void*, void*, const void*, void*, int) = 
 int (WINAPI *EVP_CIPHER_CTX_key_length)(void*) = NULL;
 void (WINAPI *EVP_CIPHER_CTX_set_padding)(void*, int) = NULL;
 int (WINAPI *EVP_CipherUpdate)(void*, void*, int*, const void*, int) = NULL;
+int (WINAPI *EVP_CipherFinal_ex)(void*, void*, int*) = NULL;
 void (WINAPI *EVP_CIPHER_CTX_free)(void*) = NULL;
 unsigned long (WINAPI *OpenSSL_version_num)() = NULL;
 
@@ -261,8 +262,7 @@ static DynamicHelper lcrypto;
 static bool lib_to_load = true;
 
 template<bool encrypt>
-bool openssl_crypt(const u8* key, const u8* data, u8* out) {
-    void *ctx = EVP_CIPHER_CTX_new();
+bool openssl_crypt(const u8* key, const u8* data, u8* out, void *ctx) {
     if(!ctx) return false;
     bool ret = false;
     do {
@@ -271,23 +271,25 @@ bool openssl_crypt(const u8* key, const u8* data, u8* out) {
         EVP_CIPHER_CTX_set_padding(ctx, 0);
         int foo;
         if(!EVP_CipherUpdate(ctx, out, &foo, data, 16)) break;
+        if(!EVP_CipherFinal_ex(ctx, out + foo, &foo)) break;
         ret = true;
     } while(0);
-    EVP_CIPHER_CTX_free(ctx);
     return ret;
 }
 
-bool aes_decrypt_128_wrap(const u8* roundkey, const u8* data, u8* out) {
+bool aes_decrypt_128_wrap(const u8* roundkey, const u8* data, u8* out, void *ctx) {
+    (void)ctx; //warning suppress
     aes_decrypt_128(roundkey, data, out);
     return true;
 }
 
-bool aes_encrypt_128_wrap(const u8* roundkey, const u8* data, u8* out) {
+bool aes_encrypt_128_wrap(const u8* roundkey, const u8* data, u8* out, void *ctx) {
+    (void)ctx; //warning suppress
     aes_encrypt_128(roundkey, data, out);
     return true;
 }
 
-template<bool (*crypher)(const u8*, const u8*, u8*), bool (*crypher2)(const u8*, const u8*, u8*)>
+template<bool (*crypher)(const u8*, const u8*, u8*, void*), bool (*crypher2)(const u8*, const u8*, u8*, void*), bool ossl>
 class XTSN {
     SectorOffset sectoroffset;
     Buffer buf;
@@ -295,6 +297,7 @@ class XTSN {
     u64 skipped_bytes;
     u8 *roundkeys_key;
     u8 *roundkeys_tweak;
+    void* ctx;
     #ifdef DEBUGON
     void Debug() { //debug printing.
         PySys_WriteStdout("Sector Offset (Lo, Hi): %llu, %llu\n"
@@ -315,14 +318,14 @@ class XTSN {
                 skipped_bytes %= sector_size;
             }
             if(skipped_bytes) {
-                Tweak<crypher2> tweak(sectoroffset, roundkeys_tweak);
+                Tweak<crypher2> tweak(sectoroffset, roundkeys_tweak, ctx);
                 u64 i;
                 for (i = 0; i < (skipped_bytes / 16LLU); i++) {
                     tweak.Update();
                 }
                 for (i = 0; i < ((sector_size - skipped_bytes) / 16LLU) && buf.len; i++) {
                     buf ^= tweak;
-                    crypher(roundkeys_key, buf.ptr->v8, buf.ptr->v8);
+                    crypher(roundkeys_key, buf.ptr->v8, buf.ptr->v8, ctx);
                     buf ^= tweak;
                     tweak.Update();
                     buf.Step();
@@ -331,11 +334,11 @@ class XTSN {
             }
         }
         while(buf.len) {
-            Tweak<crypher2> tweak(sectoroffset, roundkeys_tweak);
+            Tweak<crypher2> tweak(sectoroffset, roundkeys_tweak, ctx);
             u64 i;
             for (i = 0; i < (sector_size / 16LLU) && buf.len; i++) {
                 buf ^= tweak;
-                crypher(roundkeys_key, buf.ptr->v8, buf.ptr->v8);
+                crypher(roundkeys_key, buf.ptr->v8, buf.ptr->v8, ctx);
                 buf ^= tweak;
                 tweak.Update();
                 buf.Step();
@@ -399,12 +402,16 @@ public:
         Debug();
         #endif
         try {
+            if(ossl) ctx = EVP_CIPHER_CTX_new();
+            else ctx = NULL;
             Run();
         } catch(...) {
             Py_XDECREF(local_buf);
             local_buf = NULL;
             PyErr_SetString(PyExc_RuntimeError, "Unexpected error from openssl.");
         }
+
+        if(ossl) EVP_CIPHER_CTX_free(ctx);
 
     end:
         PyBuffer_Release(&orig_buf);
@@ -413,10 +420,10 @@ public:
     inline XTSN() : sector_size(0x200), skipped_bytes(0) {}
 };
 
-typedef XTSN<&aes_decrypt_128_wrap, aes_encrypt_128_wrap> XTSNDecrypt;
-typedef XTSN<&aes_encrypt_128_wrap, aes_encrypt_128_wrap> XTSNEncrypt;
-typedef XTSN<&openssl_crypt<false>, &openssl_crypt<true>> XTSNOpenSSLDecrypt;
-typedef XTSN<&openssl_crypt<true>, &openssl_crypt<true>> XTSNOpenSSLEncrypt;
+typedef XTSN<&aes_decrypt_128_wrap, aes_encrypt_128_wrap, false> XTSNDecrypt;
+typedef XTSN<&aes_encrypt_128_wrap, aes_encrypt_128_wrap, false> XTSNEncrypt;
+typedef XTSN<&openssl_crypt<false>, &openssl_crypt<true>, true> XTSNOpenSSLDecrypt;
+typedef XTSN<&openssl_crypt<true>, &openssl_crypt<true>, true> XTSNOpenSSLEncrypt;
 
 inline static void
 aes_xtsn_schedule_128(u8* key, u8* tweakin, u8* roundkeys_x2) {
@@ -557,12 +564,14 @@ static void load_lcrypto() {
                     lcrypto.GetFunctionPtr("EVP_CIPHER_CTX_key_length", (void**)&EVP_CIPHER_CTX_key_length);
                     lcrypto.GetFunctionPtr("EVP_CIPHER_CTX_set_padding", (void**)&EVP_CIPHER_CTX_set_padding);
                     lcrypto.GetFunctionPtr("EVP_CipherUpdate", (void**)&EVP_CipherUpdate);
+                    lcrypto.GetFunctionPtr("EVP_CipherFinal_ex", (void**)&EVP_CipherFinal_ex);
                     lcrypto.GetFunctionPtr("EVP_CIPHER_CTX_free", (void**)&EVP_CIPHER_CTX_free);
                     lcrypto.GetFunctionPtr("OpenSSL_version_num", (void**)&OpenSSL_version_num);
 
                     if(!EVP_CIPHER_CTX_new || !EVP_aes_128_ecb || !EVP_CipherInit_ex ||
                       !EVP_CIPHER_CTX_key_length || !EVP_CIPHER_CTX_set_padding ||
-                      !EVP_CipherUpdate || !EVP_CIPHER_CTX_free || !OpenSSL_version_num) {
+                      !EVP_CipherUpdate || !EVP_CIPHER_CTX_free || !EVP_CIPHER_CTX_free ||
+                      !OpenSSL_version_num) {
                         lcrypto.Unload();
                         continue;
                     }
