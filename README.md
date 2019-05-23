@@ -133,6 +133,10 @@ Windows users can use a drive letter like `F:` as a mountpoint, or use `*` and a
   `mount_nandtwl --console-id 4E696E74656E646F --cid 576879446F657344536945786973743F nand_dsi.bin mountpoint`
 * Mount a DSi NAND backup with a Console ID file and specified CID file:  
   `mount_nandtwl --console-id ConsoleID.bin --cid CID.bin nand_dsi.bin mountpoint`
+* Mount a Switch NAND backup
+  `mount_nandhac --keys prod.keys rawnand.bin mountpoint`
+* Mount a Switch NAND backup in multiple parts
+  `mount_nandhac --keys prod.keys -S rawnand.bin.00 mountpoint`
 * Mount an NCCH container (.app, .cxi, .cfa, .ncch):  
   `mount_ncch content.cxi mountpoint`
 * Mount a RomFS:  
