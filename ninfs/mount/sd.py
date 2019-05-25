@@ -69,16 +69,6 @@ class SDFilesystemMount(LoggingMixIn, Operations):
     def __call__(self, op, path, *args):
         return super().__call__(op, self.root + path, *args)
 
-    def __del__(self, *args):
-        # putting the keys in a tuple so the dict can be modified
-        with suppress(AttributeError):
-            for f in tuple(self.fds):
-                with suppress(KeyError):
-                    self.fds[f].close()
-                    del self.fds[f]
-
-    destroy = __del__
-
     def access(self, path, mode):
         if not os.access(path, mode):
             raise FuseOSError(EACCES)
