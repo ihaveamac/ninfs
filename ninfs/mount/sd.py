@@ -53,8 +53,6 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         if not os.path.isdir(sd_dir + '/' + self.root_dir):
             exit(f'Failed to find {self.root_dir} in the SD dir.')
 
-        self.fds: Dict[int, BinaryIO] = {}
-
         print('Root dir: ' + self.root_dir)
 
         self.crypto.set_keyslot('y', Keyslot.SD, readbe(key_y))
@@ -85,17 +83,9 @@ class SDFilesystemMount(LoggingMixIn, Operations):
     @_c.raise_on_readonly
     def create(self, path, mode, **kwargs):
         fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode)
-        self.fds[fd] = os.fdopen(fd, 'wb')
-        return fd
-
-    def flush(self, path, fh):
-        try:
-            os.fsync(fh)
-        except OSError as e:
-            # I am not sure why this is happening on Windows. if anyone can give me a hint, please do.
-            if e.errno != EBADF:  # "Bad file descriptor"
-                raise
-        return
+        os.close(fd)
+        self.fd += 1
+        return self.fd
 
     def getattr(self, path, fh=None):
         st = os.lstat(path)
