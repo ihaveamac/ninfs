@@ -31,6 +31,8 @@ if _c.windows:
 
 
 class SDFilesystemMount(LoggingMixIn, Operations):
+    fd = 0
+
     @_c.ensure_lower_path
     def path_to_iv(self, path):
         path_hash = sha256(path[self.root_len + 33:].encode('utf-16le') + b'\0\0').digest()
@@ -105,10 +107,6 @@ class SDFilesystemMount(LoggingMixIn, Operations):
                 raise
         return
 
-    def fsync(self, path, datasync, fh):
-        self.flush(path, fh)
-        return
-
     def getattr(self, path, fh=None):
         st = os.lstat(path)
         uid, gid, _ = fuse_get_context()
@@ -136,20 +134,20 @@ class SDFilesystemMount(LoggingMixIn, Operations):
 
     # open = os.open
     def open(self, path, flags):
-        f = open(path, 'rb+', buffering=-1)
-        self.fds[f.fileno()] = f
-        return f.fileno()
+        self.fd += 1
+        return self.fd
 
     def read(self, path, size, offset, fh):
-        f = self.fds[fh]
         # special check for special files
         if os.path.basename(path).startswith('.') or 'nintendo dsiware' in path:
-            f.seek(offset)
-            return f.read(size)
+            with open(path, 'rb') as f:
+                f.seek(offset)
+                return f.read(size)
 
         before = offset % 16
-        f.seek(offset - before)
-        data = f.read(size + before)
+        with open(path, 'rb') as f:
+            f.seek(offset - before)
+            data = f.read(size + before)
         iv = self.path_to_iv(path) + (offset >> 4)
         return self.crypto.create_ctr_cipher(Keyslot.SD, iv).decrypt(data)[before:]
 
@@ -163,10 +161,6 @@ class SDFilesystemMount(LoggingMixIn, Operations):
             yield from ld
 
     readlink = os.readlink
-
-    def release(self, path, fh):
-        self.fds[fh].close()
-        del self.fds[fh]
 
     @_c.raise_on_readonly
     def rename(self, old, new):
@@ -208,11 +202,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         return os.symlink(source, target)
 
     def truncate(self, path, length, fh=None):
-        if fh is None:
-            with open(path, 'r+b') as f:
-                f.truncate(length)
-        else:
-            f = self.fds[fh]
+        with open(path, 'r+b') as f:
             f.truncate(length)
 
     @_c.raise_on_readonly
@@ -225,17 +215,19 @@ class SDFilesystemMount(LoggingMixIn, Operations):
 
     @_c.raise_on_readonly
     def write(self, path, data, offset, fh):
-        f = self.fds[fh]
         # special check for special files
         if os.path.basename(path).startswith('.') or 'nintendo dsiware' in path.lower():
-            f.seek(offset)
-            return f.write(data)
+            with open(path, 'rb+') as f:
+                f.seek(offset)
+                return f.write(data)
 
         before = offset % 16
         iv = self.path_to_iv(path) + (offset >> 4)
         out_data = self.crypto.create_ctr_cipher(Keyslot.SD, iv).decrypt((b'\0' * before) + data)[before:]
-        f.seek(offset)
-        return f.write(out_data)
+
+        with open(path, 'rb+') as f:
+            f.seek(offset)
+            return f.write(out_data)
 
 
 def main(prog: str = None, args: list = None):
