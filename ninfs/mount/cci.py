@@ -28,9 +28,8 @@ if TYPE_CHECKING:
 class CTRCartImageMount(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, cci_fp: BinaryIO, g_stat: os.stat_result, dev: bool = False, seeddb: str = None):
+    def __init__(self, cci_fp: BinaryIO, g_stat: os.stat_result, dev: bool = False):
         self.dev = dev
-        self.seeddb = seeddb
 
         self._g_stat = g_stat
         # get status change, modify, and file access times
@@ -82,8 +81,7 @@ class CTRCartImageMount(LoggingMixIn, Operations):
                 # noinspection PyBroadException
                 try:
                     content_vfp = _c.VirtualFileWrapper(self, filename, part[1])
-                    content_fuse = NCCHContainerMount(content_vfp, g_stat=self._g_stat, dev=self.dev,
-                                                      seeddb=self.seeddb)
+                    content_fuse = NCCHContainerMount(content_vfp, g_stat=self._g_stat, dev=self.dev)
                     content_fuse.init(path)
                     self.dirs[dirname] = content_fuse
                 except Exception as e:
@@ -145,8 +143,7 @@ def main(prog: str = None, args: list = None):
     if args is None:
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS CTR Cart Image files.',
-                            parents=(_c.default_argp, _c.dev_argp, _c.seeddb_argp,
-                                     _c.main_args('cci', 'CCI file')))
+                            parents=(_c.default_argp, _c.dev_argp, _c.main_args('cci', 'CCI file')))
 
     a = parser.parse_args(args)
     opts = dict(_c.parse_fuse_opts(a.o))
@@ -157,7 +154,7 @@ def main(prog: str = None, args: list = None):
     cci_stat = os.stat(a.cci)
 
     with open(a.cci, 'rb') as f:
-        mount = CTRCartImageMount(cci_fp=f, dev=a.dev, g_stat=cci_stat, seeddb=a.seeddb)
+        mount = CTRCartImageMount(cci_fp=f, dev=a.dev, g_stat=cci_stat)
         if _c.macos or _c.windows:
             opts['fstypename'] = 'CCI'
             if _c.macos:
