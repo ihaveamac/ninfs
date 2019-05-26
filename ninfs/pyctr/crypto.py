@@ -556,7 +556,7 @@ class CryptoEngine:
 
         key_hash = sha256(key).digest()[0:16]
         hash_parts = unpack('<IIII', key_hash)
-        self._id0 = pack('>IIII', hash_parts)
+        self._id0 = pack('>IIII', *hash_parts)
 
     def setup_sd_key_from_file(self, path: str):
         """Set up the SD key from a movable.sed file."""
