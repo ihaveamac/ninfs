@@ -143,6 +143,8 @@ Windows users can use a drive letter like `F:` as a mountpoint, or use `*` and a
   `mount_romfs romfs.bin mountpoint`
 * Mount a `Nintendo 3DS` directory from an SD card:  
   `mount_sd --movable movable.sed "/path/to/Nintendo 3DS" mountpoint`
+* Mount a `Nintendo 3DS` directory from an SD card with an SD key hexstring:  
+  `mount_sd --sd-key 504C415900000000504F4B454D4F4E21 "/path/to/Nintendo 3DS" mountpoint`
 * Mount a Nintendo DS ROM image (NDS/SRL, `mount_nds` also works):  
   `mount_srl game.nds`
 * Mount a 3DSX homebrew application:  
