@@ -48,8 +48,6 @@ SeedDB is checked in order of:
 * `~/.3ds/seeddb.bin`
 * `~/3ds/seeddb.bin`
 
-It can also be provided with the `--seeddb` argument.
-
 Python 3.6.1+ and pycryptodomex are required. appJar is required for the GUI.
 * fusepy is pre-included until the [main fusepy repository](https://github.com/fusepy/fusepy) has full Windows support.
 
