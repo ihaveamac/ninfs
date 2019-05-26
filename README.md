@@ -109,47 +109,47 @@ Windows users can use a drive letter like `F:` as a mountpoint, or use `*` and a
 * Linux: Run from terminal: `fusermount -u /path/to/mount`
 
 ### Examples
-* Mount a 3DS game card dump:  
+* 3DS game card dump:  
   `mount_cci game.3ds mountpoint`
-* Mount contents downloaded from CDN:  
+* Contents downloaded from CDN:  
   `mount_cdn cdn_directory mountpoint`
-* Mount CDN contents with a specific decrypted titlekey:  
+* CDN contents with a specific decrypted titlekey:  
   `mount_cdn --dec-key 3E3E6769742E696F2F76416A65423C3C cdn_directory mountpoint`
-* Mount a CIA:  
+* CIA:  
   `mount_cia game.cia mountpoint`
-* Mount an ExeFS:  
+* ExeFS:  
   `mount_exefs exefs.bin mountpoint`
-* Mount a 3DS NAND backup with `essential.exefs` embedded:    
+* 3DS NAND backup with `essential.exefs` embedded:    
   `mount_nandctr nand.bin mountpoint`
-* Mount a 3DS NAND backup with an OTP file (Counter is automatically generated):  
+* 3DS NAND backup with an OTP file (Counter is automatically generated):  
   `mount_nandctr --otp otp.bin nand.bin mountpoint`
-* Mount a 3DS NAND backup with OTP and CID files:  
+* 3DS NAND backup with OTP and CID files:  
   `mount_nandctr --otp otp.bin --cid nand_cid.bin nand.bin mountpoint`
-* Mount a 3DS NAND backup with OTP file and a CID hexstring:  
+* 3DS NAND backup with OTP file and a CID hexstring:  
   `mount_nandctr --otp otp.bin --cid 7468616E6B7334636865636B696E6721 nand.bin mountpoint`
-* Mount a DSi NAND backup (Counter is automatically generated):  
+* DSi NAND backup (Counter is automatically generated):  
   `mount_nandtwl --console-id 4E696E74656E646F nand_dsi.bin mountpoint`
-* Mount a DSi NAND backup with a Console ID hexstring and specified CID hexstring:  
+* DSi NAND backup with a Console ID hexstring and specified CID hexstring:  
   `mount_nandtwl --console-id 4E696E74656E646F --cid 576879446F657344536945786973743F nand_dsi.bin mountpoint`
-* Mount a DSi NAND backup with a Console ID file and specified CID file:  
+* DSi NAND backup with a Console ID file and specified CID file:  
   `mount_nandtwl --console-id ConsoleID.bin --cid CID.bin nand_dsi.bin mountpoint`
-* Mount a Switch NAND backup  
+* Switch NAND backup  
   `mount_nandhac --keys prod.keys rawnand.bin mountpoint`
-* Mount a Switch NAND backup in multiple parts  
+* Switch NAND backup in multiple parts  
   `mount_nandhac --keys prod.keys -S rawnand.bin.00 mountpoint`
-* Mount an NCCH container (.app, .cxi, .cfa, .ncch):  
+* NCCH container (.app, .cxi, .cfa, .ncch):  
   `mount_ncch content.cxi mountpoint`
-* Mount a RomFS:  
+* RomFS:  
   `mount_romfs romfs.bin mountpoint`
-* Mount a `Nintendo 3DS` directory from an SD card:  
+* `Nintendo 3DS` directory from an SD card:  
   `mount_sd --movable movable.sed "/path/to/Nintendo 3DS" mountpoint`
-* Mount a `Nintendo 3DS` directory from an SD card with an SD key hexstring:  
+* `Nintendo 3DS` directory from an SD card with an SD key hexstring:  
   `mount_sd --sd-key 504C415900000000504F4B454D4F4E21 "/path/to/Nintendo 3DS" mountpoint`
-* Mount a Nintendo DS ROM image (NDS/SRL, `mount_nds` also works):  
+* Nintendo DS ROM image (NDS/SRL, `mount_nds` also works):  
   `mount_srl game.nds`
-* Mount a 3DSX homebrew application:  
+* 3DSX homebrew application:  
   `mount_threedsx boot.3dsx mountpoint`
-* Mount an entire `title` directory (like one from a NAND backup, or in an SD card mount):  
+* `title` directory from a NAND backup, or in an SD card mount:  
   `mount_titledir title mountpoint`
 
 ## Useful tools
