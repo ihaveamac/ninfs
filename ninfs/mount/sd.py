@@ -206,7 +206,9 @@ def main(prog: str = None, args: list = None):
                             parents=(_c.default_argp, _c.readonly_argp, _c.dev_argp,
                                      _c.main_args(
                                          'sd_dir', "path to folder with SD contents (on SD: /Nintendo 3DS)")))
-    parser.add_argument('--movable', metavar='MOVABLESED', help='path to movable.sed', required=True)
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--movable', metavar='MOVABLESED', help='path to movable.sed')
+    group.add_argument('--sd-key', metavar='SDKEY', help='SD key as hexstring')
 
     a = parser.parse_args(args)
     opts = dict(_c.parse_fuse_opts(a.o))
@@ -214,8 +216,11 @@ def main(prog: str = None, args: list = None):
     if a.do:
         logging.basicConfig(level=logging.DEBUG, filename=a.do)
 
-    with open(a.movable, 'rb') as f:
-        movable = f.read(0x140)
+    if a.movable:
+        with open(a.movable, 'rb') as f:
+            movable = f.read(0x140)
+    else:
+        movable = bytes.fromhex(a.sd_key)
 
     mount = SDFilesystemMount(sd_dir=a.sd_dir, movable=movable, dev=a.dev, readonly=a.ro)
     if _c.macos or _c.windows:
