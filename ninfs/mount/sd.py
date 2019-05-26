@@ -40,23 +40,17 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         hash_p2 = readbe(path_hash[16:32])
         return hash_p1 ^ hash_p2
 
-    def __init__(self, sd_dir: str, movable: str, dev: bool = False, readonly: bool = False):
+    def __init__(self, sd_dir: str, movable: bytes, dev: bool = False, readonly: bool = False):
         self.crypto = CryptoEngine(dev=dev)
 
-        with open(movable, 'rb') as mv:
-            mv.seek(0x110)
-            key_y = mv.read(0x10)
-        key_hash = sha256(key_y).digest()
-        hash_parts = unpack('<IIII', key_hash[0:16])
-        self.root_dir = f'{hash_parts[0]:08x}{hash_parts[1]:08x}{hash_parts[2]:08x}{hash_parts[3]:08x}'
+        self.crypto.setup_sd_key(movable)
+        self.root_dir = self.crypto.id0.hex()
 
         if not os.path.isdir(sd_dir + '/' + self.root_dir):
             exit(f'Failed to find {self.root_dir} in the SD dir.')
 
         print('Root dir: ' + self.root_dir)
-
-        self.crypto.set_keyslot('y', Keyslot.SD, readbe(key_y))
-        print('Key:      ' + self.crypto.key_normal[Keyslot.SD].hex())
+        print('Key:      ' + self.crypto.keygen(Keyslot.SD).hex())
 
         self.root = os.path.realpath(sd_dir + '/' + self.root_dir)
         self.root_len = len(self.root)
@@ -226,7 +220,10 @@ def main(prog: str = None, args: list = None):
     if a.do:
         logging.basicConfig(level=logging.DEBUG, filename=a.do)
 
-    mount = SDFilesystemMount(sd_dir=a.sd_dir, movable=a.movable, dev=a.dev, readonly=a.ro)
+    with open(a.movable, 'rb') as f:
+        movable = f.read(0x140)
+
+    mount = SDFilesystemMount(sd_dir=a.sd_dir, movable=movable, dev=a.dev, readonly=a.ro)
     if _c.macos or _c.windows:
         opts['fstypename'] = 'SDCard'
         if _c.macos:
