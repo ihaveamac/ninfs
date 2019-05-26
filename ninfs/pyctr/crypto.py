@@ -9,6 +9,7 @@ from functools import wraps
 from hashlib import sha256
 from os import environ
 from os.path import getsize, join as pjoin
+from struct import pack, unpack
 from typing import TYPE_CHECKING
 
 from Cryptodome.Cipher import AES
@@ -44,6 +45,10 @@ class CorruptOTPError(CryptoError):
 
 class KeyslotMissingError(CryptoError):
     """Normal key is not set up for the keyslot."""
+
+
+class BadMovableSedError(CryptoError):
+    """movable.sed provided is invalid."""
 
 
 class TicketLengthError(CryptoError):
@@ -93,6 +98,8 @@ class Keyslot(IntEnum):
     CardSave = 0x37
     BOSS = 0x38
     DownloadPlay = 0x39
+
+    DSiWareExport = 0x3A
 
     CommonKey = 0x3D
 
@@ -193,6 +200,8 @@ class CryptoEngine:
     _otp_key: bytes = None
     _otp_iv: bytes = None
 
+    _id0: bytes = None
+
     def __init__(self, dev: int = 0, setup_b9_keys: bool = True):
         self.key_x: Dict[int, int] = {}
         self.key_y: Dict[int, int] = {0x03: 0xE1A00005202DDD1DBD4DC4D30AB9DC76,
@@ -226,6 +235,12 @@ class CryptoEngine:
     @_requires_bootrom
     def otp_iv(self) -> bytes:
         return self._otp_iv
+
+    @property
+    def id0(self) -> bytes:
+        if not self._id0:
+            raise KeyslotMissingError('load a movable.sed with setup_sd_key')
+        return self._id0
 
     def create_cbc_cipher(self, keyslot: int, iv: bytes) -> 'CbcMode':
         """Create AES-CBC cipher with the given keyslot."""
@@ -525,3 +540,25 @@ class CryptoEngine:
         """Set up console-unique keys from an OTP file. Encrypted and decrypted are supported."""
         with open(path, 'rb') as f:
             self.setup_keys_from_otp(f.read(0x100))
+
+    def setup_sd_key(self, data: bytes):
+        """Set up the SD key from movable.sed. Must be 0x10 (only key), 0x120 (no cmac), or 0x140 (with cmac)."""
+        if len(data) == 0x10:
+            key = data
+        elif len(data) in {0x120, 0x140}:
+            key = data[0x110:0x120]
+        else:
+            raise BadMovableSedError(f'invalid length ({len(data):#x}')
+
+        self.set_keyslot('y', Keyslot.SD, key)
+        self.set_keyslot('y', Keyslot.CMACSDNAND, key)
+        self.set_keyslot('y', Keyslot.DSiWareExport, key)
+
+        key_hash = sha256(key).digest()[0:16]
+        hash_parts = unpack('<IIII', key_hash)
+        self._id0 = pack('>IIII', hash_parts)
+
+    def setup_sd_key_from_file(self, path: str):
+        """Set up the SD key from a movable.sed file."""
+        with open(path, 'rb') as f:
+            self.setup_sd_key(f.read(0x140))
