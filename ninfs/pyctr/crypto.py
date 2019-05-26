@@ -71,23 +71,23 @@ class Keyslot(IntEnum):
     FIRM = 0x06
     AGB = 0x07
 
-    NANDDBCMAC = 0x0B
+    CMACNANDDB = 0x0B
 
     NCCH93 = 0x18
-    CardSaveCMACNew = 0x19
+    CMACCardSaveNew = 0x19
     CardSaveNew = 0x1A
     NCCH96 = 0x1B
 
-    AGBCMAC = 0x24
+    CMACAGB = 0x24
     NCCH70 = 0x25
 
     NCCH = 0x2C
     UDSLocalWAN = 0x2D
     StreetPass = 0x2E
     Save60 = 0x2F
-    SDNANDCMAC = 0x30
+    CMACSDNAND = 0x30
 
-    CardSaveCMAC = 0x33
+    CMACCardSave = 0x33
     SD = 0x34
 
     CardSave = 0x37
