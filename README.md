@@ -64,6 +64,7 @@ Python does not have to be installed, but [WinFsp](http://www.secfs.net/winfsp/d
 
 #### Install with existing Python
 * Install the latest version of [Python 3](https://www.python.org/downloads/). The x86-64 version is preferred on 64-bit Windows.
+  * Alternatively, use [Python 3.7 from the Microsoft Store](https://www.microsoft.com/en-us/p/python-37/9nj46sx7x90p). Note that `python` or `python3` must be used, not `py -3`.
 * Install the latest version of [WinFsp](http://www.secfs.net/winfsp/download/).
 * Install ninfs with `py -3 -m pip install --upgrade https://github.com/ihaveamac/ninfs/archive/master.zip`.
   * With GUI support: `py -3 -m pip install --upgrade https://github.com/ihaveamac/ninfs/archive/master.zip#egg=ninfs[gui]`
@@ -95,7 +96,7 @@ Versions of macOS supported by Apple are highly recommended. Mac OS X Snow Leopa
 A GUI can be used, if ninfs was installed with GUI support, by specifying the type to be `gui` (e.g. Windows: `py -3 -mninfs gui`, \*nix: `python3 -mninfs gui`). The GUI controls mounting and unmounting.
 
 ### Command line
-The main way to run a mount script after installing is using "`mount_<type>`" (e.g. `mount_cci game.3ds mountpoint`). Use `-h` to view arguments for a script.
+Run a mount script by using "`mount_<type>`" (e.g. `mount_cci game.3ds mountpoint`). Use `-h` to view arguments for a script.
 
 If it doesn't work, the other way is to use `<python-cmd> -mninfs <type>` (e.g. Windows: `py -3 -mninfs cci game.3ds mountpoint`, \*nix: `python3 -mninfs cci game.3ds mountpoint`).
 
