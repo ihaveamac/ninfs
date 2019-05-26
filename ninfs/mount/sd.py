@@ -10,21 +10,15 @@ Mounts SD contents under `/Nintendo 3DS`, creating a virtual filesystem with dec
 
 import logging
 import os
-from contextlib import suppress
-from errno import EPERM, EACCES, EBADF
+from errno import EPERM, EACCES
 from hashlib import sha256
-from struct import unpack
 from sys import exit, argv
-from typing import TYPE_CHECKING
 
 from pyctr.crypto import CryptoEngine, Keyslot
 from pyctr.util import readbe
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
 from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
-
-if TYPE_CHECKING:
-    from typing import Dict, BinaryIO
 
 if _c.windows:
     from ctypes import c_wchar_p, pointer, c_ulonglong, windll, wintypes
