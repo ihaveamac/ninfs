@@ -34,8 +34,12 @@ class CDNContentsMount(LoggingMixIn, Operations):
     def rp(self, path):
         return os.path.join(self.cdn_dir, path)
 
-    def __init__(self, cdn_dir: str, dec_key: str = None, dev: bool = False, seeddb: str = None):
-        self.cdn_dir = cdn_dir
+    def __init__(self, tmd_file: str = None, cdn_dir: str = None, dec_key: str = None, dev: bool = False, seeddb: str = None):
+        if tmd_file:
+            self.cdn_dir = os.path.dirname(tmd_file)
+        else:
+            self.cdn_dir = cdn_dir
+            tmd_file = os.path.join(cdn_dir, 'tmd')
 
         self.crypto = CryptoEngine(dev=dev)
 
@@ -44,12 +48,15 @@ class CDNContentsMount(LoggingMixIn, Operations):
         self.seeddb = seeddb
 
         # get status change, modify, and file access times
-        cdn_stat = os.stat(cdn_dir)
+        try:
+            cdn_stat = os.stat(tmd_file)
+        except FileNotFoundError:
+            exit('Could not find "tmd" in directory')
         self.g_stat = {'st_ctime': int(cdn_stat.st_ctime), 'st_mtime': int(cdn_stat.st_mtime),
                        'st_atime': int(cdn_stat.st_atime)}
 
         try:
-            self.tmd = TitleMetadataReader.from_file(self.rp('tmd'))
+            self.tmd = TitleMetadataReader.from_file(tmd_file)
         except FileNotFoundError:
             exit('tmd not found.')
 
@@ -209,7 +216,7 @@ def main(prog: str = None, args: list = None):
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS CDN contents.',
                             parents=(_c.default_argp, _c.dev_argp, _c.seeddb_argp,
-                                     _c.main_args('cdn_dir', 'directory with CDN contents')))
+                                     _c.main_args('content', 'tmd file or directory with CDN contents')))
     parser.add_argument('--dec-key', help='decrypted titlekey')
 
     a = parser.parse_args(args)
@@ -218,9 +225,15 @@ def main(prog: str = None, args: list = None):
     if a.do:
         logging.basicConfig(level=logging.DEBUG, filename=a.do)
 
-    mount = CDNContentsMount(cdn_dir=a.cdn_dir, dev=a.dev, dec_key=a.dec_key, seeddb=a.seeddb)
+    mount_opts = {}
+    if os.path.isfile(a.content):
+        mount_opts['tmd_file'] = a.content
+    else:
+        mount_opts['cdn_dir'] = a.content
+
+    mount = CDNContentsMount(dev=a.dev, dec_key=a.dec_key, seeddb=a.seeddb, **mount_opts)
     if _c.macos or _c.windows:
         opts['fstypename'] = 'CDN'
         opts['volname'] = f'CDN Contents ({mount.title_id.upper()})'
     FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
-         fsname=os.path.realpath(a.cdn_dir).replace(',', '_'), **opts)
+         fsname=os.path.realpath(a.content).replace(',', '_'), **opts)
