@@ -545,9 +545,9 @@ def change_type(*_):
 
         elif mount_type == CDN:
             with app.frame(CDN, row=1, colspan=3):
-                app.addLabel(CDN + LABEL1, DIRECTORY, row=0, column=0)
-                app.addDirectoryEntry(CDN + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
-                app.setEntryDefault(CDN + ITEM, DRAGDIR)
+                app.addLabel(CDN + LABEL1, 'TMD File', row=0, column=0)
+                app.addFileEntry(CDN + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
+                app.setEntryDefault(CDN + ITEM, DRAGFILE)
 
                 app.addLabel(CDN + LABEL2, 'Decrypted Titlekey*', row=3, column=0)
                 app.addEntry(CDN + 'key', row=3, column=1, colspan=2)
