@@ -82,7 +82,7 @@ class CTRCartImageMount(LoggingMixIn, Operations):
                 # noinspection PyBroadException
                 try:
                     content_vfp = _c.VirtualFileWrapper(self, filename, part[1])
-                    content_fuse = NCCHContainerMount(content_vfp, g_stat=self._g_stat, dev=self.dev, boot9=boot9)
+                    content_fuse = NCCHContainerMount(content_vfp, g_stat=self._g_stat, dev=self.dev, boot9=self.boot9)
                     content_fuse.init(path)
                     self.dirs[dirname] = content_fuse
                 except Exception as e:
