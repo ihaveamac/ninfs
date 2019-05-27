@@ -203,7 +203,7 @@ def main(prog: str = None, args: list = None):
     if args is None:
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS SD card contents.',
-                            parents=(_c.default_argp, _c.readonly_argp, _c.dev_argp,
+                            parents=(_c.default_argp, _c.readonly_argp, _c.ctrcrypto_argp,
                                      _c.main_args(
                                          'sd_dir', "path to folder with SD contents (on SD: /Nintendo 3DS)")))
     group = parser.add_mutually_exclusive_group(required=True)

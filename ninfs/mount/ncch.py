@@ -369,7 +369,7 @@ def main(prog: str = None, args: list = None):
     if args is None:
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS NCCH containers.',
-                            parents=(_c.default_argp, _c.dev_argp, _c.seeddb_argp,
+                            parents=(_c.default_argp, _c.ctrcrypto_argp, _c.seeddb_argp,
                                      _c.main_args('ncch', 'NCCH file')))
 
     a = parser.parse_args(args)

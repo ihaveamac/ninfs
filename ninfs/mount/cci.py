@@ -143,7 +143,7 @@ def main(prog: str = None, args: list = None):
     if args is None:
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS CTR Cart Image files.',
-                            parents=(_c.default_argp, _c.dev_argp, _c.main_args('cci', 'CCI file')))
+                            parents=(_c.default_argp, _c.ctrcrypto_argp, _c.main_args('cci', 'CCI file')))
 
     a = parser.parse_args(args)
     opts = dict(_c.parse_fuse_opts(a.o))

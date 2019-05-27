@@ -194,7 +194,7 @@ def main(prog: str = None, args: list = None):
     if args is None:
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS NCCH files from installed NAND/SD titles.',
-                            parents=(_c.default_argp, _c.dev_argp, _c.seeddb_argp,
+                            parents=(_c.default_argp, _c.ctrcrypto_argp, _c.seeddb_argp,
                                      _c.main_args('title_dir', 'title directory')))
     parser.add_argument('--mount-all', help='mount all contents, not just the first', action='store_true')
     parser.add_argument('--decompress-code', help='decompress code of all mounted titles '

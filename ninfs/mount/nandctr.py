@@ -452,7 +452,7 @@ def main(prog: str = None, args: list = None):
     if args is None:
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS NAND images.',
-                            parents=(_c.default_argp, _c.readonly_argp, _c.dev_argp,
+                            parents=(_c.default_argp, _c.readonly_argp, _c.ctrcrypto_argp,
                                      _c.main_args('nand', 'NAND image')))
     parser.add_argument('--otp', help='path to otp (enc/dec); not needed if NAND image has essentials backup from '
                                       'GodMode9')
