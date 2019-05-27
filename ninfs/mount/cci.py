@@ -28,8 +28,9 @@ if TYPE_CHECKING:
 class CTRCartImageMount(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, cci_fp: BinaryIO, g_stat: os.stat_result, dev: bool = False):
+    def __init__(self, cci_fp: BinaryIO, g_stat: os.stat_result, dev: bool = False, boot9: str = None):
         self.dev = dev
+        self.boot9 = boot9
 
         self._g_stat = g_stat
         # get status change, modify, and file access times
@@ -81,7 +82,7 @@ class CTRCartImageMount(LoggingMixIn, Operations):
                 # noinspection PyBroadException
                 try:
                     content_vfp = _c.VirtualFileWrapper(self, filename, part[1])
-                    content_fuse = NCCHContainerMount(content_vfp, g_stat=self._g_stat, dev=self.dev)
+                    content_fuse = NCCHContainerMount(content_vfp, g_stat=self._g_stat, dev=self.dev, boot9=boot9)
                     content_fuse.init(path)
                     self.dirs[dirname] = content_fuse
                 except Exception as e:
@@ -154,7 +155,7 @@ def main(prog: str = None, args: list = None):
     cci_stat = os.stat(a.cci)
 
     with open(a.cci, 'rb') as f:
-        mount = CTRCartImageMount(cci_fp=f, dev=a.dev, g_stat=cci_stat)
+        mount = CTRCartImageMount(cci_fp=f, dev=a.dev, boot9=a.boot9, g_stat=cci_stat)
         if _c.macos or _c.windows:
             opts['fstypename'] = 'CCI'
             if _c.macos:

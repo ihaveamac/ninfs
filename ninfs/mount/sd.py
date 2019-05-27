@@ -34,8 +34,8 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         hash_p2 = readbe(path_hash[16:32])
         return hash_p1 ^ hash_p2
 
-    def __init__(self, sd_dir: str, movable: bytes, dev: bool = False, readonly: bool = False):
-        self.crypto = CryptoEngine(dev=dev)
+    def __init__(self, sd_dir: str, movable: bytes, dev: bool = False, readonly: bool = False, boot9: str = None):
+        self.crypto = CryptoEngine(boot9=boot9, dev=dev)
 
         self.crypto.setup_sd_key(movable)
         self.root_dir = self.crypto.id0.hex()
@@ -222,7 +222,7 @@ def main(prog: str = None, args: list = None):
     else:
         movable = bytes.fromhex(a.sd_key)
 
-    mount = SDFilesystemMount(sd_dir=a.sd_dir, movable=movable, dev=a.dev, readonly=a.ro)
+    mount = SDFilesystemMount(sd_dir=a.sd_dir, movable=movable, dev=a.dev, readonly=a.ro, boot9=a.boot9)
     if _c.macos or _c.windows:
         opts['fstypename'] = 'SDCard'
         if _c.macos:

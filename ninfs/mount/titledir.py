@@ -17,6 +17,7 @@ from sys import argv
 from threading import Thread
 from typing import TYPE_CHECKING
 
+from pyctr.crypto import CryptoEngine
 from pyctr.types.smdh import SMDH, SMDH_SIZE, InvalidSMDHError
 from pyctr.types.tmd import TitleMetadataReader
 from . import _common as _c
@@ -35,7 +36,9 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
     fd = 0
 
     def __init__(self, titles_dir: str, mount_all: bool = False, decompress_code: bool = False, dev: bool = False,
-                 seeddb: str = None):
+                 seeddb: str = None, boot9: str = None):
+        # CryptoEngine is called here only to have the keys be set up.
+        CryptoEngine(boot9=boot9, dev=dev)
         self.titles_dir = titles_dir
         self._files: Dict[str, Dict[str, Union[AnyStr, int]]] = {}
         self.dirs: Dict[str, NCCHContainerMount] = {}
@@ -207,7 +210,7 @@ def main(prog: str = None, args: list = None):
         logging.basicConfig(level=logging.DEBUG, filename=a.do)
 
     mount = TitleDirectoryMount(titles_dir=a.title_dir, mount_all=a.mount_all, decompress_code=a.decompress_code,
-                                dev=a.dev, seeddb=a.seeddb)
+                                dev=a.dev, seeddb=a.seeddb, boot9=a.boot9)
     if _c.macos or _c.windows:
         opts['fstypename'] = 'Titles'
         if _c.macos:

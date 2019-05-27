@@ -36,8 +36,8 @@ class NCCHContainerMount(LoggingMixIn, Operations):
     exefs_fuse = None
 
     def __init__(self, ncch_fp: BinaryIO, g_stat: os.stat_result, decompress_code: bool = True, dev: bool = False,
-                 seeddb: str = None):
-        self.crypto = CryptoEngine(dev=dev)
+                 seeddb: str = None, boot9: str = None):
+        self.crypto = CryptoEngine(boot9=boot9, dev=dev)
 
         self.decompress_code = decompress_code
         self.seeddb = seeddb
@@ -381,7 +381,7 @@ def main(prog: str = None, args: list = None):
     ncch_stat = os.stat(a.ncch)
 
     with open(a.ncch, 'rb') as f:
-        mount = NCCHContainerMount(ncch_fp=f, dev=a.dev, g_stat=ncch_stat, seeddb=a.seeddb)
+        mount = NCCHContainerMount(ncch_fp=f, dev=a.dev, g_stat=ncch_stat, seeddb=a.seeddb, boot9=a.boot9)
         if _c.macos or _c.windows:
             opts['fstypename'] = 'NCCH'
             if _c.macos:

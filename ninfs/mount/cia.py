@@ -36,8 +36,9 @@ def new_offset(x: int) -> int:
 class CTRImportableArchiveMount(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, cia_fp: BinaryIO, g_stat: os.stat_result, dev: bool = False, seeddb: bool = None):
-        self.crypto = CryptoEngine(dev=dev)
+    def __init__(self, cia_fp: BinaryIO, g_stat: os.stat_result, dev: bool = False, seeddb: bool = None,
+                 boot9: str = None):
+        self.crypto = CryptoEngine(boot9=boot9, dev=dev)
 
         self.dev = dev
         self.seeddb = seeddb
@@ -113,10 +114,12 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
             # noinspection PyBroadException
             try:
                 content_vfp = _c.VirtualFileWrapper(self, filename, chunk.size)
+                # boot9 is not passed here, as CryptoEngine has already set up the keys at the beginning.
                 if is_srl:
                     content_fuse = SRLMount(content_vfp, g_stat=self._g_stat)
                 else:
-                    content_fuse = NCCHContainerMount(content_vfp, dev=self.dev, g_stat=self._g_stat, seeddb=self.seeddb)
+                    content_fuse = NCCHContainerMount(content_vfp, dev=self.dev, g_stat=self._g_stat,
+                                                      seeddb=self.seeddb)
                 content_fuse.init(path)
                 self.dirs[dirname] = content_fuse
             except Exception as e:
@@ -233,7 +236,7 @@ def main(prog: str = None, args: list = None):
     cia_stat = os.stat(a.cia)
 
     with open(a.cia, 'rb') as f:
-        mount = CTRImportableArchiveMount(cia_fp=f, dev=a.dev, g_stat=cia_stat, seeddb=a.seeddb)
+        mount = CTRImportableArchiveMount(cia_fp=f, dev=a.dev, g_stat=cia_stat, seeddb=a.seeddb, boot9=a.boot9)
         if _c.macos or _c.windows:
             opts['fstypename'] = 'CIA'
             if _c.macos:

@@ -34,14 +34,15 @@ class CDNContentsMount(LoggingMixIn, Operations):
     def rp(self, path):
         return os.path.join(self.cdn_dir, path)
 
-    def __init__(self, tmd_file: str = None, cdn_dir: str = None, dec_key: str = None, dev: bool = False, seeddb: str = None):
+    def __init__(self, tmd_file: str = None, cdn_dir: str = None, dec_key: str = None, dev: bool = False,
+                 seeddb: str = None, boot9: str = None):
         if tmd_file:
             self.cdn_dir = os.path.dirname(tmd_file)
         else:
             self.cdn_dir = cdn_dir
             tmd_file = os.path.join(cdn_dir, 'tmd')
 
-        self.crypto = CryptoEngine(dev=dev)
+        self.crypto = CryptoEngine(boot9=boot9, dev=dev)
 
         self.cdn_content_size = 0
         self.dev = dev
@@ -113,6 +114,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
             # noinspection PyBroadException
             try:
                 content_vfp = _c.VirtualFileWrapper(self, filename, chunk.size)
+                # boot9 is not passed here, as CryptoEngine has already set up the keys at the beginning.
                 if is_srl:
                     content_fuse = SRLMount(content_vfp, g_stat=f_stat)
                 else:
@@ -228,7 +230,7 @@ def main(prog: str = None, args: list = None):
     else:
         mount_opts['cdn_dir'] = a.content
 
-    mount = CDNContentsMount(dev=a.dev, dec_key=a.dec_key, seeddb=a.seeddb, **mount_opts)
+    mount = CDNContentsMount(dev=a.dev, dec_key=a.dec_key, seeddb=a.seeddb, boot9=a.boot9, **mount_opts)
     if _c.macos or _c.windows:
         opts['fstypename'] = 'CDN'
         opts['volname'] = f'CDN Contents ({mount.title_id.upper()})'

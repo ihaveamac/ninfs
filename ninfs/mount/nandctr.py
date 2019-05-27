@@ -36,8 +36,8 @@ class CTRNandImageMount(LoggingMixIn, Operations):
     _essentials_mounted = False
 
     def __init__(self, nand_fp: BinaryIO, g_stat: os.stat_result, dev: bool = False, readonly: bool = False,
-                 otp: bytes = None, cid: AnyStr = None):
-        self.crypto = CryptoEngine(dev=dev)
+                 otp: bytes = None, cid: AnyStr = None, boot9: str = None):
+        self.crypto = CryptoEngine(boot9=boot9, dev=dev)
 
         self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
                        'st_atime': int(g_stat.st_atime)}
@@ -468,7 +468,8 @@ def main(prog: str = None, args: list = None):
 
     with open(a.nand, f'r{"" if a.ro else "+"}b') as f:
         # noinspection PyTypeChecker
-        mount = CTRNandImageMount(nand_fp=f, dev=a.dev, g_stat=nand_stat, readonly=a.ro, otp=a.otp, cid=a.cid)
+        mount = CTRNandImageMount(nand_fp=f, dev=a.dev, g_stat=nand_stat, readonly=a.ro, otp=a.otp, cid=a.cid,
+                                  boot9=a.boot9)
         if _c.macos or _c.windows:
             opts['fstypename'] = 'CTRFS'
             # assuming / is the path separator since macos. but if windows gets support for this,
