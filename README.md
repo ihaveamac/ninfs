@@ -30,6 +30,7 @@ Windows, macOS, and Linux are supported.
 
 ## Setup
 For 3DS types, The ARM9 bootROM is required. You can dump it using boot9strap, which can be set up by [3DS Hacks Guide](https://3ds.hacks.guide). It is checked in order of:
+* `--boot9` argument (if set)
 * `BOOT9_PATH` environment variable (if set)
 * `%APPDATA%\3ds\boot9.bin` (Windows-specific)
 * `~/Library/Application Support/3ds/boot9.bin` (macOS-specific)
