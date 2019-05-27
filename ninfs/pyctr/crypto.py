@@ -202,7 +202,7 @@ class CryptoEngine:
 
     _id0: bytes = None
 
-    def __init__(self, dev: int = 0, setup_b9_keys: bool = True):
+    def __init__(self, boot9: str = None, dev: int = 0, setup_b9_keys: bool = True):
         self.key_x: Dict[int, int] = {}
         self.key_y: Dict[int, int] = {0x03: 0xE1A00005202DDD1DBD4DC4D30AB9DC76,
                                       0x05: 0x4D804F4E9990194613A204AC584460BE}
@@ -214,7 +214,7 @@ class CryptoEngine:
             self.key_x[keyslot] = keys[dev]
 
         if setup_b9_keys:
-            self.setup_keys_from_boot9_file()
+            self.setup_keys_from_boot9_file(boot9)
 
     @property
     @_requires_bootrom
