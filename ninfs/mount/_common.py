@@ -59,7 +59,7 @@ readonly_argp = ArgumentParser(add_help=False)
 readonly_argp.add_argument('-r', '--ro', help='mount read-only', action='store_true')
 
 ctrcrypto_argp = ArgumentParser(add_help=False)
-ctrcrypto_argp.add_argument('--boot9', help='path to boot9.bin', action='store_true')
+ctrcrypto_argp.add_argument('--boot9', help='path to boot9.bin')
 ctrcrypto_argp.add_argument('--dev', help='use dev keys', action='store_const', const=1, default=0)
 
 seeddb_argp = ArgumentParser(add_help=False)
