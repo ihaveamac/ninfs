@@ -62,7 +62,7 @@ dev_argp = ArgumentParser(add_help=False)
 dev_argp.add_argument('--dev', help='use dev keys', action='store_const', const=1, default=0)
 
 seeddb_argp = ArgumentParser(add_help=False)
-seeddb_argp.add_argument('--seeddb', help=SUPPRESS)
+seeddb_argp.add_argument('--seeddb', help='path to seeddb.bin')
 
 
 def main_args(name: str, help: str) -> ArgumentParser:

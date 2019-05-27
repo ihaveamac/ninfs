@@ -42,6 +42,7 @@ For 3DS types, The ARM9 bootROM is required. You can dump it using boot9strap, w
 
 CDN, CIA, and NCCH mounting may need [SeedDB](https://github.com/ihaveamac/3DS-rom-tools/wiki/SeedDB-list) for mounting NCCH containers of newer games (2015+) that use seeds.  
 SeedDB is checked in order of:
+* `--seeddb` argument (if set)
 * `SEEDDB_PATH` environment variable (if set)
 * `%APPDATA%\3ds\seeddb.bin` (Windows-specific)
 * `~/Library/Application Support/3ds/seeddb.bin` (macOS-specific)
