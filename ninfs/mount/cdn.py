@@ -55,10 +55,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
         self.g_stat = {'st_ctime': int(cdn_stat.st_ctime), 'st_mtime': int(cdn_stat.st_mtime),
                        'st_atime': int(cdn_stat.st_atime)}
 
-        try:
-            self.tmd = TitleMetadataReader.from_file(tmd_file)
-        except FileNotFoundError:
-            exit('tmd not found.')
+        self.tmd = TitleMetadataReader.from_file(tmd_file)
 
         # noinspection PyUnboundLocalVariable
         self.title_id = self.tmd.title_id
