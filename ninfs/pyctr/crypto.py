@@ -13,6 +13,7 @@ from struct import pack, unpack
 from typing import TYPE_CHECKING
 
 from Cryptodome.Cipher import AES
+from Cryptodome.Hash import CMAC
 from Cryptodome.Util import Counter
 
 from .common import PyCTRError
@@ -25,6 +26,7 @@ if TYPE_CHECKING:
     from Cryptodome.Cipher._mode_ctr import CtrMode
     # noinspection PyProtectedMember
     from Cryptodome.Cipher._mode_ecb import EcbMode
+    from Cryptodome.Hash.CMAC import CMAC as CMACObject
     from typing import Dict, List, Union
 
 __all__ = ['CryptoError', 'OTPLengthError', 'CorruptBootromError', 'KeyslotMissingError', 'TicketLengthError',
@@ -277,6 +279,15 @@ class CryptoEngine:
             raise KeyslotMissingError(f'normal key for keyslot 0x{keyslot:02x} is not set up')
 
         return AES.new(key, AES.MODE_ECB)
+
+    def create_cmac_object(self, keyslot: int) -> 'CMACObject':
+        """Create a CMAC object with the given keyslot."""
+        try:
+            key = self.key_normal[keyslot]
+        except KeyError:
+            raise KeyslotMissingError(f'normal key for keyslot 0x{keyslot:02x} is not set up')
+
+        return CMAC.new(key, ciphermod=AES)
 
     def load_from_ticket(self, ticket: bytes):
         """Load a titlekey from a ticket and set keyslot 0x40 to the decrypted titlekey."""
