@@ -29,10 +29,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
 
     @_c.ensure_lower_path
     def path_to_iv(self, path):
-        path_hash = sha256(path[self.root_len + 33:].encode('utf-16le') + b'\0\0').digest()
-        hash_p1 = readbe(path_hash[0:16])
-        hash_p2 = readbe(path_hash[16:32])
-        return hash_p1 ^ hash_p2
+        return CryptoEngine.sd_path_to_iv(path[self.root_len + 33:])
 
     def __init__(self, sd_dir: str, movable: bytes, dev: bool = False, readonly: bool = False, boot9: str = None):
         self.crypto = CryptoEngine(boot9=boot9, dev=dev)
