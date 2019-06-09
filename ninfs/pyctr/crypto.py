@@ -289,6 +289,13 @@ class CryptoEngine:
 
         return CMAC.new(key, ciphermod=AES)
 
+    @staticmethod
+    def sd_path_to_iv(path: str) -> int:
+        path_hash = sha256(path.encode('utf-16le') + b'\0\0').digest()
+        hash_p1 = readbe(path_hash[0:16])
+        hash_p2 = readbe(path_hash[0:16])
+        return hash_p1 ^ hash_p2
+
     def load_from_ticket(self, ticket: bytes):
         """Load a titlekey from a ticket and set keyslot 0x40 to the decrypted titlekey."""
         ticket_len = len(ticket)
