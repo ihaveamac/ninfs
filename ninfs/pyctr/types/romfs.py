@@ -137,6 +137,7 @@ class RomFSReader:
     def __init__(self, fp: 'Union[str, BinaryIO]', case_insensitive: bool = False):
         if isinstance(fp, str):
             fp = open(fp, 'rb')
+        self._start = fp.tell()
         self._fp = fp
         self.case_insensitive = case_insensitive
         self._lock = Lock()
@@ -155,7 +156,7 @@ class RomFSReader:
             lv3_block_size = readle(ivfc[0x4C:0x50])
             lv3_hash_block_size = 1 << lv3_block_size
             lv3_offset += roundup(0x60 + master_hash_size, lv3_hash_block_size)
-            fp.seek(lv3_offset)
+            fp.seek(self._start + lv3_offset)
             magic = fp.read(4)
         self.lv3_offset = lv3_offset
 
@@ -194,7 +195,7 @@ class RomFSReader:
 
             # iterate through all child directories
             if first_child_dir != 0xFFFFFFFF:
-                fp.seek(lv3_offset + lv3_dirmeta.offset + first_child_dir)
+                fp.seek(self._start + lv3_offset + lv3_dirmeta.offset + first_child_dir)
                 while True:
                     child_dir_meta = fp.read(0x18)
                     next_sibling_dir = readle(child_dir_meta[0x4:0x8])
@@ -208,10 +209,10 @@ class RomFSReader:
                                 f'{current_path}{child_dir_name}/')
                     if next_sibling_dir == 0xFFFFFFFF:
                         break
-                    fp.seek(lv3_offset + lv3_dirmeta.offset + next_sibling_dir)
+                    fp.seek(self._start + lv3_offset + lv3_dirmeta.offset + next_sibling_dir)
 
             if first_file != 0xFFFFFFFF:
-                fp.seek(lv3_offset + lv3_filemeta.offset + first_file)
+                fp.seek(self._start + lv3_offset + lv3_filemeta.offset + first_file)
                 while True:
                     child_file_meta = fp.read(0x20)
                     next_sibling_file = readle(child_file_meta[0x4:0x8])
@@ -227,11 +228,11 @@ class RomFSReader:
                     self.total_size += child_file_size
                     if next_sibling_file == 0xFFFFFFFF:
                         break
-                    fp.seek(lv3_offset + lv3_filemeta.offset + next_sibling_file)
+                    fp.seek(self._start + lv3_offset + lv3_filemeta.offset + next_sibling_file)
 
         self._tree_root = {'name': 'ROOT'}
         self.total_size = 0
-        fp.seek(lv3_offset + lv3_dirmeta.offset)
+        fp.seek(self._start + lv3_offset + lv3_dirmeta.offset)
         iterate_dir(self._tree_root, fp.read(0x18), '/')
 
     def close(self):
@@ -280,5 +281,5 @@ class RomFSReader:
         if offset + size > info.size:
             size = info.size - offset
         with self._lock:
-            self._fp.seek(self.data_offset + info.offset + offset)
+            self._fp.seek(self._start + self.data_offset + info.offset + offset)
             return self._fp.read(size)
