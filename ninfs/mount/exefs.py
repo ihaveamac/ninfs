@@ -11,12 +11,11 @@ Mounts Executable Filesystem (ExeFS) files, creating a virtual filesystem of the
 import logging
 import os
 from errno import ENOENT
-from hashlib import sha256
 from stat import S_IFDIR, S_IFREG
 from sys import argv
 from typing import TYPE_CHECKING
 
-from pyctr.types.exefs import ExeFSReader, ExeFSEntry, decompress_code as _decompress_code
+from pyctr.types.exefs import ExeFSReader, ExeFSFileNotFoundError
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
 from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
@@ -27,17 +26,17 @@ if TYPE_CHECKING:
 
 class ExeFSMount(LoggingMixIn, Operations):
     fd = 0
+    files: 'Dict[str, str]'
 
-    def __init__(self, exefs_fp: 'BinaryIO', g_stat: os.stat_result, decompress_code: bool = False, strict: bool = False):
+    def __init__(self, exefs_fp: 'BinaryIO', g_stat: os.stat_result, decompress_code: bool = False):
         self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
                        'st_atime': int(g_stat.st_atime)}
 
-        self.reader = ExeFSReader.load(exefs_fp, strict)
-        self.files: Dict[str, ExeFSEntry] = {'/' + x.name.replace('.', '', 1) + '.bin': x
-                                             for x in self.reader.entries.values()}
-        self.exefs_size = sum(x.size for x in self.reader.entries.values())
-        self.code_dec = b''
+        self.reader = ExeFSReader(exefs_fp)
         self.decompress_code = decompress_code
+
+        # for vfs stats
+        self.exefs_size = sum(x.size for x in self.reader.entries.values())
 
         self.f = exefs_fp
 
@@ -51,26 +50,16 @@ class ExeFSMount(LoggingMixIn, Operations):
 
     # TODO: maybe do this in a way that allows for multiprocessing (titledir)
     def init(self, path, data=None):
-        try:
-            item = self.files['/code.bin']
-        except KeyError:
-            return  # no code, don't attempt to decompress
-        else:
-            if self.decompress_code:
-                print('ExeFS: Decompressing .code...')
-                # noinspection PyBroadException
-                try:
-                    self.code_dec = _decompress_code(data if data else self.read('/code.bin', item.size, item.offset, 0))
-                    self.files['/code-decompressed.bin'] = ExeFSEntry(name='code-decompressed', offset=-1,
-                                                                      size=len(self.code_dec),
-                                                                      hash=sha256(self.code_dec).digest())
-                    print('ExeFS: Done!')
-                except Exception as e:
-                    print(f'ExeFS: Failed to decompress .code: {type(e).__name__}: {e}')
+        if self.decompress_code:
+            print('ExeFS: Decompressing code...')
+            res = self.reader.decompress_code()
+            if res:
+                print('ExeFS: Done!')
             else:
-                print('ExeFS: .code aleady decompressed')
-                self.files['/code-decompressed.bin'] = ExeFSEntry(name='code-decompressed', offset=item.offset,
-                                                                  size=item.size, hash=item.hash)
+                print('ExeFS: No decompression needed')
+
+        # displayed name associated with real entry name
+        self.files = {'/' + x.name.replace('.', '', 1) + '.bin': x.name for x in self.reader.entries.values()}
 
     @_c.ensure_lower_path
     def getattr(self, path, fh=None):
@@ -79,7 +68,7 @@ class ExeFSMount(LoggingMixIn, Operations):
             st = {'st_mode': (S_IFDIR | 0o555), 'st_nlink': 2}
         else:
             try:
-                item = self.files[path]
+                item = self.reader.entries[self.files[path]]
             except KeyError:
                 raise FuseOSError(ENOENT)
             st = {'st_mode': (S_IFREG | 0o444), 'st_size': item.size, 'st_nlink': 1}
@@ -97,20 +86,11 @@ class ExeFSMount(LoggingMixIn, Operations):
     @_c.ensure_lower_path
     def read(self, path, size, offset, fh):
         try:
-            item = self.files[path]
-        except KeyError:
+            with self.reader.open(self.files[path]) as f:
+                f.seek(offset)
+                return f.read(size)
+        except (KeyError, ExeFSFileNotFoundError):
             raise FuseOSError(ENOENT)
-        if item.offset == -1:
-            # special case for code-decompressed
-            return self.code_dec[offset:offset + size]
-
-        real_offset = 0x200 + item.offset + offset
-        if real_offset > item.offset + item.size + 0x200:
-            return b''
-        if offset + size > item.size:
-            size = item.size - offset
-        self.f.seek(real_offset)
-        return self.f.read(size)
 
     @_c.ensure_lower_path
     def statfs(self, path):
