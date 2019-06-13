@@ -4,26 +4,52 @@
 # This file is licensed under The MIT License (MIT).
 # You can find the full license text in LICENSE.md in the root of this project.
 
+from hashlib import sha256
+from threading import Lock
 from typing import TYPE_CHECKING, NamedTuple
 
-from ..common import PyCTRError
+from ..common import PyCTRError, _ReaderOpenFileBase
 from ..util import readle
 
 if TYPE_CHECKING:
-    from typing import BinaryIO, Dict, Iterable
+    from typing import BinaryIO, Dict, Union
 
-__all__ = ['EMPTY_ENTRY', 'ExeFSError', 'InvalidExeFSError', 'CodeDecompressionError', 'decompress_code', 'ExeFSEntry',
-           'ExeFSReader']
+__all__ = ['EXEFS_EMPTY_ENTRY', 'EXEFS_ENTRY_SIZE', 'EXEFS_ENTRY_COUNT', 'EXEFS_HEADER_SIZE', 'ExeFSError',
+           'ExeFSFileNotFoundError', 'InvalidExeFSError', 'ExeFSNameError', 'BadOffsetError', 'CodeDecompressionError',
+           'decompress_code', 'ExeFSReader']
 
-EMPTY_ENTRY = b'\0' * 0x10
+EXEFS_ENTRY_SIZE = 0x10
+EXEFS_ENTRY_COUNT = 10
+EXEFS_EMPTY_ENTRY = b'\0' * EXEFS_ENTRY_SIZE
+EXEFS_HEADER_SIZE = 0x200
+
+CODE_DECOMPRESSED_NAME = '.code-decompressed'
 
 
 class ExeFSError(PyCTRError):
     """Generic exception for ExeFS operations."""
 
 
+class ExeFSFileNotFoundError(ExeFSError):
+    """File not found in the ExeFS."""
+
+
 class InvalidExeFSError(ExeFSError):
     """Invalid ExeFS header."""
+
+
+class ExeFSNameError(InvalidExeFSError):
+    """Name could not be decoded, likely making the file not a valid ExeFS."""
+
+    def __str__(self):
+        return f'could not decode from ascii: {self.args[0]!r}'
+
+
+class BadOffsetError(InvalidExeFSError):
+    """Offset is not a multiple of 0x200. This kind of ExeFS will not work on a 3DS."""
+
+    def __str__(self):
+        return f'offset is not a multiple of 0x200: {self.args[0]:#x}'
 
 
 class CodeDecompressionError(ExeFSError):
@@ -120,64 +146,135 @@ class ExeFSEntry(NamedTuple):
     hash: bytes
 
 
+def _normalize_path(p: str):
+    """Fix a given path to work with ExeFS filenames."""
+    if p.startswith('/'):
+        p = p[1:]
+    # while it is technically possible for an ExeFS entry to contain ".bin",
+    #   this would not happen in practice.
+    # even so, normalization can be disabled by passing normalize=False to
+    #   ExeFSReader.open
+    if p.lower().endswith('.bin'):
+        p = p[:4]
+    return p
+
+
+class _ExeFSOpenFile(_ReaderOpenFileBase):
+    """Class for open ExeFS file entries."""
+
+    def __init__(self, reader: 'ExeFSReader', path: str):
+        super().__init__(reader, path)
+        try:
+            self._info = reader.entries[self._path]
+        except KeyError:
+            raise ExeFSFileNotFoundError(self._path)
+
+
 class ExeFSReader:
     """
-    Class for 3DS ExeFS.
+    Class to read the 3DS ExeFS container.
 
     http://3dbrew.org/wiki/ExeFS
     """
 
-    def __init__(self, entries: 'Iterable[ExeFSEntry]', strict: bool = False):
-        self.entries: Dict[str, ExeFSEntry] = {}
-        for x in entries:
-            if x.offset % 0x200:
-                msg = f'{x.name} has an offset not aligned to 0x200 ({x.offset:#x})'
-                if strict:
-                    raise InvalidExeFSError(msg)
-                print(f'Warning: {msg}.\n'
-                      f'This ExeFS will not work on console.')
-            for e in self.entries.values():
-                if e.offset + e.size > x.offset > e.offset:
-                    msg = f'{x.name} overlaps with {e.name}'
-                    if strict:
-                        raise InvalidExeFSError(msg)
-                    print('Warning:', msg)
-            self.entries[x.name] = x
+    closed = False
+    _code_dec = None
 
-    def __hash__(self) -> int:
-        return hash(self.entries.values())
+    def __init__(self, fp: 'Union[str, BinaryIO]'):
+        if isinstance(fp, str):
+            fp = open(fp, 'rb')
+
+        # storing the starting offset lets it work from anywhere in the file
+        self._start = fp.tell()
+        self._fp = fp
+        self._lock = Lock()
+
+        self.entries: 'Dict[str, ExeFSEntry]' = {}
+
+        header = fp.read(EXEFS_HEADER_SIZE)
+
+        # ExeFS entries can fit up to 10 names. hashes are stored in reverse order
+        #   (e.g. the first entry would have the hash at the very end - 0x1E0)
+        for entry_n, hash_n in zip(range(0, EXEFS_ENTRY_COUNT * EXEFS_ENTRY_SIZE, EXEFS_ENTRY_SIZE),
+                                   range(0x1E0, 0xA0, -0x20)):
+            entry_raw = header[entry_n:entry_n + 0x10]
+            entry_hash = header[hash_n:hash_n + 0x20]
+            if entry_raw == EXEFS_EMPTY_ENTRY:
+                continue
+
+            try:
+                # ascii is used since only a-z would be used in practice
+                name = entry_raw[0:8].rstrip(b'\0').decode('ascii')
+            except UnicodeDecodeError:
+                raise ExeFSNameError(entry_raw[0:8])
+
+            entry = ExeFSEntry(name=name,
+                               offset=readle(entry_raw[8:12]),
+                               size=readle(entry_raw[12:16]),
+                               hash=entry_hash)
+
+            # the 3DS fails to parse an ExeFS with an offset that isn't a multiple of 0x200
+            #   so we should do the same here
+            if entry.offset % 0x200:
+                raise BadOffsetError(entry.offset)
+
+            self.entries[name] = entry
 
     def __len__(self) -> int:
+        """Return the amount of entries in the ExeFS."""
         return len(self.entries)
 
-    def __getitem__(self, item: str) -> ExeFSEntry:
-        return self.entries[item]
+    def close(self):
+        self.closed = True
+        self._fp.close()
 
-    @classmethod
-    def load(cls, fp: 'BinaryIO', strict: bool = False) -> 'ExeFSReader':
-        """Load an ExeFS from a file-like object."""
-        header = fp.read(0x200)
-        if len(set(header)) == 1:
-            raise InvalidExeFSError('Empty header')
+    __del__ = close
 
-        entries = []
-        # exefs entry number, exefs hash number
-        try:
-            for en, hn in zip(range(0, 0xA0, 0x10), range(0x1E0, 0xA0, -0x20)):
-                entry_raw = header[en:en + 0x10]
-                entry_hash = header[hn:hn + 0x20]
-                if entry_raw == EMPTY_ENTRY:
-                    continue
-                entries.append(ExeFSEntry(name=entry_raw[0:8].rstrip(b'\0').decode('ascii'),
-                                          offset=readle(entry_raw[8:12]),
-                                          size=readle(entry_raw[12:16]),
-                                          hash=entry_hash))
-        except UnicodeDecodeError:
-            raise InvalidExeFSError('Failed to convert name, probably not a valid ExeFS')
+    def open(self, path: str, *, normalize: bool = True):
+        """Open a file in the ExeFS for reading."""
+        if normalize:
+            # remove beginning "/" and ending ".bin"
+            path = _normalize_path(path)
+        return _ExeFSOpenFile(self, path)
 
-        return cls(entries, strict)
+    def get_data(self, info: ExeFSEntry, offset: int, size: int) -> bytes:
+        if offset + size > info.size:
+            size = info.size - offset
+        with self._lock:
+            # data for ExeFS entries start relative to the end of the header
+            self._fp.seek(self._start + EXEFS_HEADER_SIZE + info.offset + offset)
+            return self._fp.read(size)
 
-    @classmethod
-    def from_file(cls, fn: str, strict: bool = False) -> 'ExeFSReader':
-        with open(fn, 'rb') as f:
-            return cls.load(f, strict)
+    def decompress_code(self) -> bool:
+        """
+        Decompress '.code' in the container. The result will be available as '.code-decompressed'.
+
+        The return value is if '.code' was actually decompressed.
+        """
+        with self.open('.code') as f:
+            code = f.read()
+
+        # if it's already decompressed, this would return the code unmodified
+        code_dec = decompress_code(code)
+
+        decompressed = code_dec != code
+
+        if decompressed:
+            code_dec_hash = sha256(code_dec)
+            entry = ExeFSEntry(name=CODE_DECOMPRESSED_NAME,
+                               offset=-1,
+                               size=len(code_dec),
+                               hash=code_dec_hash.digest())
+            self._code_dec = code_dec
+        else:
+            # if the code was already decompressed, don't store a second copy in memory
+            code_entry = self.entries['.code']
+            entry = ExeFSEntry(name=CODE_DECOMPRESSED_NAME,
+                               offset=code_entry.offset,
+                               size=code_entry.size,
+                               hash=code_entry.hash)
+
+        self.entries[CODE_DECOMPRESSED_NAME] = entry
+
+        # returns if the code was actually decompressed or not
+        return decompressed
