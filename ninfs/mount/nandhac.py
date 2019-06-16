@@ -198,7 +198,7 @@ def main(prog: str = None, args: list = None):
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description='Mount Nintendo Switch NAND images.',
                             parents=(_c.default_argp, _c.readonly_argp, _c.main_args('nand', 'NAND image')))
-    parser.add_argument('--keys', help='keys text file from biskeydump')
+    parser.add_argument('--keys', help='keys text file from biskeydump', default=os.path.expanduser("~") + "/.switch/prod.keys")
     parser.add_argument('-S', '--split-files', help='treat as part of a split file', action='store_true')
 
     a = parser.parse_args(args)
