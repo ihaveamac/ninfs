@@ -32,7 +32,8 @@ bis_key_ids = defaultdict(lambda: -1, {
 class HACNandImageMount(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, nand_fp: 'BinaryIO', g_stat: os.stat_result, keys: str, readonly: bool = False):
+    def __init__(self, nand_fp: 'BinaryIO', g_stat: os.stat_result, keys: str, readonly: bool = False, emummc: bool = False):
+        self.base_addr = 0x800000 if emummc else 0
         self.readonly = readonly
         self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
                        'st_atime': int(g_stat.st_atime)}
@@ -43,7 +44,7 @@ class HACNandImageMount(LoggingMixIn, Operations):
             self.crypto[x] = XTSN(*bis_keys[x])
 
         self.files = {}
-        nand_fp.seek(0x200)
+        nand_fp.seek(0x200 + self.base_addr)
         gpt_header = nand_fp.read(0x5C)
         if gpt_header[0:8] != b'EFI PART':
             exit('GPT header magic not found.')
@@ -56,7 +57,7 @@ class HACNandImageMount(LoggingMixIn, Operations):
 
         gpt_backup_header_location = int.from_bytes(gpt_header[0x20:0x28], 'little')
         # check if the backup header exists
-        nand_fp.seek(gpt_backup_header_location * 0x200)
+        nand_fp.seek(gpt_backup_header_location * 0x200 + self.base_addr)
         gpt_backup_header = nand_fp.read(0x200)
         if gpt_backup_header[0:8] != b'EFI PART':
             exit('GPT backup header not found. This likely means an incomplete backup.')
@@ -65,7 +66,7 @@ class HACNandImageMount(LoggingMixIn, Operations):
         gpt_part_count = int.from_bytes(gpt_header[0x50:0x54], 'little')
         gpt_part_entry_size = int.from_bytes(gpt_header[0x54:0x58], 'little')
 
-        nand_fp.seek(gpt_part_start * 0x200)
+        nand_fp.seek(gpt_part_start * 0x200 + self.base_addr)
         gpt_part_full_raw = nand_fp.read(gpt_part_count * gpt_part_entry_size)
         gpt_part_crc_expected = int.from_bytes(gpt_header[0x58:0x5C], 'little')
         gpt_part_crc_got = crc32(gpt_part_full_raw) & 0xFFFFFFFF
@@ -133,12 +134,12 @@ class HACNandImageMount(LoggingMixIn, Operations):
             aligned_real_offset = real_offset - before
             aligned_offset = offset - before
             size = before + size
-            self.f.seek(aligned_real_offset)
+            self.f.seek(aligned_real_offset + self.base_addr)
             xtsn = self.crypto[fi['bis_key']]
             return xtsn.decrypt(self.f.read(size + after), 0, 0x4000, aligned_offset)[before:size]
 
         else:
-            self.f.seek(real_offset)
+            self.f.seek(real_offset + self.base_addr)
             return self.f.read(size)
 
     @_c.ensure_lower_path
@@ -174,13 +175,13 @@ class HACNandImageMount(LoggingMixIn, Operations):
             else:
                 first_block_beginning = b''
 
-            self.f.seek(aligned_real_offset)
+            self.f.seek(aligned_real_offset + self.base_addr)
             xtsn = self.crypto[fi['bis_key']]
             to_encrypt = b''.join((first_block_beginning, data, last_block_ending))
             self.f.write(xtsn.encrypt(to_encrypt, 0, 0x4000, aligned_offset))
 
         else:
-            self.f.seek(real_offset)
+            self.f.seek(real_offset + self.base_addr)
             self.f.write(data)
 
         return real_len
@@ -200,6 +201,7 @@ def main(prog: str = None, args: list = None):
                             parents=(_c.default_argp, _c.readonly_argp, _c.main_args('nand', 'NAND image')))
     parser.add_argument('--keys', help='keys text file from biskeydump', default=os.path.expanduser("~") + "/.switch/prod.keys")
     parser.add_argument('-S', '--split-files', help='treat as part of a split file', action='store_true')
+    parser.add_argument('-e', '--emummc', help='Is the input image an emuMMC image', action='store_true')
 
     a = parser.parse_args(args)
     opts = dict(_c.parse_fuse_opts(a.o))
@@ -208,7 +210,7 @@ def main(prog: str = None, args: list = None):
         logging.basicConfig(level=logging.DEBUG, filename=a.do)
 
     def do_thing(f: 'BinaryIO', k: 'TextIO', nand_stat: os.stat_result):
-        mount = HACNandImageMount(nand_fp=f, g_stat=nand_stat, keys=k.read(), readonly=a.ro)
+        mount = HACNandImageMount(nand_fp=f, g_stat=nand_stat, keys=k.read(), readonly=a.ro, emummc=a.emummc)
         if _c.macos or _c.windows:
             opts['fstypename'] = 'HACFS'
             # assuming / is the path separator since macos. but if windows gets support for this,
