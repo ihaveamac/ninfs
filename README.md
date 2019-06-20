@@ -159,6 +159,7 @@ Windows users can use a drive letter like `F:` as a mountpoint, or use `*` and a
 * [OSFMount](https://www.osforensics.com/tools/mount-disk-images.html) for Windows can mount FAT12/FAT16 partitions in NAND backups.
 
 ## Related tools
+* roothorick's [BUSEHAC](https://gitlab.com/roothorick/busehac) is a Linux driver for encrypted Nintendo Switch NANDs.
 * Maschell's [fuse-wiiu](https://github.com/Maschell/fuse-wiiu) can be used to mount Wii U contents.
 * koolkdev's [wfslib](https://github.com/koolkdev/wfslib) has wfs-fuse to mount the Wii U mlc dumps and usb devices.
 
@@ -166,7 +167,7 @@ Windows users can use a drive letter like `F:` as a mountpoint, or use `*` and a
 * `ninfs` is under the MIT license.
   * `fuse.py` is under the ISC license ([taken from `setup.py`](https://github.com/fusepy/fusepy/blob/b5f87a1855119d55c755c2c4c8b1da346365629d/setup.py)).
   * `hac/aes.cpp` and `hac/aes.hpp` are from @openluopworld's [aes_128](https://github.com/openluopworld/aes_128) commit `b5b7f55`, and uses the MIT License.
-  * `hac/ccrypto.cpp` AES-XTS part is by @luigoalma, based on @plutooo's [crypto module](https://gist.github.com/plutooo/fd4b22e7f533e780c1759057095d7896); Python module implementation by me(@ihaveamac).
+  * `hac/_crypto.cpp` AES-XTS part by @luigoalma, based on @plutooo's [crypto module](https://gist.github.com/plutooo/fd4b22e7f533e780c1759057095d7896); Python module implementation initially by me(@ihaveamac).
 
 Special thanks to @Stary2001 for help with NAND crypto (especially TWL), and @d0k3 for SD crypto.
 
