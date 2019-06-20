@@ -226,6 +226,7 @@ class SplitFileHandler(BufferedIOBase):
                 raise TypeError(f'an integer is required (got type {type(whence).__name__})')
         return self._fake_seek
 
+    @_raise_if_closed
     def tell(self):
         return self._fake_seek
 
