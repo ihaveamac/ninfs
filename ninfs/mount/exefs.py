@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 from pyctr.types.exefs import ExeFSReader, ExeFSFileNotFoundError
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
-from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time
 
 if TYPE_CHECKING:
     from typing import BinaryIO, Dict
@@ -28,9 +28,8 @@ class ExeFSMount(LoggingMixIn, Operations):
     fd = 0
     files: 'Dict[str, str]'
 
-    def __init__(self, exefs_fp: 'BinaryIO', g_stat: os.stat_result, decompress_code: bool = False):
-        self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
-                       'st_atime': int(g_stat.st_atime)}
+    def __init__(self, exefs_fp: 'BinaryIO', g_stat: dict, decompress_code: bool = False):
+        self.g_stat = g_stat
 
         self.reader = ExeFSReader(exefs_fp)
         self.decompress_code = decompress_code
@@ -112,7 +111,7 @@ def main(prog: str = None, args: list = None):
     if a.do:
         logging.basicConfig(level=logging.DEBUG, filename=a.do)
 
-    exefs_stat = os.stat(a.exefs)
+    exefs_stat = get_time(a.exefs)
 
     with open(a.exefs, 'rb') as f:
         mount = ExeFSMount(exefs_fp=f, g_stat=exefs_stat, decompress_code=a.decompress_code)

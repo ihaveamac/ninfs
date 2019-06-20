@@ -5,6 +5,7 @@
 # You can find the full license text in LICENSE.md in the root of this project.
 
 import logging
+import time
 from argparse import ArgumentParser, SUPPRESS
 from errno import EROFS
 from functools import wraps
@@ -14,6 +15,7 @@ from sys import exit, platform
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from os import PathLike
     from typing import Generator, Tuple, Union
 
 windows = platform in {'win32', 'cygwin'}
@@ -28,6 +30,19 @@ try:
 except Exception as e:
     exit(f'Failed to import the fuse module:\n'
          f'{type(e).__name__}: {e}')
+
+
+def get_time(path: 'PathLike'):
+    try:
+        # os.stat accepts a PathLike object, so this suppresses PyCharm's incorrect warning
+        # noinspection PyTypeChecker
+        res = stat(path)
+        return {'st_ctime': int(res.st_ctime), 'st_mtime': int(res.st_mtime), 'st_atime': int(res.st_atime)}
+    except OSError:
+        # sometimes os.stat can't be used with a path, such as Windows physical drives
+        #   so we need to fake the result
+        now = int(time.time())
+        return {'st_ctime': now, 'st_mtime': now, 'st_atime': now}
 
 
 # custom LoggingMixIn modified from the original fusepy, to suppress certain entries.

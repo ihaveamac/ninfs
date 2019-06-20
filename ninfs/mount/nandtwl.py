@@ -21,19 +21,18 @@ from pyctr.crypto import CryptoEngine, Keyslot
 from pyctr.util import readbe, readle
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
-from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time
 
 
 class TWLNandImageMount(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, nand_fp: BinaryIO, g_stat: os.stat, consoleid: str = None, cid: str = None,
+    def __init__(self, nand_fp: BinaryIO, g_stat: dict, consoleid: str = None, cid: str = None,
                  readonly: bool = False):
         self.crypto = CryptoEngine(setup_b9_keys=False)
         self.readonly = readonly
 
-        self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
-                       'st_atime': int(g_stat.st_atime)}
+        self.g_stat = g_stat
 
         self.files = {}
 
@@ -239,7 +238,7 @@ def main(prog: str = None, args: list = None):
     if a.do:
         logging.basicConfig(level=logging.DEBUG, filename=a.do)
 
-    nand_stat = os.stat(a.nand)
+    nand_stat = get_time(a.nand)
 
     with open(a.nand, f'r{"" if a.ro else "+"}b') as f:
         mount = TWLNandImageMount(nand_fp=f, g_stat=nand_stat, consoleid=a.console_id, cid=a.cid, readonly=a.ro)

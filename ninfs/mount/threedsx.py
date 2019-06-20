@@ -20,7 +20,7 @@ from pyctr.util import readle
 from . import _common as _c
 from .romfs import RomFSMount
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
-from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time
 
 if TYPE_CHECKING:
     from typing import Dict
@@ -29,10 +29,8 @@ if TYPE_CHECKING:
 class ThreeDSXMount(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, threedsx_fp: BinaryIO, g_stat: os.stat_result):
-        self._g_stat = g_stat
-        self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
-                       'st_atime': int(g_stat.st_atime)}
+    def __init__(self, threedsx_fp: BinaryIO, g_stat: dict):
+        self.g_stat = g_stat
         self.romfs_fuse: RomFSMount = None
 
         self.f = threedsx_fp
@@ -63,7 +61,7 @@ class ThreeDSXMount(LoggingMixIn, Operations):
         if '/romfs.bin' in self.files:
             try:
                 romfs_vfp = _c.VirtualFileWrapper(self, '/romfs.bin', self.files['/romfs.bin']['size'])
-                romfs_fuse = RomFSMount(romfs_vfp, self._g_stat)
+                romfs_fuse = RomFSMount(romfs_vfp, self.g_stat)
                 romfs_fuse.init(path)
                 self.romfs_fuse = romfs_fuse
             except Exception as e:
@@ -135,7 +133,7 @@ def main(prog: str = None, args: list = None):
     if a.do:
         logging.basicConfig(level=logging.DEBUG, filename=a.do)
 
-    threedsx_stat = os.stat(a.threedsx)
+    threedsx_stat = get_time(a.threedsx)
 
     with open(a.threedsx, 'rb') as f:
         mount = ThreeDSXMount(threedsx_fp=f, g_stat=threedsx_stat)

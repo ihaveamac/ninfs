@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 from zlib import crc32
 
 from hac.crypto import XTSN, parse_biskeydump
-from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time
 from . import _common as _c
 
 if TYPE_CHECKING:
@@ -32,11 +32,10 @@ bis_key_ids = defaultdict(lambda: -1, {
 class HACNandImageMount(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, nand_fp: 'BinaryIO', g_stat: os.stat_result, keys: str, readonly: bool = False, emummc: bool = False):
+    def __init__(self, nand_fp: 'BinaryIO', g_stat: dict, keys: str, readonly: bool = False, emummc: bool = False):
         self.base_addr = 0x800000 if emummc else 0
         self.readonly = readonly
-        self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
-                       'st_atime': int(g_stat.st_atime)}
+        self.g_stat = g_stat
 
         bis_keys = parse_biskeydump(keys)
         self.crypto: List[XTSN] = [None] * 4
@@ -248,8 +247,8 @@ def main(prog: str = None, args: list = None):
                 exit('Could not find the first part of the multi-part backup.')
 
             handler = _c.SplitFileHandler(base + format(x, '02') for x in range(count))
-            do_thing(handler, k, os.stat(base + '00'))
+            do_thing(handler, k, get_time(base + '00'))
 
         else:
             with open(a.nand, 'r+b') as f:
-                do_thing(f, k, os.stat(a.nand))
+                do_thing(f, k, get_time(a.nand))

@@ -23,7 +23,7 @@ from pyctr.crypto import CryptoEngine, Keyslot
 from pyctr.types.tmd import TitleMetadataReader, CHUNK_RECORD_SIZE
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
-from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time
 from .ncch import NCCHContainerMount
 from .srl import SRLMount
 
@@ -36,17 +36,14 @@ def new_offset(x: int) -> int:
 class CTRImportableArchiveMount(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, cia_fp: BinaryIO, g_stat: os.stat_result, dev: bool = False, seeddb: bool = None,
+    def __init__(self, cia_fp: BinaryIO, g_stat: dict, dev: bool = False, seeddb: bool = None,
                  boot9: str = None):
         self.crypto = CryptoEngine(boot9=boot9, dev=dev)
 
         self.dev = dev
         self.seeddb = seeddb
 
-        self._g_stat = g_stat
-        # get status change, modify, and file access times
-        self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
-                       'st_atime': int(g_stat.st_atime)}
+        self.g_stat = g_stat
 
         # open cia and get section sizes
         archive_header_size, cia_type, cia_version, cert_chain_size, \
@@ -116,9 +113,9 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
                 content_vfp = _c.VirtualFileWrapper(self, filename, chunk.size)
                 # boot9 is not passed here, as CryptoEngine has already set up the keys at the beginning.
                 if is_srl:
-                    content_fuse = SRLMount(content_vfp, g_stat=self._g_stat)
+                    content_fuse = SRLMount(content_vfp, g_stat=self.g_stat)
                 else:
-                    content_fuse = NCCHContainerMount(content_vfp, dev=self.dev, g_stat=self._g_stat,
+                    content_fuse = NCCHContainerMount(content_vfp, dev=self.dev, g_stat=self.g_stat,
                                                       seeddb=self.seeddb)
                 content_fuse.init(path)
                 self.dirs[dirname] = content_fuse
@@ -233,7 +230,7 @@ def main(prog: str = None, args: list = None):
     if a.do:
         logging.basicConfig(level=logging.DEBUG, filename=a.do)
 
-    cia_stat = os.stat(a.cia)
+    cia_stat = get_time(a.cia)
 
     with open(a.cia, 'rb') as f:
         mount = CTRImportableArchiveMount(cia_fp=f, dev=a.dev, g_stat=cia_stat, seeddb=a.seeddb, boot9=a.boot9)

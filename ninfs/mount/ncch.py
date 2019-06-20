@@ -22,7 +22,7 @@ from pyctr.types.ncch import NCCHReader, FIXED_SYSTEM_KEY
 from pyctr.util import readbe, roundup
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
-from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time
 from .exefs import ExeFSMount
 from .romfs import RomFSMount
 
@@ -35,7 +35,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
     romfs_fuse = None
     exefs_fuse = None
 
-    def __init__(self, ncch_fp: BinaryIO, g_stat: os.stat_result, decompress_code: bool = True, dev: bool = False,
+    def __init__(self, ncch_fp: BinaryIO, g_stat: dict, decompress_code: bool = True, dev: bool = False,
                  seeddb: str = None, boot9: str = None):
         self.crypto = CryptoEngine(boot9=boot9, dev=dev)
 
@@ -44,9 +44,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
         self.files: Dict[str, Dict] = {}
 
         # get status change, modify, and file access times
-        self._g_stat = g_stat
-        self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
-                       'st_atime': int(g_stat.st_atime)}
+        self.g_stat = g_stat
 
         ncch_header = ncch_fp.read(0x200)
         self.reader = NCCHReader.from_header(ncch_header)
@@ -114,7 +112,7 @@ class NCCHContainerMount(LoggingMixIn, Operations):
                     exh_flag = self.read('/extheader.bin', 1, 0xD, 0)
                     decompress = exh_flag[0] & 1
                 exefs_vfp = _c.VirtualFileWrapper(self, '/exefs.bin', exefs_region.size)
-                exefs_fuse = ExeFSMount(exefs_vfp, self._g_stat, decompress_code=decompress, strict=True)
+                exefs_fuse = ExeFSMount(exefs_vfp, self.g_stat, decompress_code=decompress, strict=True)
                 self.exefs_fuse = exefs_fuse
             except Exception as e:
                 print(f'Failed to mount ExeFS: {type(e).__name__}: {e}')
@@ -378,7 +376,7 @@ def main(prog: str = None, args: list = None):
     if a.do:
         logging.basicConfig(level=logging.DEBUG, filename=a.do)
 
-    ncch_stat = os.stat(a.ncch)
+    ncch_stat = get_time(a.ncch)
 
     with open(a.ncch, 'rb') as f:
         mount = NCCHContainerMount(ncch_fp=f, dev=a.dev, g_stat=ncch_stat, seeddb=a.seeddb, boot9=a.boot9)

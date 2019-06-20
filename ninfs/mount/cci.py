@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, BinaryIO
 from pyctr.util import readle
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
-from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time
 from .ncch import NCCHContainerMount
 
 if TYPE_CHECKING:
@@ -28,15 +28,11 @@ if TYPE_CHECKING:
 class CTRCartImageMount(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, cci_fp: BinaryIO, g_stat: os.stat_result, dev: bool = False, boot9: str = None):
+    def __init__(self, cci_fp: BinaryIO, g_stat: dict, dev: bool = False, boot9: str = None):
         self.dev = dev
         self.boot9 = boot9
 
-        self._g_stat = g_stat
-        # get status change, modify, and file access times
-        self.g_stat = {'st_ctime': int(g_stat.st_ctime),
-                       'st_mtime': int(g_stat.st_mtime),
-                       'st_atime': int(g_stat.st_atime)}
+        self.g_stat = g_stat
 
         # open cci and get section sizes
         cci_fp.seek(0x100)
@@ -82,7 +78,7 @@ class CTRCartImageMount(LoggingMixIn, Operations):
                 # noinspection PyBroadException
                 try:
                     content_vfp = _c.VirtualFileWrapper(self, filename, part[1])
-                    content_fuse = NCCHContainerMount(content_vfp, g_stat=self._g_stat, dev=self.dev, boot9=self.boot9)
+                    content_fuse = NCCHContainerMount(content_vfp, g_stat=self.g_stat, dev=self.dev, boot9=self.boot9)
                     content_fuse.init(path)
                     self.dirs[dirname] = content_fuse
                 except Exception as e:
@@ -152,7 +148,7 @@ def main(prog: str = None, args: list = None):
     if a.do:
         logging.basicConfig(level=logging.DEBUG, filename=a.do)
 
-    cci_stat = os.stat(a.cci)
+    cci_stat = get_time(a.cci)
 
     with open(a.cci, 'rb') as f:
         mount = CTRCartImageMount(cci_fp=f, dev=a.dev, boot9=a.boot9, g_stat=cci_stat)

@@ -23,7 +23,7 @@ from pyctr.types.exefs import ExeFSReader, InvalidExeFSError
 from pyctr.util import readbe, readle, roundup
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
-from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time
 from .exefs import ExeFSMount
 
 # ncsd image doesn't have the actual size
@@ -35,12 +35,11 @@ class CTRNandImageMount(LoggingMixIn, Operations):
 
     _essentials_mounted = False
 
-    def __init__(self, nand_fp: BinaryIO, g_stat: os.stat_result, dev: bool = False, readonly: bool = False,
+    def __init__(self, nand_fp: BinaryIO, g_stat: dict, dev: bool = False, readonly: bool = False,
                  otp: bytes = None, cid: AnyStr = None, boot9: str = None):
         self.crypto = CryptoEngine(boot9=boot9, dev=dev)
 
-        self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
-                       'st_atime': int(g_stat.st_atime)}
+        self.g_stat = g_stat
 
         nand_fp.seek(0x100)  # screw the signature
         ncsd_header = nand_fp.read(0x100)
@@ -464,7 +463,7 @@ def main(prog: str = None, args: list = None):
     if a.do:
         logging.basicConfig(level=logging.DEBUG, filename=a.do)
 
-    nand_stat = os.stat(a.nand)
+    nand_stat = get_time(a.nand)
 
     with open(a.nand, f'r{"" if a.ro else "+"}b') as f:
         # noinspection PyTypeChecker

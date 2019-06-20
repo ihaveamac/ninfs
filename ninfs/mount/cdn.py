@@ -19,7 +19,7 @@ from pyctr.crypto import CryptoEngine, Keyslot
 from pyctr.types.tmd import TitleMetadataReader, CHUNK_RECORD_SIZE
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
-from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time
 from .ncch import NCCHContainerMount
 from .srl import SRLMount
 
@@ -50,11 +50,9 @@ class CDNContentsMount(LoggingMixIn, Operations):
 
         # get status change, modify, and file access times
         try:
-            cdn_stat = os.stat(tmd_file)
+            self.g_stat = get_time(tmd_file)
         except FileNotFoundError:
             exit('Could not find "tmd" in directory')
-        self.g_stat = {'st_ctime': int(cdn_stat.st_ctime), 'st_mtime': int(cdn_stat.st_mtime),
-                       'st_atime': int(cdn_stat.st_atime)}
 
         self.tmd = TitleMetadataReader.from_file(tmd_file)
 

@@ -20,7 +20,7 @@ from typing import BinaryIO, NamedTuple
 
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
-from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time
 
 twl_header_format = ('<12s 4s 2s B B B 7x B B B B I I I I I I I I I I I I I I I I I I I H H I I Q I I 56x 156s HH 32x '
                      # twl stuff
@@ -101,10 +101,9 @@ class SRLMount(LoggingMixIn, Operations):
                 raise FuseOSError(ENOENT)
         return curr
 
-    def __init__(self, srl_fp: BinaryIO, g_stat: os.stat_result):
+    def __init__(self, srl_fp: BinaryIO, g_stat: dict):
         # get status change, modify, and file access times
-        self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
-                       'st_atime': int(g_stat.st_atime)}
+        self.g_stat = g_stat
 
         # parse header
         header = TwlHeaderRaw(*twl_header_struct.unpack(srl_fp.read(0x1000)))
@@ -281,7 +280,7 @@ def main(prog: str = None, args: list = None):
     if a.do:
         logging.basicConfig(level=logging.DEBUG, filename=a.do)
 
-    srl_stat = os.stat(a.srl)
+    srl_stat = get_time(a.srl)
 
     with open(a.srl, 'rb') as f:
         mount = SRLMount(srl_fp=f, g_stat=srl_stat)

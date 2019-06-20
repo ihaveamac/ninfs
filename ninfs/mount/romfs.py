@@ -19,16 +19,15 @@ from typing import BinaryIO
 from pyctr.types.romfs import RomFSReader, RomFSFileNotFoundError
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
-from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time
 
 
 class RomFSMount(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, romfs_fp: BinaryIO, g_stat: os.stat_result):
+    def __init__(self, romfs_fp: BinaryIO, g_stat: dict):
         # get status change, modify, and file access times
-        self.g_stat = {'st_ctime': int(g_stat.st_ctime), 'st_mtime': int(g_stat.st_mtime),
-                       'st_atime': int(g_stat.st_atime)}
+        self.g_stat = g_stat
 
         self.reader: RomFSReader = None
         self.f = romfs_fp
@@ -105,7 +104,7 @@ def main(prog: str = None, args: list = None):
     if a.do:
         logging.basicConfig(level=logging.DEBUG, filename=a.do)
 
-    romfs_stat = os.stat(a.romfs)
+    romfs_stat = get_time(a.romfs)
 
     with open(a.romfs, 'rb') as f:
         mount = RomFSMount(romfs_fp=f, g_stat=romfs_stat)

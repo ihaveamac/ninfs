@@ -23,7 +23,7 @@ from pyctr.types.tmd import TitleMetadataReader
 from . import _common as _c
 from .ncch import NCCHContainerMount
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
-from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time
 
 if TYPE_CHECKING:
     from typing import AnyStr, Dict, List, Union
@@ -99,8 +99,9 @@ class TitleDirectoryMount(LoggingMixIn, Operations):
                     if self.mount_all is False:
                         break
                     continue
-                f_stat = os.stat(real_filename)
-                if chunk.size != f_stat.st_size:
+                f_stat = get_time(real_filename)
+                f_size = os.path.getsize(real_filename)
+                if chunk.size != f_size:
                     print('Warning: TMD Content size and filesize of', chunk.id, 'are different.')
                 file_ext = 'nds' if chunk.cindex == 0 and int(tmd.title_id, 16) >> 44 == 0x48 else 'ncch'
                 filename = f'/{tmd.title_id}.{chunk.cindex:04x}.{chunk.id}.{file_ext}'
