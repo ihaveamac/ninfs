@@ -14,7 +14,6 @@ import os
 from errno import ENOENT
 from stat import S_IFDIR, S_IFREG
 from sys import argv
-from typing import BinaryIO
 
 from pyctr.types.romfs import RomFSReader, RomFSFileNotFoundError
 from . import _common as _c
@@ -25,24 +24,19 @@ from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_conte
 class RomFSMount(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, romfs_fp: BinaryIO, g_stat: dict):
+    def __init__(self, reader: 'RomFSReader', g_stat: dict):
         # get status change, modify, and file access times
         self.g_stat = g_stat
 
-        self.reader: RomFSReader = None
-        self.f = romfs_fp
+        self.reader = reader
 
     def __del__(self, *args):
         try:
-            self.f.close()  # just in case
             self.reader.close()
         except AttributeError:
             pass
 
     destroy = __del__
-
-    def init(self, path):
-        self.reader = RomFSReader(self.f, case_insensitive=True)
 
     def getattr(self, path, fh=None):
         uid, gid, pid = fuse_get_context()
@@ -106,8 +100,8 @@ def main(prog: str = None, args: list = None):
 
     romfs_stat = get_time(a.romfs)
 
-    with open(a.romfs, 'rb') as f:
-        mount = RomFSMount(romfs_fp=f, g_stat=romfs_stat)
+    with RomFSReader(a.romfs, case_insensitive=True) as r:
+        mount = RomFSMount(reader=r, g_stat=romfs_stat)
         if _c.macos or _c.windows:
             opts['fstypename'] = 'RomFS'
             # assuming / is the path separator since macos. but if windows gets support for this,
