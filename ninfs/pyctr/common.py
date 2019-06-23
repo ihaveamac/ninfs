@@ -6,6 +6,12 @@
 
 from functools import wraps
 from io import BufferedIOBase
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    # this is a lazy way to make type checkers stop complaining
+    from typing import BinaryIO
+    BufferedIOBase = BinaryIO
 
 
 class PyCTRError(Exception):
@@ -18,7 +24,7 @@ def _raise_if_closed(method):
         if self._reader.closed:
             self.closed = True
         if self.closed:
-            raise ValueError('I/O operation on closed file.')
+            raise ValueError('I/O operation on closed file')
         return method(self, *args, **kwargs)
     return decorator
 
@@ -30,7 +36,7 @@ class _ReaderOpenFileBase(BufferedIOBase):
     _info = None
     closed = False
 
-    def __init__(self, reader, path: str):
+    def __init__(self, reader, path):
         self._reader = reader
         self._path = path
 
@@ -66,6 +72,10 @@ class _ReaderOpenFileBase(BufferedIOBase):
     @_raise_if_closed
     def readable(self) -> bool:
         return True
+
+    @_raise_if_closed
+    def writable(self) -> bool:
+        return False
 
     @_raise_if_closed
     def seekable(self) -> bool:
