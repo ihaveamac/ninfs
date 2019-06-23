@@ -241,9 +241,13 @@ class ExeFSReader:
         if offset + size > info.size:
             size = info.size - offset
         with self._lock:
-            # data for ExeFS entries start relative to the end of the header
-            self._fp.seek(self._start + EXEFS_HEADER_SIZE + info.offset + offset)
-            return self._fp.read(size)
+            if info.offset == -1:
+                # return the decompressed code instead
+                return self._code_dec[offset:offset + size]
+            else:
+                # data for ExeFS entries start relative to the end of the header
+                self._fp.seek(self._start + EXEFS_HEADER_SIZE + info.offset + offset)
+                return self._fp.read(size)
 
     def decompress_code(self) -> bool:
         """
