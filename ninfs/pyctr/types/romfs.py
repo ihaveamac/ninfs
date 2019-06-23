@@ -191,6 +191,12 @@ class RomFSReader:
         self.closed = True
         self._fp.close()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
     @overload
     def open(self, path: str, encoding: str, errors: 'Optional[str]' = None,
              newline: 'Optional[str]' = None) -> TextIOWrapper: ...
