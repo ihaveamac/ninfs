@@ -127,29 +127,31 @@ class _NCCHSectionFile(_ReaderOpenFileBase):
 
     def __init__(self, reader: 'NCCHReader', path: 'NCCHSection'):
         super().__init__(reader, path)
-        self._info = reader._sections[path]
+        self._info = reader.sections[path]
 
 
 class NCCHReader:
     """Class for 3DS NCCH container."""
 
     seed_set_up = False
+    # this is the KeyY when generated using the seed
     _seeded_key_y = None
     closed = False
 
+    # this lists the ranges of the ExeFS to decrypt with Original NCCH (see load_sections)
     _exefs_keyslot_normal_range: 'List[Tuple[int, int]]'
     exefs: 'Optional[ExeFSReader]' = None
     romfs: 'Optional[RomFSReader]' = None
 
     def __init__(self, fp: 'Union[str, BinaryIO]', case_insensitive: bool = True, *, crypto: CryptoEngine = None,
-                 load_seed: bool = True, load_sections: bool = True):
+                 dev: bool = False, seeddb: str = None, load_sections: bool = True):
         if isinstance(fp, str):
             fp = open(fp, 'rb')
 
         if crypto:
             self._crypto = crypto
         else:
-            self._crypto = CryptoEngine()
+            self._crypto = CryptoEngine(dev=dev)
 
         # store the starting offset so the NCCH can be read from any point in the base file
         self._start = fp.tell()
@@ -180,14 +182,14 @@ class NCCHReader:
         extheader_size = readle(header[0x180:0x184])
 
         # each section is stored with the section ID, then the region information (offset, size, IV)
-        self._sections: 'Dict[NCCHSection, NCCHRegion]' = {}
+        self.sections: 'Dict[NCCHSection, NCCHRegion]' = {}
 
         def add_region(section: 'NCCHSection', starting_unit: int, units: int):
             if units != 0:  # only add existing regions
-                self._sections[section] = NCCHRegion(section=section,
-                                                     offset=starting_unit * NCCH_MEDIA_UNIT,
-                                                     size=units * NCCH_MEDIA_UNIT,
-                                                     iv=self.partition_id << 64 | (section << 56))
+                self.sections[section] = NCCHRegion(section=section,
+                                                    offset=starting_unit * NCCH_MEDIA_UNIT,
+                                                    size=units * NCCH_MEDIA_UNIT,
+                                                    iv=self.partition_id << 64 | (section << 56))
 
         # add the header as the first region
         add_region(NCCHSection.Header, 0, 1)
@@ -213,8 +215,8 @@ class NCCHReader:
         self._crypto.set_keyslot('y', Keyslot.NCCH, self.get_key_y(original=True))
 
         # load the seed if needed
-        if load_seed and self.flags.uses_seed:
-            self.load_seed_from_seeddb()
+        if self.flags.uses_seed:
+            self.load_seed_from_seeddb(seeddb)
 
         # load the (seeded, if needed) key into the extra keyslot
         self._crypto.set_keyslot('y', self.extra_keyslot, self.get_key_y())
@@ -232,7 +234,7 @@ class NCCHReader:
 
         # try to load the ExeFS
         try:
-            self._fp.seek(self._start + self._sections[NCCHSection.ExeFS].offset)
+            self._fp.seek(self._start + self.sections[NCCHSection.ExeFS].offset)
         except KeyError:
             pass  # no ExeFS
         else:
@@ -261,7 +263,7 @@ class NCCHReader:
         # try to load RomFS
         if not self.flags.no_romfs:
             try:
-                self._fp.seek(self._start + self._sections[NCCHSection.RomFS].offset)
+                self._fp.seek(self._start + self.sections[NCCHSection.RomFS].offset)
             except KeyError:
                 pass  # no RomFS
             else:
@@ -286,7 +288,7 @@ class NCCHReader:
         return extra_cryptoflags[self.flags.crypto_method]
 
     def check_for_extheader(self) -> bool:
-        return NCCHSection.ExtendedHeader in self._sections
+        return NCCHSection.ExtendedHeader in self.sections
 
     def setup_seed(self, seed: bytes):
         if not self.flags.uses_seed:
