@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, NamedTuple
 
 from ..common import PyCTRError, _ReaderOpenFileBase
 from ..util import readle
+from ..types.smdh import SMDH, InvalidSMDHError
 
 if TYPE_CHECKING:
     from typing import BinaryIO, Dict, Union
@@ -179,6 +180,7 @@ class ExeFSReader:
 
     closed = False
     _code_dec = None
+    icon: 'SMDH' = None
 
     def __init__(self, fp: 'Union[str, BinaryIO]'):
         if isinstance(fp, str):
@@ -219,6 +221,12 @@ class ExeFSReader:
                 raise BadOffsetError(entry.offset)
 
             self.entries[name] = entry
+
+        try:
+            with self.open('icon') as f:
+                self.icon = SMDH.load(f)
+        except InvalidSMDHError:
+            pass
 
     def __len__(self) -> int:
         """Return the amount of entries in the ExeFS."""
