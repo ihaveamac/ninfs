@@ -10,13 +10,29 @@ from typing import TYPE_CHECKING, NamedTuple
 from ..common import PyCTRError
 
 if TYPE_CHECKING:
-    from typing import BinaryIO, Dict
+    from typing import BinaryIO, Dict, Mapping, Optional, Tuple, Union
 
 SMDH_SIZE = 0x36C0
 
 region_names = (
     'Japanese',
     'English',
+    'French',
+    'German',
+    'Italian',
+    'Spanish',
+    'Simplified Chinese',
+    'Korean',
+    'Dutch',
+    'Portuguese',
+    'Russian',
+    'Traditional Chinese',
+)
+
+# the order of the SMDH names to check. the difference here is that English is put before Japanese.
+_region_order_check = (
+    'English',
+    'Japanese',
     'French',
     'German',
     'Italian',
@@ -54,7 +70,16 @@ class SMDH:
     # TODO: support other settings
 
     def __init__(self, names: 'Dict[str, AppTitle]'):
-        self.names: Dict[str, AppTitle] = MappingProxyType({n: names.get(n, None) for n in region_names})
+        self.names: Mapping[str, AppTitle] = MappingProxyType({n: names.get(n, None) for n in region_names})
+
+    def get_app_title(self, language: 'Union[str, Tuple[str, ...]]' = _region_order_check) -> 'Optional[AppTitle]':
+        if isinstance(language, str):
+            language = (language,)
+
+        for l in language:
+            apptitle = self.names[l]
+            if apptitle:
+                return apptitle
 
     @classmethod
     def load(cls, fp: 'BinaryIO') -> 'SMDH':
