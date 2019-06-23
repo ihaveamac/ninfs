@@ -291,9 +291,19 @@ class CryptoEngine:
 
     @staticmethod
     def sd_path_to_iv(path: str) -> int:
+        # ensure the path is lowercase
+        path = path.lower()
+
+        # SD Save Data Backup does a copy of the raw, encrypted file from the game's data directory
+        # so we need to handle this and fake the path
+        if path.startswith('/backup') and len(path) > 28:
+            tid_upper = path[12:20]
+            tid_lower = path[20:28]
+            path = f'/title/{tid_upper}/{tid_lower}/data' + path[28:]
+
         path_hash = sha256(path.encode('utf-16le') + b'\0\0').digest()
         hash_p1 = readbe(path_hash[0:16])
-        hash_p2 = readbe(path_hash[0:16])
+        hash_p2 = readbe(path_hash[16:32])
         return hash_p1 ^ hash_p2
 
     def load_from_ticket(self, ticket: bytes):
