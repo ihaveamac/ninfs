@@ -4,8 +4,7 @@
 # This file is licensed under The MIT License (MIT).
 # You can find the full license text in LICENSE.md in the root of this project.
 
-from functools import wraps
-from io import BufferedIOBase, TextIOWrapper
+from io import TextIOWrapper
 from threading import Lock
 from typing import overload, TYPE_CHECKING, NamedTuple
 
