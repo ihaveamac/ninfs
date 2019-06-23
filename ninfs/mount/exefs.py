@@ -21,27 +21,25 @@ from . import _common as _c
 from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time
 
 if TYPE_CHECKING:
-    from typing import BinaryIO, Dict
+    from typing import Dict
 
 
 class ExeFSMount(LoggingMixIn, Operations):
     fd = 0
     files: 'Dict[str, str]'
 
-    def __init__(self, exefs_fp: 'BinaryIO', g_stat: dict, decompress_code: bool = False):
+    def __init__(self, reader: 'ExeFSReader', g_stat: dict, decompress_code: bool = False):
         self.g_stat = g_stat
 
-        self.reader = ExeFSReader(exefs_fp)
+        self.reader = reader
         self.decompress_code = decompress_code
 
         # for vfs stats
         self.exefs_size = sum(x.size for x in self.reader.entries.values())
 
-        self.f = exefs_fp
-
     def __del__(self, *args):
         try:
-            self.f.close()
+            self.reader.close()
         except AttributeError:
             pass
 
@@ -113,8 +111,8 @@ def main(prog: str = None, args: list = None):
 
     exefs_stat = get_time(a.exefs)
 
-    with open(a.exefs, 'rb') as f:
-        mount = ExeFSMount(exefs_fp=f, g_stat=exefs_stat, decompress_code=a.decompress_code)
+    with ExeFSReader(a.exefs) as r:
+        mount = ExeFSMount(reader=r, g_stat=exefs_stat, decompress_code=a.decompress_code)
         if _c.macos or _c.windows:
             opts['fstypename'] = 'ExeFS'
             # assuming / is the path separator since macos. but if windows gets support for this,
