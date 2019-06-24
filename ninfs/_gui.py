@@ -183,20 +183,18 @@ ROMFS = 'Read-only Filesystem (".romfs", "romfs.bin")'
 SD = 'SD Card Contents ("Nintendo 3DS" from SD)'
 SRL = 'Nintendo DS ROM image (".nds", ".srl")'
 THREEDSX = '3DSX Homebrew (".3dsx")'
-TITLEDIR = 'Titles directory ("title" from NAND or SD)'
 
 mount_types = {CCI: 'cci', CDN: 'cdn', CIA: 'cia', EXEFS: 'exefs', NANDCTR: 'nandctr', NANDHAC: 'nandhac',
-               NANDTWL: 'nandtwl', NCCH: 'ncch', ROMFS: 'romfs', SD: 'sd', SRL: 'srl', THREEDSX: 'threedsx',
-               TITLEDIR: 'titledir'}
+               NANDTWL: 'nandtwl', NCCH: 'ncch', ROMFS: 'romfs', SD: 'sd', SRL: 'srl', THREEDSX: 'threedsx'}
 
 mount_types_rv: 'Dict[str, str]' = {y: x for x, y in mount_types.items()}
 
-ctr_types = (CCI, CDN, CIA, EXEFS, NANDCTR, NCCH, ROMFS, SD, THREEDSX, TITLEDIR)
+ctr_types = (CCI, CDN, CIA, EXEFS, NANDCTR, NCCH, ROMFS, SD, THREEDSX)
 twl_types = (NANDTWL, SRL)
 hac_types = (NANDHAC,)
 types_list = ctr_types + twl_types
 
-types_requiring_b9 = {CCI, CDN, CIA, NANDCTR, NCCH, SD, TITLEDIR}
+types_requiring_b9 = {CCI, CDN, CIA, NANDCTR, NCCH, SD}
 
 if windows:
     from ctypes import windll
@@ -458,13 +456,6 @@ def press(button: str):
             extra_args.extend(('--movable', movable))
             if not aw:
                 extra_args.append('-r')
-        elif mount_type == TITLEDIR:
-            decompress = app.getCheckBox(TITLEDIR + 'decompress')
-            mount_all = app.getCheckBox(TITLEDIR + 'mountall')
-            if decompress:
-                extra_args.append('--decompress-code')
-            if mount_all:
-                extra_args.append('--mount-all')
         elif mount_type == EXEFS:
             decompress = app.getCheckBox(EXEFS + 'decompress')
             if decompress:
@@ -664,16 +655,6 @@ def change_type(*_):
                 app.addFileEntry(SRL + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
                 app.setEntryDefault(SRL + ITEM, DRAGFILE)
 
-        elif mount_type == TITLEDIR:
-            with app.frame(TITLEDIR, row=1, colspan=3):
-                app.addLabel(TITLEDIR + LABEL1, DIRECTORY, row=0, column=0)
-                app.addDirectoryEntry(TITLEDIR + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
-                app.setEntryDefault(TITLEDIR + ITEM, DRAGFILE)
-
-                app.addLabel(TITLEDIR + LABEL3, 'Options', row=3, column=0)
-                app.addNamedCheckBox('Decompress .code (slow!)', TITLEDIR + 'decompress', row=3, column=1, colspan=1)
-                app.addNamedCheckBox('Mount all contents', TITLEDIR + 'mountall', row=3, column=2, colspan=1)
-
         if has_dnd:
             app.setEntryDropTarget(mount_type + ITEM, make_dnd_entry_check(mount_type + ITEM))
 
@@ -800,7 +781,7 @@ with app.frame('loading', row=1, colspan=3):
 
 def show_unknowntype(path: str):
     app.warningBox('ninfs Error',
-                   "The type of the given file couldn't be detected."
+                   "The type of the given file couldn't be detected. "
                    "If you know it is a compatibile file, choose the "
                    "correct type and file an issue on GitHub if it works.\n\n"
                    + path)
@@ -826,7 +807,8 @@ def detect_type(fn: str):
                 next(iglob(pjoin(fn, '[0-9a-f]' * 32)))
             except StopIteration:
                 # no entries
-                mount_type = TITLEDIR
+                show_unknowntype(fn)
+                return
             else:
                 # at least one entry
                 mount_type = SD
@@ -1272,7 +1254,8 @@ def main(_pyi=False, _allow_admin=False):
                     next(iglob(pjoin(fn, '[0-9a-f]' * 32)))
                 except StopIteration:
                     # no entries
-                    mount_type = TITLEDIR
+                    show_unknowntype(fn)
+                    return
                 else:
                     # at least one entry
                     mount_type = SD

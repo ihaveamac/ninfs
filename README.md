@@ -150,8 +150,6 @@ Windows users can use a drive letter like `F:` as a mountpoint, or use `*` and a
   `mount_srl game.nds`
 * 3DSX homebrew application:  
   `mount_threedsx boot.3dsx mountpoint`
-* `title` directory from a NAND backup, or in an SD card mount:  
-  `mount_titledir title mountpoint`
 
 ## Useful tools
 * wwylele's [3ds-save-tool](https://github.com/wwylele/3ds-save-tool) can be used to extract game saves and extra data (DISA and DIFF, respectively).
