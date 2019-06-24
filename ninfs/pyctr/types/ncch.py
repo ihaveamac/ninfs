@@ -143,7 +143,7 @@ class NCCHReader:
     exefs: 'Optional[ExeFSReader]' = None
     romfs: 'Optional[RomFSReader]' = None
 
-    def __init__(self, fp: 'Union[str, BinaryIO]', case_insensitive: bool = True, *, crypto: CryptoEngine = None,
+    def __init__(self, fp: 'Union[str, BinaryIO]', *, case_insensitive: bool = True, crypto: CryptoEngine = None,
                  dev: bool = False, seeddb: str = None, load_sections: bool = True):
         if isinstance(fp, str):
             fp = open(fp, 'rb')
