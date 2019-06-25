@@ -182,7 +182,7 @@ class ExeFSReader:
     _code_dec = None
     icon: 'SMDH' = None
 
-    def __init__(self, fp: 'Union[str, BinaryIO]'):
+    def __init__(self, fp: 'Union[str, BinaryIO]', *, _load_icon: bool = True):
         if isinstance(fp, str):
             fp = open(fp, 'rb')
 
@@ -222,6 +222,13 @@ class ExeFSReader:
 
             self.entries[name] = entry
 
+        # this sometimes needs to be loaded outside, since reading it here may cause encryption problems
+        #   when the NCCH has not fully initialized yet and needs to figure out what ExeFS regions need
+        #   to be decrypted with the Original NCCH key
+        if _load_icon:
+            self._load_icon()
+
+    def _load_icon(self):
         try:
             with self.open('icon') as f:
                 self.icon = SMDH.load(f)
