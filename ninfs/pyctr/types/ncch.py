@@ -90,9 +90,13 @@ class NCCHSection(IntEnum):
     Logo = 5
     Plain = 6
 
+    # special
+    FullDecrypted = 7
+    Raw = 8
+
 
 # these sections don't use encryption at all
-NO_ENCRYPTION = {NCCHSection.Header, NCCHSection.Logo, NCCHSection.Plain}
+NO_ENCRYPTION = {NCCHSection.Header, NCCHSection.Logo, NCCHSection.Plain, NCCHSection.Raw}
 # the contents of these files in the ExeFS, plus the header, will always use the Original NCCH keyslot
 # therefore these regions need to be stored to check what keyslot is used to decrypt
 EXEFS_NORMAL_CRYPTO_FILES = {'icon', 'banner'}
@@ -102,6 +106,7 @@ class NCCHRegion(NamedTuple):
     section: 'NCCHSection'
     offset: int
     size: int
+    end: int  # this is just offset + size, stored to avoid re-calculation later on
     # not all sections will actually use this (see NCCHSection), so some have a useless value
     iv: int
 
@@ -183,20 +188,34 @@ class NCCHReader:
 
         # each section is stored with the section ID, then the region information (offset, size, IV)
         self.sections: 'Dict[NCCHSection, NCCHRegion]' = {}
+        # same as above, but includes non-existant regions too, for the full-decrypted handler
+        self._all_sections: 'Dict[NCCHSection, NCCHRegion]' = {}
 
         def add_region(section: 'NCCHSection', starting_unit: int, units: int):
+            offset = starting_unit * NCCH_MEDIA_UNIT
+            size = units * NCCH_MEDIA_UNIT
+            region = NCCHRegion(section=section,
+                                offset=offset,
+                                size=size,
+                                end=offset + size,
+                                iv=self.partition_id << 64 | (section << 56))
+            self._all_sections[section] = region
             if units != 0:  # only add existing regions
-                self.sections[section] = NCCHRegion(section=section,
-                                                    offset=starting_unit * NCCH_MEDIA_UNIT,
-                                                    size=units * NCCH_MEDIA_UNIT,
-                                                    iv=self.partition_id << 64 | (section << 56))
+                self.sections[section] = region
 
         # add the header as the first region
         add_region(NCCHSection.Header, 0, 1)
 
+        # add the full decrypted content, which when read, simulates a fully decrypted NCCH container
+        add_region(NCCHSection.FullDecrypted, 0, self.content_size // NCCH_MEDIA_UNIT)
+        # add the full raw content
+        add_region(NCCHSection.Raw, 0, self.content_size // NCCH_MEDIA_UNIT)
+
         # only care about the exheader if it's the expected size
         if extheader_size == 0x400:
             add_region(NCCHSection.ExtendedHeader, 1, 4)
+        else:
+            add_region(NCCHSection.ExtendedHeader, 0, 0)
 
         # add the remaining NCCH regions
         # some of these may not exist, and won't be added if units (second value) is 0
@@ -326,10 +345,94 @@ class NCCHReader:
         # if keys are not set...
         raise InvalidNCCHError(paths)
 
-    def get_data(self, region: 'NCCHRegion', offset: int, size: int) -> bytes:
+    def get_data(self, section: 'Union[NCCHRegion, NCCHSection]', offset: int, size: int) -> bytes:
+        try:
+            region = self._all_sections[section]
+        except KeyError:
+            region = section
         if offset + size > region.size:
             # prevent reading past the region
             size = region.size - offset
+
+        # the full-decrypted handler is done outside of the thread lock
+        if region.section == NCCHSection.FullDecrypted:
+            before = offset % 0x200
+            aligned_offset = offset - before
+            aligned_size = size + before
+
+            def do_thing(al_offset: int, al_size: int, cut_start: int, cut_end: int):
+                # get the offset of the end of the last chunk
+                end = al_offset + (ceil(al_size / 0x200) * 0x200)
+
+                # store the sections to read
+                # dict is ordered by default in CPython since 3.6.0, and part of the language spec since 3.7.0
+                to_read: Dict[Tuple[NCCHSection, int], List[int]] = {}
+
+                # get each section to a local variable for easier access
+                header = self._all_sections[NCCHSection.Header]
+                extheader = self._all_sections[NCCHSection.ExtendedHeader]
+                logo = self._all_sections[NCCHSection.Logo]
+                plain = self._all_sections[NCCHSection.Plain]
+                exefs = self._all_sections[NCCHSection.ExeFS]
+                romfs = self._all_sections[NCCHSection.RomFS]
+
+                last_region = False
+
+                # this is somewhat hardcoded for performance reasons. this may be optimized better later.
+                for chunk_offset in range(al_offset, end, 0x200):
+                    # RomFS check first, since it might be faster
+                    if romfs.offset <= chunk_offset < romfs.end:
+                        region = (NCCHSection.RomFS, 0)
+                        curr_offset = romfs.offset
+
+                    # ExeFS check second, since it might be faster
+                    elif exefs.offset <= chunk_offset < exefs.end:
+                        region = (NCCHSection.ExeFS, 0)
+                        curr_offset = exefs.offset
+
+                    elif header.offset <= chunk_offset < header.end:
+                        region = (NCCHSection.Header, 0)
+                        curr_offset = header.offset
+
+                    elif extheader.offset <= chunk_offset < extheader.end:
+                        region = (NCCHSection.ExtendedHeader, 0)
+                        curr_offset = extheader.offset
+
+                    elif logo.offset <= chunk_offset < logo.end:
+                        region = (NCCHSection.Logo, 0)
+                        curr_offset = logo.offset
+
+                    elif plain.offset <= chunk_offset < plain.end:
+                        region = (NCCHSection.Logo, 0)
+                        curr_offset = plain.offset
+
+                    else:
+                        region = (NCCHSection.Raw, chunk_offset)
+                        curr_offset = 0
+
+                    if region not in to_read:
+                        to_read[region] = [chunk_offset - curr_offset, 0]
+                    to_read[region][1] += 0x200
+                    last_region = region
+
+                is_start = True
+                for region, info in to_read.items():
+                    new_data = self.get_data(region[0], info[0], info[1])
+                    if region[0] == NCCHSection.Header:
+                        # fix crypto flags
+                        ncch_array = bytearray(new_data)
+                        ncch_array[0x18B] = 0
+                        ncch_array[0x18F] = 4
+                        new_data = bytes(ncch_array)
+                    if is_start:
+                        new_data = new_data[cut_start:]
+                        is_start = False
+                    if region == last_region and cut_end != 0x200:
+                        new_data = new_data[:-cut_end]
+
+                    yield new_data
+
+            return b''.join(do_thing(aligned_offset, aligned_size, before, 0x200 - ((size + before) % 0x200)))
 
         with self._lock:
             # check if decryption is really needed
