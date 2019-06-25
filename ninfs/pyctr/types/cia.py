@@ -16,7 +16,7 @@ from ..types.tmd import TitleMetadataReader
 from ..util import readle, roundup
 
 if TYPE_CHECKING:
-    from typing import BinaryIO, Optional, Union
+    from typing import BinaryIO, Dict, Optional, Union
 
 ALIGN_SIZE = 64
 
@@ -115,8 +115,11 @@ class CIAReader:
         content_offset = tmd_offset + roundup(tmd_size, ALIGN_SIZE)
         meta_offset = content_offset + roundup(content_size, ALIGN_SIZE)
 
+        # lazy method to get the total size
+        self.total_size = meta_offset + meta_size
+
         # this contains the location of each section, as well as the IV of encrypted ones
-        self.sections = {}
+        self.sections: Dict[Union[int, CIASection], CIARegion] = {}
 
         def add_region(section: 'Union[int, CIASection]', offset: int, size: int, iv: 'Optional[bytes]'):
             region = CIARegion(section=section, offset=offset, size=size, iv=iv)
