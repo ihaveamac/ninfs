@@ -154,9 +154,16 @@ def main(prog: str = None, args: list = None):
         if _c.macos or _c.windows:
             opts['fstypename'] = 'NCCH'
             if _c.macos:
-                opts['volname'] = f'NCCH Container ({mount.reader.product_code}; {mount.reader.program_id:016X})'
+                display = f'{r.partition_id:016X}; {r.product_code}'
+                try:
+                    title = r.exefs.icon.get_app_title()
+                    if title.short_desc != 'unknown':
+                        display += '; ' + title.short_desc
+                except:
+                    pass
+                opts['volname'] = f'NCCH Container ({display})'
             elif _c.windows:
                 # volume label can only be up to 32 chars
-                opts['volname'] = f'NCCH ({mount.reader.product_code})'
+                opts['volname'] = f'NCCH ({r.product_code})'
         FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
              fsname=os.path.realpath(a.ncch).replace(',', '_'), **opts)
