@@ -254,6 +254,8 @@ class NCCHReader:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
+    __del__ = close
+
     def load_sections(self):
         """Load the sections of the NCCH (Extended Header, ExeFS, and RomFS)."""
 
