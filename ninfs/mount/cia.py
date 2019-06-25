@@ -159,7 +159,15 @@ def main(prog: str = None, args: list = None):
         if _c.macos or _c.windows:
             opts['fstypename'] = 'CIA'
             if _c.macos:
-                opts['volname'] = f'CTR Importable Archive ({r.tmd.title_id.upper()})'
+                display = r.tmd.title_id.upper()
+                try:
+                    title = r.contents[0].exefs.icon.get_app_title()
+                    display += f'; ' + r.contents[0].product_code
+                    if title.short_desc != 'unknown':
+                        display += '; ' + title.short_desc
+                except:
+                    pass
+                opts['volname'] = f'CTR Importable Archive ({display})'
             elif _c.windows:
                 # volume label can only be up to 32 chars
                 opts['volname'] = f'CIA ({r.tmd.title_id.upper()})'
