@@ -72,6 +72,9 @@ class SMDH:
     def __init__(self, names: 'Dict[str, AppTitle]'):
         self.names: Mapping[str, AppTitle] = MappingProxyType({n: names.get(n, None) for n in region_names})
 
+    def __repr__(self):
+        return f'<{type(self).__name__} title: {self.get_app_title().short_desc}>'
+
     def get_app_title(self, language: 'Union[str, Tuple[str, ...]]' = _region_order_check) -> 'Optional[AppTitle]':
         if isinstance(language, str):
             language = (language,)
@@ -80,6 +83,9 @@ class SMDH:
             apptitle = self.names[l]
             if apptitle:
                 return apptitle
+
+        # if, for some reason, it fails to return...
+        return AppTitle('unknown', 'unknown', 'unknown')
 
     @classmethod
     def load(cls, fp: 'BinaryIO') -> 'SMDH':
