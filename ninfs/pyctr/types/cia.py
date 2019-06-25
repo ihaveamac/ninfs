@@ -50,7 +50,7 @@ class _CIASectionFile(_ReaderOpenFileBase):
 
     def __init__(self, reader: 'CIAReader', path: 'CIASection'):
         super().__init__(reader, path)
-        self._info = reader._sections[path]
+        self._info = reader.sections[path]
 
 
 class CIAReader:
@@ -116,11 +116,11 @@ class CIAReader:
         meta_offset = content_offset + roundup(content_size, ALIGN_SIZE)
 
         # this contains the location of each section, as well as the IV of encrypted ones
-        self._sections = {}
+        self.sections = {}
 
         def add_region(section: 'Union[int, CIASection]', offset: int, size: int, iv: 'Optional[bytes]'):
             region = CIARegion(section=section, offset=offset, size=size, iv=iv)
-            self._sections[section] = region
+            self.sections[section] = region
 
         # add each part of the header
         add_region(CIASection.ArchiveHeader, 0, archive_header_size, None)
