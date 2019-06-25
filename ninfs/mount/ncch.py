@@ -11,7 +11,6 @@ Mounts NCCH containers, creating a virtual filesystem of decrypted sections.
 import logging
 import os
 from errno import ENOENT
-from math import ceil
 from stat import S_IFDIR, S_IFREG
 from sys import argv
 from typing import TYPE_CHECKING
@@ -24,7 +23,7 @@ from .exefs import ExeFSMount
 from .romfs import RomFSMount
 
 if TYPE_CHECKING:
-    from typing import Dict, List
+    from typing import Dict
 
 
 class NCCHContainerMount(LoggingMixIn, Operations):
@@ -150,7 +149,7 @@ def main(prog: str = None, args: list = None):
 
     load_custom_boot9(a.boot9)
 
-    with NCCHReader(a.ncch, seeddb=a.seeddb) as r:
+    with NCCHReader(a.ncch, dev=a.dev, seeddb=a.seeddb) as r:
         mount = NCCHContainerMount(reader=r, g_stat=ncch_stat)
         if _c.macos or _c.windows:
             opts['fstypename'] = 'NCCH'
