@@ -88,6 +88,14 @@ def main_args(name: str, help: str) -> ArgumentParser:
     return parser
 
 
+def load_custom_boot9(path: str, dev: bool = False):
+    """Load keys from a custom ARM9 bootROM path."""
+    if path:
+        from pyctr.crypto import CryptoEngine
+        # doing this will set up the keys for all future CryptoEngine objects
+        CryptoEngine(boot9=path, dev=dev)
+
+
 # aren't type hints great?
 def parse_fuse_opts(opts) -> 'Generator[Tuple[str, Union[str, bool]], None, None]':
     if not opts:
@@ -181,6 +189,14 @@ class VirtualFileWrapper(BufferedIOBase):
         return True
 
     @_raise_if_closed
+    def writable(self) -> bool:
+        try:
+            # types that support writing will have this attribute
+            return self.fuse_op.readonly
+        except AttributeError:
+            return False
+
+    @_raise_if_closed
     def seekable(self) -> bool:
         return True
 
@@ -189,7 +205,8 @@ class SplitFileHandler(BufferedIOBase):
     _fake_seek = 0
     _seek_info = (0, 0)
 
-    def __init__(self, names):
+    def __init__(self, names, mode='rb'):
+        self.mode = mode
         self._files = []
         curr_offset = 0
         self._names = tuple(names)
@@ -281,3 +298,54 @@ class SplitFileHandler(BufferedIOBase):
                 break  # EOF
 
         return total - left
+
+    @_raise_if_closed
+    def readable(self) -> bool:
+        return 'r' in self.mode
+
+    def writable(self) -> bool:
+        return 'w' in self.mode or 'a' in self.mode
+
+    @_raise_if_closed
+    def seekable(self) -> bool:
+        return True
+
+
+class RawDeviceHandler(BufferedIOBase):
+    """Handler for easier IO access with raw devices by aligning reads and writes to the sector size."""
+
+    _seek = 0
+
+    def __init__(self, fh: 'BinaryIO', mode: str = 'rb+', sector_size: int = 0x200):
+        self._fh = fh
+        self.mode = mode
+        self._sector_size = sector_size
+
+    @_raise_if_closed
+    def seek(self, seek: int, whence: int = 0) -> int:
+        if whence == 0:
+            if seek < 0:
+                raise ValueError(f'negative seek value {seek}')
+            self._seek = seek
+        elif whence == 1:
+            self._seek = max(self._seek + seek, 0)
+        elif whence == 2:
+            # this doesn't work...
+            raise Exception
+        return self._seek
+
+    @_raise_if_closed
+    def tell(self) -> int:
+        return self._seek
+
+    @_raise_if_closed
+    def readable(self) -> bool:
+        return True
+
+    @_raise_if_closed
+    def writable(self) -> bool:
+        return True
+
+    @_raise_if_closed
+    def seekable(self) -> bool:
+        return True
