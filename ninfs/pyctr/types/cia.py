@@ -173,6 +173,18 @@ class CIAReader:
 
             curr_offset += record.size
 
+    def close(self):
+        self.closed = True
+        self._fp.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+    __del__ = close
+
     def open_raw_section(self, section: 'CIASection'):
         """Open a raw CIA section for reading."""
         return _CIASectionFile(self, section)
