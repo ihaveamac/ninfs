@@ -92,7 +92,7 @@ class CIAReader:
         meta_size = readle(header[0x14:0x18])
         # content size is the total size of the contents
         # I'm not sure what happens yet if one of the contents is not aligned to 0x40 bytes.
-        content_size = readle(header[0x14:0x18])
+        content_size = readle(header[0x18:0x20])
         # the content index determines what contents are in the CIA
         # this is not stored as int, so it's faster to parse(?)
         content_index = fp.read(archive_header_size - 0x20)
