@@ -311,7 +311,7 @@ class CryptoEngine:
         ticket_len = len(ticket)
         # TODO: probably support other sig types which would be different lengths
         # unlikely to happen in practice, but I would still like to
-        if ticket_len < 0x350:
+        if ticket_len < 0x2AC:
             raise TicketLengthError(ticket_len)
 
         titlekey_enc = ticket[0x1BF:0x1CF]
