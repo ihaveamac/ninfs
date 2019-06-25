@@ -410,7 +410,7 @@ class NCCHReader:
                         curr_offset = logo.offset
 
                     elif plain.offset <= chunk_offset < plain.end:
-                        region = (NCCHSection.Logo, 0)
+                        region = (NCCHSection.Plain, 0)
                         curr_offset = plain.offset
 
                     else:
