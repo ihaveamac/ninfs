@@ -59,14 +59,14 @@ class CIAReader:
     closed = False
 
     def __init__(self, fp: 'Union[str, BinaryIO]', *, case_insensitive: bool = True, crypto: CryptoEngine = None,
-                 load_contents: bool = True):
+                 dev: bool = False, seeddb: str = None, load_contents: bool = True):
         if isinstance(fp, str):
             fp = open(fp, 'rb')
 
         if crypto:
             self._crypto = crypto
         else:
-            self._crypto = CryptoEngine()
+            self._crypto = CryptoEngine(dev=dev)
 
         # store the starting offset so the CIA can be read from any point in the base file
         self._start = fp.tell()
@@ -168,7 +168,8 @@ class CIAReader:
                 is_srl = record.cindex == 0 and self.tmd.title_id[3:5] == '48'
                 if not is_srl:
                     content_fp = self.open_raw_section(record.cindex)
-                    self.contents[record.cindex] = NCCHReader(content_fp)
+                    self.contents[record.cindex] = NCCHReader(content_fp, case_insensitive=case_insensitive,
+                                                              dev=dev, seeddb=seeddb)
 
             curr_offset += record.size
 
