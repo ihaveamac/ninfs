@@ -93,7 +93,7 @@ class SMDH:
         app_structs = smdh[8:0x2008]
         names: Dict[str, AppTitle] = {}
         # due to region_names only being 12 elements, this will only process 12. the other 4 are unused.
-        for app_title, region in zip((app_structs[x:x + 0x200] for x in range(0, 0x200, 0x2000)), region_names):
+        for app_title, region in zip((app_structs[x:x + 0x200] for x in range(0, 0x2000, 0x200)), region_names):
             names[region] = AppTitle(app_title[0:0x80].decode('utf-16le').strip('\0'),
                                      app_title[0x80:0x180].decode('utf-16le').strip('\0'),
                                      app_title[0x180:0x200].decode('utf-16le').strip('\0'))
