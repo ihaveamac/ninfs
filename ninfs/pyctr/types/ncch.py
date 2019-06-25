@@ -275,7 +275,7 @@ class NCCHReader:
             self._exefs_keyslot_normal_range = [(0, 0x200)]
             exefs_fp = self.open_raw_section(NCCHSection.ExeFS)
             # load the RomFS reader
-            self.exefs = ExeFSReader(exefs_fp)
+            self.exefs = ExeFSReader(exefs_fp, _load_icon=False)
 
             for entry in self.exefs.entries.values():
                 if entry.name in EXEFS_NORMAL_CRYPTO_FILES:
@@ -284,6 +284,8 @@ class NCCHReader:
                     r = (entry.offset + EXEFS_HEADER_SIZE,
                          entry.offset + EXEFS_HEADER_SIZE + roundup(entry.size, NCCH_MEDIA_UNIT))
                     self._exefs_keyslot_normal_range.append(r)
+
+            self.exefs._load_icon()
 
         # try to load RomFS
         if not self.flags.no_romfs:
