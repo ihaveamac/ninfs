@@ -178,7 +178,10 @@ class CIAReader:
 
     def close(self):
         self.closed = True
-        self._fp.close()
+        try:
+            self._fp.close()
+        except AttributeError:
+            pass
 
     def __enter__(self):
         return self
