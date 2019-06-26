@@ -34,11 +34,12 @@ except Exception as e:
          f'{type(e).__name__}: {e}')
 
 
-def get_time(path: 'PathLike'):
+def get_time(path: 'Union[str, PathLike, stat_result]'):
     try:
-        # os.stat accepts a PathLike object, so this suppresses PyCharm's incorrect warning
-        # noinspection PyTypeChecker
-        res = stat(path)
+        if not isinstance(path, stat_result):
+            res = stat(path)
+        else:
+            res = path
         return {'st_ctime': int(res.st_ctime), 'st_mtime': int(res.st_mtime), 'st_atime': int(res.st_atime)}
     except OSError:
         # sometimes os.stat can't be used with a path, such as Windows physical drives
