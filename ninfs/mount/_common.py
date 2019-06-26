@@ -10,13 +10,15 @@ from argparse import ArgumentParser, SUPPRESS
 from errno import EROFS
 from functools import wraps
 from io import BufferedIOBase
-from os import stat
+from os import stat, stat_result
 from sys import exit, platform
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from os import PathLike
-    from typing import Generator, Tuple, Union
+    from typing import BinaryIO, Generator, Tuple, Union
+    # this is a lazy way to make type checkers stop complaining
+    BufferedIOBase = BinaryIO
 
 windows = platform in {'win32', 'cygwin'}
 macos = platform == 'darwin'
