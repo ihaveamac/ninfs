@@ -16,10 +16,11 @@ from sys import exit, argv
 from typing import TYPE_CHECKING
 
 from pyctr.crypto import CryptoEngine, Keyslot
+from pyctr.types.ncch import NCCHReader
 from pyctr.types.tmd import TitleMetadataReader, CHUNK_RECORD_SIZE
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
-from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time, load_custom_boot9
 from .ncch import NCCHContainerMount
 from .srl import SRLMount
 
@@ -111,12 +112,14 @@ class CDNContentsMount(LoggingMixIn, Operations):
             dirname = f'/{chunk.cindex:04x}.{chunk.id}'
             # noinspection PyBroadException
             try:
+                f_time = get_time(f_stat)
                 content_vfp = _c.VirtualFileWrapper(self, filename, chunk.size)
                 # boot9 is not passed here, as CryptoEngine has already set up the keys at the beginning.
                 if is_srl:
-                    content_fuse = SRLMount(content_vfp, g_stat=f_stat)
+                    content_fuse = SRLMount(content_vfp, g_stat=f_time)
                 else:
-                    content_fuse = NCCHContainerMount(content_vfp, dev=self.dev, g_stat=f_stat, seeddb=self.seeddb)
+                    content_reader = NCCHReader(content_vfp, dev=self.dev, seeddb=self.seeddb)
+                    content_fuse = NCCHContainerMount(content_reader, g_stat=f_time)
                 content_fuse.init(path)
                 self.dirs[dirname] = content_fuse
             except Exception as e:
@@ -227,6 +230,8 @@ def main(prog: str = None, args: list = None):
         mount_opts['tmd_file'] = a.content
     else:
         mount_opts['cdn_dir'] = a.content
+
+    load_custom_boot9(a.boot9)
 
     mount = CDNContentsMount(dev=a.dev, dec_key=a.dec_key, seeddb=a.seeddb, boot9=a.boot9, **mount_opts)
     if _c.macos or _c.windows:
