@@ -16,6 +16,7 @@ from struct import unpack
 from sys import exit, argv
 from typing import TYPE_CHECKING, BinaryIO
 
+from pyctr.types.romfs import RomFSReader
 from pyctr.util import readle
 from . import _common as _c
 from .romfs import RomFSMount
@@ -61,7 +62,8 @@ class ThreeDSXMount(LoggingMixIn, Operations):
         if '/romfs.bin' in self.files:
             try:
                 romfs_vfp = _c.VirtualFileWrapper(self, '/romfs.bin', self.files['/romfs.bin']['size'])
-                romfs_fuse = RomFSMount(romfs_vfp, self.g_stat)
+                romfs_reader = RomFSReader(romfs_vfp)
+                romfs_fuse = RomFSMount(romfs_reader, self.g_stat)
                 romfs_fuse.init(path)
                 self.romfs_fuse = romfs_fuse
             except Exception as e:
