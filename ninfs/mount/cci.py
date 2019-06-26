@@ -15,10 +15,11 @@ from stat import S_IFDIR, S_IFREG
 from sys import exit, argv
 from typing import TYPE_CHECKING, BinaryIO
 
+from pyctr.types.ncch import NCCHReader
 from pyctr.util import readle
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
-from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time, load_custom_boot9
 from .ncch import NCCHContainerMount
 
 if TYPE_CHECKING:
@@ -78,7 +79,8 @@ class CTRCartImageMount(LoggingMixIn, Operations):
                 # noinspection PyBroadException
                 try:
                     content_vfp = _c.VirtualFileWrapper(self, filename, part[1])
-                    content_fuse = NCCHContainerMount(content_vfp, g_stat=self.g_stat, dev=self.dev, boot9=self.boot9)
+                    content_reader = NCCHReader(content_vfp, dev=self.dev)
+                    content_fuse = NCCHContainerMount(reader=content_reader, g_stat=self.g_stat)
                     content_fuse.init(path)
                     self.dirs[dirname] = content_fuse
                 except Exception as e:
@@ -149,6 +151,8 @@ def main(prog: str = None, args: list = None):
         logging.basicConfig(level=logging.DEBUG, filename=a.do)
 
     cci_stat = get_time(a.cci)
+
+    load_custom_boot9(a.boot9)
 
     with open(a.cci, 'rb') as f:
         mount = CTRCartImageMount(cci_fp=f, dev=a.dev, boot9=a.boot9, g_stat=cci_stat)
