@@ -143,6 +143,7 @@ _b9_key_y: 'Dict[int, int]' = {}
 _b9_key_normal: 'Dict[int, bytes]' = {}
 _b9_extdata_otp: bytes = None
 _b9_extdata_keygen: bytes = None
+_b9_path: str = None
 _otp_key: bytes = None
 _otp_iv: bytes = None
 
@@ -195,6 +196,7 @@ class CryptoEngine:
     """Class for 3DS crypto operations, including encryption and key generation."""
 
     b9_keys_set: bool = False
+    b9_path: str = None
 
     _b9_extdata_otp: bytes = None
     _b9_extdata_keygen: bytes = None
@@ -448,10 +450,12 @@ class CryptoEngine:
 
     def setup_keys_from_boot9_file(self, path: str = None):
         """Set up certain keys from an ARM9 bootROM file."""
+        global _b9_path
         if self.b9_keys_set:
             return
 
         if _b9_key_x:
+            self.b9_path = _b9_path
             self._copy_global_keys()
             return
 
@@ -465,6 +469,8 @@ class CryptoEngine:
                         if b9_size == 0x10000:
                             f.seek(0x8000)
                         self.setup_keys_from_boot9(f.read(0x8000))
+                        _b9_path = p
+                        self.b9_path = p
                         return
             except FileNotFoundError:
                 continue
