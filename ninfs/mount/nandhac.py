@@ -32,8 +32,8 @@ bis_key_ids = defaultdict(lambda: -1, {
 class HACNandImageMount(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, nand_fp: 'BinaryIO', g_stat: dict, keys: str, readonly: bool = False, emummc: bool = False):
-        self.base_addr = 0x800000 if emummc else 0
+    def __init__(self, nand_fp: 'BinaryIO', g_stat: dict, keys: str, readonly: bool = False, emummc: int = 0):
+        self.base_addr = emummc
         self.readonly = readonly
         self.g_stat = g_stat
 
@@ -201,7 +201,9 @@ def main(prog: str = None, args: list = None):
     parser.add_argument('--keys', help='keys text file from biskeydump',
                         default=os.path.join(os.path.expanduser('~'), '.switch', 'prod.keys'))
     parser.add_argument('-S', '--split-files', help='treat as part of a split file', action='store_true')
-    parser.add_argument('-e', '--emummc', help='is the input image an emuMMC image', action='store_true')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-e', '--emummc', help='is an emuMMC image', action='store_const', const=0x800000)
+    group.add_argument('-R', '--raw-emummc', help='is an SD raw emuMMC image', action='store_const', const=0x1800000)
 
     a = parser.parse_args(args)
     opts = dict(_c.parse_fuse_opts(a.o))
@@ -209,8 +211,9 @@ def main(prog: str = None, args: list = None):
     if a.do:
         logging.basicConfig(level=logging.DEBUG, filename=a.do)
 
-    def do_thing(f: 'BinaryIO', k: 'TextIO', nand_stat: os.stat_result):
-        mount = HACNandImageMount(nand_fp=f, g_stat=nand_stat, keys=k.read(), readonly=a.ro, emummc=a.emummc)
+    def do_thing(f: 'BinaryIO', k: 'TextIO', nand_stat: dict):
+        mount = HACNandImageMount(nand_fp=f, g_stat=nand_stat, keys=k.read(), readonly=a.ro,
+                                  emummc=a.emummc or a.raw_emummc)
         if _c.macos or _c.windows:
             opts['fstypename'] = 'HACFS'
             # assuming / is the path separator since macos. but if windows gets support for this,
