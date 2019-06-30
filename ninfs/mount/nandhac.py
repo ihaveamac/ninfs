@@ -59,7 +59,11 @@ class HACNandImageMount(LoggingMixIn, Operations):
         nand_fp.seek(gpt_backup_header_location * 0x200 + self.base_addr)
         gpt_backup_header = nand_fp.read(0x200)
         if gpt_backup_header[0:8] != b'EFI PART':
-            exit('GPT backup header not found. This likely means an incomplete backup.')
+            if emummc:
+                # it seems sometimes the backup header is not found in an emummc image
+                print('Warning: GPT backup header not found.')
+            else:
+                exit('GPT backup header not found. This likely means an incomplete backup.')
 
         gpt_part_start = int.from_bytes(gpt_header[0x48:0x50], 'little')
         gpt_part_count = int.from_bytes(gpt_header[0x50:0x54], 'little')
