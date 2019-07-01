@@ -9,7 +9,7 @@ from struct import pack
 from typing import TYPE_CHECKING, NamedTuple
 
 from ..common import PyCTRError
-from ..util import readbe
+from ..util import readbe, readle
 
 if TYPE_CHECKING:
     from typing import BinaryIO, Iterable
@@ -237,8 +237,8 @@ class TitleMetadataReader:
         # only values that actually have a use are loaded here. (currently)
         # several fields in were left in from the Wii tmd and have no function on 3DS.
         title_id = header[0x4C:0x54].hex()
-        save_size = readbe(header[0x5A:0x5E])
-        srl_save_size = readbe(header[0x5E:0x62])
+        save_size = readle(header[0x5A:0x5E])
+        srl_save_size = readle(header[0x5E:0x62])
         title_version = TitleVersion.from_int(readbe(header[0x9C:0x9E]))
         content_count = readbe(header[0x9E:0xA0])
 
