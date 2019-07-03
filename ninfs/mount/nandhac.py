@@ -33,7 +33,7 @@ class HACNandImageMount(LoggingMixIn, Operations):
     fd = 0
 
     def __init__(self, nand_fp: 'BinaryIO', g_stat: dict, keys: str, readonly: bool = False, emummc: int = 0):
-        self.base_addr = emummc
+        self.base_addr = emummc or 0
         self.readonly = readonly
         self.g_stat = g_stat
 
