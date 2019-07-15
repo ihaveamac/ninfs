@@ -277,6 +277,9 @@ class SplitFileHandler(BufferedIOBase):
             except IndexError:
                 break  # EOF
 
+        # TODO: make this more efficient
+        self._calc_seek(self._fake_seek)
+
         return b''.join(full_data)
 
     def write(self, data: bytes):
@@ -299,6 +302,9 @@ class SplitFileHandler(BufferedIOBase):
                 left -= to_write
             except IndexError:
                 break  # EOF
+
+        # TODO: make this more efficient
+        self._calc_seek(self._fake_seek)
 
         return total - left
 
