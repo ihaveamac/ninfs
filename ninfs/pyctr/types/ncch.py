@@ -139,6 +139,7 @@ class NCCHReader:
     """Class for 3DS NCCH container."""
 
     seed_set_up = False
+    seed: 'Optional[bytes]' = None
     # this is the KeyY when generated using the seed
     _seeded_key_y = None
     closed = False
@@ -328,6 +329,7 @@ class NCCHReader:
         seed_verify_hash = sha256(seed + self.program_id.to_bytes(0x8, 'little')).digest()
         if seed_verify_hash[0x0:0x4] != self._seed_verify:
             raise NCCHSeedError('given seed does not match with seed verify hash in header')
+        self.seed = seed
         self._seeded_key_y = sha256(self._key_y + seed).digest()[0:16]
         self.seed_set_up = True
 
