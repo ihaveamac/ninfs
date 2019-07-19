@@ -171,6 +171,8 @@ class NCCHReader:
 
         # load the Key Y from the first 0x10 of the signature
         self._key_y = header[0x0:0x10]
+        # store the ncch version
+        self.version = readle(header[0x112:0x114])
         # get the total size of the NCCH container, and store it in bytes
         self.content_size = readle(header[0x104:0x108]) * NCCH_MEDIA_UNIT
         # get the Partition ID, which is used in the encryption
