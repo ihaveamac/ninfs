@@ -232,7 +232,7 @@ class ExeFSReader:
         try:
             with self.open('icon') as f:
                 self.icon = SMDH.load(f)
-        except InvalidSMDHError:
+        except (ExeFSFileNotFoundError, InvalidSMDHError):
             pass
 
     def __len__(self) -> int:
