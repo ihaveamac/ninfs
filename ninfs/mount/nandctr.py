@@ -19,7 +19,7 @@ from traceback import print_exc
 from typing import BinaryIO, AnyStr
 
 from pyctr.crypto import CryptoEngine, Keyslot
-from pyctr.types.exefs import ExeFSReader, InvalidExeFSError
+from pyctr.types.exefs import ExeFSFileNotFoundError, ExeFSReader, InvalidExeFSError
 from pyctr.util import readbe, readle, roundup
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
@@ -52,7 +52,7 @@ class CTRNandImageMount(LoggingMixIn, Operations):
         # check for essential.exefs
         nand_fp.seek(0x200)
         try:
-            exefs = ExeFSReader.load(nand_fp)
+            exefs = ExeFSReader(nand_fp)
         except InvalidExeFSError:
             exefs = None
 
@@ -70,10 +70,10 @@ class CTRNandImageMount(LoggingMixIn, Operations):
             if exefs is None:
                 exit('OTP not found, provide with --otp or embed essentials backup with GodMode9')
             else:
-                if 'otp' in exefs.entries:
-                    nand_fp.seek(exefs['otp'].offset + 0x400)
-                    otp_data = nand_fp.read(exefs['otp'].size)
-                else:
+                try:
+                    with exefs.open('otp') as otp:
+                        otp_data = otp.read(0x200)
+                except ExeFSFileNotFoundError:
                     exit('"otp" not found in essentials backup, update with GodMode9 or provide with --otp')
 
         self.crypto.setup_keys_from_otp(otp_data)
@@ -134,10 +134,10 @@ class CTRNandImageMount(LoggingMixIn, Operations):
             if exefs is None:
                 generate_ctr()
             else:
-                if 'nand_cid' in exefs.entries:
-                    nand_fp.seek(exefs['nand_cid'].offset + 0x400)
-                    cid_data = nand_fp.read(exefs['nand_cid'].size)
-                else:
+                try:
+                    with exefs.open('nand_cid') as cid:
+                        cid_data = cid.read(0x10)
+                except ExeFSFileNotFoundError:
                     print('"nand_cid" not found in essentials backup, update with GodMode9 or provide with --cid')
                     generate_ctr()
 
@@ -290,8 +290,7 @@ class CTRNandImageMount(LoggingMixIn, Operations):
             exefs_size = sum(roundup(x.size, 0x200) for x in exefs.entries.values()) + 0x200
             self.files['/essential.exefs'] = {'size': exefs_size, 'offset': 0x200, 'keyslot': 0xFF, 'type': 'raw'}
             try:
-                exefs_vfp = _c.VirtualFileWrapper(self, '/essential.exefs', exefs_size)
-                self.exefs_fuse = ExeFSMount(exefs_vfp, g_stat=g_stat)
+                self.exefs_fuse = ExeFSMount(exefs, g_stat=g_stat)
                 self.exefs_fuse.init('/')
                 self._essentials_mounted = True
             except Exception as e:
