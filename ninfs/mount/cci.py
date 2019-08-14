@@ -29,9 +29,11 @@ if TYPE_CHECKING:
 class CTRCartImageMount(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, cci_fp: BinaryIO, g_stat: dict, dev: bool = False, boot9: str = None):
+    def __init__(self, cci_fp: BinaryIO, g_stat: dict, dev: bool = False, boot9: str = None,
+                 assume_decrypted: bool = False):
         self.dev = dev
         self.boot9 = boot9
+        self.assume_decrypted = assume_decrypted
 
         self.g_stat = g_stat
 
@@ -79,7 +81,7 @@ class CTRCartImageMount(LoggingMixIn, Operations):
                 # noinspection PyBroadException
                 try:
                     content_vfp = _c.VirtualFileWrapper(self, filename, part[1])
-                    content_reader = NCCHReader(content_vfp, dev=self.dev)
+                    content_reader = NCCHReader(content_vfp, dev=self.dev, assume_decrypted=self.assume_decrypted)
                     content_fuse = NCCHContainerMount(reader=content_reader, g_stat=self.g_stat)
                     content_fuse.init(path)
                     self.dirs[dirname] = content_fuse
@@ -143,6 +145,7 @@ def main(prog: str = None, args: list = None):
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS CTR Cart Image files.',
                             parents=(_c.default_argp, _c.ctrcrypto_argp, _c.main_args('cci', 'CCI file')))
+    parser.add_argument('--dec', help='assume contents are decrypted', action='store_true')
 
     a = parser.parse_args(args)
     opts = dict(_c.parse_fuse_opts(a.o))
@@ -155,7 +158,7 @@ def main(prog: str = None, args: list = None):
     load_custom_boot9(a.boot9)
 
     with open(a.cci, 'rb') as f:
-        mount = CTRCartImageMount(cci_fp=f, dev=a.dev, boot9=a.boot9, g_stat=cci_stat)
+        mount = CTRCartImageMount(cci_fp=f, dev=a.dev, boot9=a.boot9, g_stat=cci_stat, assume_decrypted=a.dec)
         if _c.macos or _c.windows:
             opts['fstypename'] = 'CCI'
             if _c.macos:
