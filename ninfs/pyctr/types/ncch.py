@@ -150,7 +150,7 @@ class NCCHReader:
     romfs: 'Optional[RomFSReader]' = None
 
     def __init__(self, fp: 'Union[str, BinaryIO]', *, case_insensitive: bool = True, crypto: CryptoEngine = None,
-                 dev: bool = False, seeddb: str = None, load_sections: bool = True):
+                 dev: bool = False, seeddb: str = None, load_sections: bool = True, assume_decrypted: bool = False):
         if isinstance(fp, str):
             fp = open(fp, 'rb')
 
@@ -158,6 +158,9 @@ class NCCHReader:
             self._crypto = crypto
         else:
             self._crypto = CryptoEngine(dev=dev)
+
+        # old decryption methods did not fix the flags, so sometimes we have to assume it is decrypted
+        self.assume_decrypted = assume_decrypted
 
         # store the starting offset so the NCCH can be read from any point in the base file
         self._start = fp.tell()
@@ -447,7 +450,7 @@ class NCCHReader:
 
         with self._lock:
             # check if decryption is really needed
-            if self.flags.no_crypto or region.section in NO_ENCRYPTION:
+            if self.assume_decrypted or self.flags.no_crypto or region.section in NO_ENCRYPTION:
                 self._fp.seek(self._start + region.offset + offset)
                 return self._fp.read(size)
 
