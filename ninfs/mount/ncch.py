@@ -138,6 +138,7 @@ def main(prog: str = None, args: list = None):
     parser = ArgumentParser(prog=prog, description='Mount Nintendo 3DS NCCH containers.',
                             parents=(_c.default_argp, _c.ctrcrypto_argp, _c.seeddb_argp,
                                      _c.main_args('ncch', 'NCCH file')))
+    parser.add_argument('--dec', help='assume contents are decrypted', action='store_true')
 
     a = parser.parse_args(args)
     opts = dict(_c.parse_fuse_opts(a.o))
@@ -149,7 +150,7 @@ def main(prog: str = None, args: list = None):
 
     load_custom_boot9(a.boot9)
 
-    with NCCHReader(a.ncch, dev=a.dev, seeddb=a.seeddb) as r:
+    with NCCHReader(a.ncch, dev=a.dev, seeddb=a.seeddb, assume_decrypted=a.dec) as r:
         mount = NCCHContainerMount(reader=r, g_stat=ncch_stat)
         if _c.macos or _c.windows:
             opts['fstypename'] = 'NCCH'
