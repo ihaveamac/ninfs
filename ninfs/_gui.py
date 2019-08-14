@@ -387,7 +387,11 @@ def press(button: str):
                 app.enableButton(MOUNT)
                 return
 
-        if mount_type == CDN:
+        if mount_type in {CCI, NCCH}:
+            assume_decrypted = app.getCheckBox(mount_type + 'ad')
+            if assume_decrypted:
+                extra_args.append('--dec')
+        elif mount_type == CDN:
             key = app.getEntry(CDN + 'key')
             if key:
                 try:
@@ -534,6 +538,9 @@ def change_type(*_):
                 app.addFileEntry(CCI + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
                 app.setEntryDefault(CCI + ITEM, DRAGFILE)
 
+                app.addLabel(CCI + LABEL2, 'Options', row=1, column=0)
+                app.addNamedCheckBox('Assume decrypted', CCI + 'ad', row=1, column=1, colspan=1)
+
         elif mount_type == CDN:
             with app.frame(CDN, row=1, colspan=3):
                 app.addLabel(CDN + LABEL1, 'TMD File', row=0, column=0)
@@ -620,6 +627,9 @@ def change_type(*_):
                 app.addLabel(NCCH + LABEL1, FILE, row=0, column=0)
                 app.addFileEntry(NCCH + ITEM, row=0, column=1, colspan=2).theButton.config(text=BROWSE)
                 app.setEntryDefault(NCCH + ITEM, DRAGFILE)
+
+                app.addLabel(NCCH + LABEL2, 'Options', row=1, column=0)
+                app.addNamedCheckBox('Assume decrypted', NCCH + 'ad', row=1, column=1, colspan=1)
 
         elif mount_type == ROMFS:
             with app.frame(ROMFS, row=1, colspan=3):
