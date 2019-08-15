@@ -15,7 +15,7 @@ from stat import S_IFDIR, S_IFREG
 from sys import exit, argv
 from typing import TYPE_CHECKING, BinaryIO
 
-from pyctr.types.ncch import NCCHReader
+from pyctr.types.cci import CCIReader, CCISection
 from pyctr.util import readle
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
@@ -23,39 +23,20 @@ from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_conte
 from .ncch import NCCHContainerMount
 
 if TYPE_CHECKING:
-    from typing import Dict
+    from typing import Dict, Tuple, Union
 
 
 class CTRCartImageMount(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, cci_fp: BinaryIO, g_stat: dict, dev: bool = False, boot9: str = None,
-                 assume_decrypted: bool = False):
-        self.dev = dev
-        self.boot9 = boot9
-        self.assume_decrypted = assume_decrypted
+    def __init__(self, reader: 'CCIReader', g_stat: dict):
+        self.dirs: Dict[str, NCCHContainerMount] = {}
+        self.files: Dict[str, CCISection] = {}
 
+        # get status change, modify, and file access times
         self.g_stat = g_stat
 
-        # open cci and get section sizes
-        cci_fp.seek(0x100)
-        self.ncsd_header = cci_fp.read(0x100)
-        if self.ncsd_header[0:4] != b'NCSD':
-            exit('NCSD magic not found, is this a real CCI?')
-        self.media_id = self.ncsd_header[0x8:0x10]
-        if self.media_id == b'\0' * 8:
-            exit('Media ID is all-zero, is this a CCI?')
-
-        self.cci_size = readle(self.ncsd_header[4:8]) * 0x200
-
-        # create initial virtual files
-        self.files = {'/ncsd.bin': {'size': 0x200, 'offset': 0},
-                      '/cardinfo.bin': {'size': 0x1000, 'offset': 0x200},
-                      '/devinfo.bin': {'size': 0x300, 'offset': 0x1200}}
-
-        self.f = cci_fp
-
-        self.dirs: Dict[str, NCCHContainerMount] = {}
+        self.reader = reader
 
     def __del__(self, *args):
         try:
@@ -66,27 +47,25 @@ class CTRCartImageMount(LoggingMixIn, Operations):
     destroy = __del__
 
     def init(self, path):
-        ncsd_part_raw = self.ncsd_header[0x20:0x60]
-        ncsd_partitions = [[readle(ncsd_part_raw[i:i + 4]) * 0x200,
-                            readle(ncsd_part_raw[i + 4:i + 8]) * 0x200] for i in range(0, 0x40, 0x8)]
-
         ncsd_part_names = ('game', 'manual', 'dlp', 'unk', 'unk', 'unk', 'update_n3ds', 'update_o3ds')
 
-        for idx, part in enumerate(ncsd_partitions):
-            if part[0]:
-                filename = f'/content{idx}.{ncsd_part_names[idx]}.ncch'
-                self.files[filename] = {'size': part[1], 'offset': part[0]}
+        def add_file(name: str, section: 'CCISection'):
+            self.files[name] = section
 
-                dirname = f'/content{idx}.{ncsd_part_names[idx]}'
-                # noinspection PyBroadException
-                try:
-                    content_vfp = _c.VirtualFileWrapper(self, filename, part[1])
-                    content_reader = NCCHReader(content_vfp, dev=self.dev, assume_decrypted=self.assume_decrypted)
-                    content_fuse = NCCHContainerMount(reader=content_reader, g_stat=self.g_stat)
-                    content_fuse.init(path)
-                    self.dirs[dirname] = content_fuse
-                except Exception as e:
-                    print(f'Failed to mount {filename}: {type(e).__name__}: {e}')
+        add_file('/ncsd.bin', CCISection.Header)
+        add_file('/cardinfo.bin', CCISection.CardInfo)
+        add_file('/devinfo.bin', CCISection.DevInfo)
+        for part, ncch_reader in self.reader.contents.items():
+            dirname = f'/content{part}.{ncsd_part_names[part]}'
+            filename = dirname + '.ncch'
+
+            add_file(filename, part)
+            try:
+                mount = NCCHContainerMount(ncch_reader, g_stat=self.g_stat)
+                mount.init(path)
+                self.dirs[dirname] = mount
+            except Exception as e:
+                print(f'Failed to mount {filename}: {type(e).__name__}: {e}')
 
     @_c.ensure_lower_path
     def getattr(self, path, fh=None):
@@ -97,7 +76,7 @@ class CTRCartImageMount(LoggingMixIn, Operations):
         if path == '/':
             st = {'st_mode': (S_IFDIR | 0o555), 'st_nlink': 2}
         elif path in self.files:
-            st = {'st_mode': (S_IFREG | 0o444), 'st_size': self.files[path]['size'], 'st_nlink': 1}
+            st = {'st_mode': (S_IFREG | 0o444), 'st_size': self.reader.sections[self.files[path]].size, 'st_nlink': 1}
         else:
             raise FuseOSError(ENOENT)
         return {**st, **self.g_stat, 'st_uid': uid, 'st_gid': gid}
@@ -121,21 +100,22 @@ class CTRCartImageMount(LoggingMixIn, Operations):
         first_dir = _c.get_first_dir(path)
         if first_dir in self.dirs:
             return self.dirs[first_dir].read(_c.remove_first_dir(path), size, offset, fh)
-        fi = self.files[path]
-        if fi['offset'] + offset > fi['offset'] + fi['size']:
+
+        section = self.files[path]
+        region = self.reader.sections[section]
+        if region.offset + offset > region.offset + region.size:
             return b''
-        if offset + size > fi['size']:
-            size = fi['size'] - offset
-        real_offset = fi['offset'] + offset
-        self.f.seek(real_offset)
-        return self.f.read(size)
+        if offset + size > region.size:
+            size = region.size - offset
+
+        return self.reader.get_data(region, offset, size)
 
     @_c.ensure_lower_path
     def statfs(self, path):
         first_dir = _c.get_first_dir(path)
         if first_dir in self.dirs:
             return self.dirs[first_dir].statfs(_c.remove_first_dir(path))
-        return {'f_bsize': 4096, 'f_blocks': self.cci_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
+        return {'f_bsize': 4096, 'f_blocks': self.reader.image_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
                 'f_files': len(self.files)}
 
 
@@ -157,14 +137,22 @@ def main(prog: str = None, args: list = None):
 
     load_custom_boot9(a.boot9)
 
-    with open(a.cci, 'rb') as f:
-        mount = CTRCartImageMount(cci_fp=f, dev=a.dev, boot9=a.boot9, g_stat=cci_stat, assume_decrypted=a.dec)
+    with CCIReader(a.cci, dev=a.dev, assume_decrypted=a.dec) as r:
+        mount = CTRCartImageMount(reader=r, g_stat=cci_stat)
         if _c.macos or _c.windows:
             opts['fstypename'] = 'CCI'
             if _c.macos:
-                opts['volname'] = f'CTR Cart Image ({mount.media_id[::-1].hex().upper()})'
+                display = r.media_id.upper()
+                try:
+                    title = r.contents[CCISection.Application].exefs.icon.get_app_title()
+                    display += f'; ' + r.contents[CCISection.Application].product_code
+                    if title.short_desc != 'unknown':
+                        display += '; ' + title.short_desc
+                except:
+                    pass
+                opts['volname'] = f'CTR Cart Image ({display})'
             elif _c.windows:
                 # volume label can only be up to 32 chars
-                opts['volname'] = f'CCI ({mount.media_id[::-1].hex().upper()})'
+                opts['volname'] = f'CCI ({r.media_id.upper()})'
         FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
              fsname=os.path.realpath(a.cci).replace(',', '_'), **opts)
