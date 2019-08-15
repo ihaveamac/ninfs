@@ -23,7 +23,7 @@ else:
 
 setup(
     name='ninfs',
-    version='1.7b1',
+    version='1.7b2',
     packages=find_packages(),
     url='https://github.com/ihaveamac/ninfs',
     license='MIT',
