@@ -35,6 +35,9 @@ class CIASection(IntEnum):
     CertificateChain = -3
     Ticket = -2
     TitleMetadata = -1
+    Application = 0
+    Manual = 1
+    DownloadPlayChild = 2
     Meta = -5
 
 
