@@ -25,11 +25,6 @@ _path = dirname(realpath(__file__))
 if _path not in path:
     path.insert(0, _path)
 
-from __init__ import __version__ as version
-
-# this should stay as str.format so it runs on older versions
-print('ninfs v{} - https://github.com/ihaveamac/ninfs'.format(version))
-
 if hexversion < 0x030601F0:
     exit('Python {0[0]}.{0[1]}.{0[2]} is not supported. Please use Python 3.6.1 or later.'.format(version_info))
 
