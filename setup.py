@@ -23,7 +23,7 @@ else:
 
 setup(
     name='ninfs',
-    version='1.7b2',
+    version='2.0b1',
     packages=find_packages(),
     url='https://github.com/ihaveamac/ninfs',
     license='MIT',
@@ -42,7 +42,7 @@ setup(
     ],
     install_requires=['pycryptodomex'],
     # fusepy should be added here once the main repo has a new release with Windows support.
-    extras_require={'gui': ['appJar>=0.93']},
+    extras_require={'gui': ['pyside2']},
     entry_points={'console_scripts': ['ninfs = ninfs.main:gui',
                                       # not putting in gui_scripts since the cmd window is required and trying to
                                       # remove it breaks some other stuff with subprocess management ?!?
