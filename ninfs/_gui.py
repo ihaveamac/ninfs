@@ -6,9 +6,33 @@
 
 # This will be something some day!
 
-from PySide2.QtWidgets import QMainWindow
+import os
+import sys
+
+from PySide2.QtWidgets import QApplication, QLabel, QMainWindow, QWidget, QVBoxLayout
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+
+        # create initial widget and layout
+        main_widget = QWidget()
+        main_layout = QVBoxLayout()
+        # set window's main widget
+        self.setCentralWidget(main_widget)
+        main_widget.setLayout(main_layout)
+
+        temp_label = QLabel('This exists, just so the project will build and run. This will be something some day!')
+        main_layout.addWidget(temp_label)
+
+
+def main(_allow_admin=False):
+    app = QApplication()
+    if os.name == 'nt':
+        # use Fusion style on Windows
+        app.setStyle('Fusion')
+    window = MainWindow()
+    window.show()
+
+    sys.exit(app.exec_())
