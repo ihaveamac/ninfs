@@ -1,18 +1,12 @@
 build/
 dist/
-test/
-things/
 .idea/
 venv*/
-*.spec
 *.bin
-*.bat
 *.egg-info/
 __pycache__/
-docs-build/
 .DS_Store
-pyctr-test.py
-build_*.py
 *.so
 *.pyd
+# dll and dylib are not here, since libcrypto needs to be included
 Thumbs.db

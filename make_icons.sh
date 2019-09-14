@@ -1,7 +1,7 @@
 #!/bin/sh
 if [[ `uname -s` = Darwin ]]; then
     mkdir build
-    rm -r build/ninfs.iconset
+    rm -r build/ninfs.iconset > /dev/null
     mkdir build/ninfs.iconset
 
     cp ninfs/data/16x16.png build/ninfs.iconset/icon_16x16.png

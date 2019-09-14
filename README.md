@@ -50,17 +50,13 @@ SeedDB is checked in order of:
 * `~/.3ds/seeddb.bin`
 * `~/3ds/seeddb.bin`
 
-Python 3.6.1+ and pycryptodomex are required. appJar is required for the GUI.
+Python 3.6.1+ and pycryptodomex are required. PySide2 is required for the GUI.
 * [fusepy](https://github.com/fusepy/fusepy) is pre-included until [refuse](https://github.com/pleiszenburg/refuse) has a fully stable release.
 
 ### Windows
 Windows 7 or later is required.
 
-A standalone executable with a GUI is available for use. You can get a single executable for download from [GitHub](https://github.com/ihaveamac/ninfs/releases) or the [GBAtemp Download Center](https://gbatemp.net/download/ninfs.34706/) A window will appear allowing you to choose mount options easily.
-
-Python does not have to be installed, but [WinFsp](http://www.secfs.net/winfsp/download/) is still required.
-
-<p align="center"><img src="https://github.com/ihaveamac/ninfs/raw/master/resources/mainwindow-win.png"></p>
+(GUI in progress of being re-created.) Python does not have to be installed, but [WinFsp](http://www.secfs.net/winfsp/download/) is still required.
 
 #### Install with existing Python
 * Install the latest version of [Python 3](https://www.python.org/downloads/). The x86-64 version is preferred on 64-bit Windows.
@@ -70,9 +66,7 @@ Python does not have to be installed, but [WinFsp](http://www.secfs.net/winfsp/d
   * With GUI support: `py -3 -m pip install --upgrade https://github.com/ihaveamac/ninfs/archive/master.zip#egg=ninfs[gui]`
 
 ### macOS
-A standalone application bundle with a GUI is available for use. OS X 10.9.5 Mavericks or later is required. You can download the DMG from [GitHub](https://github.com/ihaveamac/ninfs/releases).
-
-Python does not have to be installed, but [FUSE for macOS](https://osxfuse.github.io/) is still required.
+(GUI in progress of being re-created.) Python does not have to be installed, but [FUSE for macOS](https://osxfuse.github.io/) is still required.
 
 #### Install with existing Python
 Versions of macOS supported by Apple are highly recommended. Mac OS X Snow Leopard is the lowest version that should work.
@@ -147,7 +141,7 @@ Windows users can use a drive letter like `F:` as a mountpoint, or use `*` and a
 * `Nintendo 3DS` directory from an SD card with an SD key hexstring:  
   `mount_sd --sd-key 504C415900000000504F4B454D4F4E21 "/path/to/Nintendo 3DS" mountpoint`
 * Nintendo DS ROM image (NDS/SRL, `mount_nds` also works):  
-  `mount_srl game.nds`
+  `mount_srl game.nds mountpoint`
 * 3DSX homebrew application:  
   `mount_threedsx boot.3dsx mountpoint`
 
