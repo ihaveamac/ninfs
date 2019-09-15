@@ -69,7 +69,7 @@ Windows 7 or later is required.
 (GUI in progress of being re-created.) Python does not have to be installed, but [FUSE for macOS](https://osxfuse.github.io/) is still required.
 
 #### Install with existing Python
-Versions of macOS supported by Apple are highly recommended. Mac OS X Snow Leopard is the lowest version that should work.
+Versions of macOS supported by Apple are highly recommended. OS X Mavericks is the oldest version that should work.
 
 * Install the latest version of Python 3. The recommended way is [Homebrew](https://brew.sh). You can also use an installer from [python.org](https://www.python.org/downloads/) or a tool like [pyenv](https://github.com/pyenv/pyenv).
 * Install the latest version of [FUSE for macOS](https://github.com/osxfuse/osxfuse/releases/latest).
