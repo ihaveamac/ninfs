@@ -10,11 +10,16 @@ import os
 import sys
 
 from PySide2.QtWidgets import QApplication, QLabel, QMainWindow, QWidget, QVBoxLayout
+from PySide2.QtGui import QIcon
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+
+        # set application icon
+        if os.name == 'nt':
+            self.setWindowIcon(QIcon(os.path.join(os.path.dirname(__file__), 'data', 'windows.ico')))
 
         # create initial widget and layout
         main_widget = QWidget()
