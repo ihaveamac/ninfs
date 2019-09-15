@@ -21,9 +21,15 @@ elif sys.platform == 'win32':
 else:
     libcrypto = []
 
+# based on https://github.com/Legrandin/pycryptodome/blob/b3a394d0837ff92919d35d01de9952b8809e802d/setup.py
+with open('ninfs/__init__.py', 'r', encoding='utf-8') as f:
+    for line in f:
+        if line.startswith('__version__'):
+            version = eval(line.split('=')[1])
+
 setup(
     name='ninfs',
-    version='2.0b1',
+    version=version,
     packages=find_packages(),
     url='https://github.com/ihaveamac/ninfs',
     license='MIT',
