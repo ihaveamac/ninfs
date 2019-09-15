@@ -27,7 +27,7 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(temp_label)
 
 
-def main(_allow_admin=False):
+def main(_pyi=False, _allow_admin=False):
     app = QApplication()
     if os.name == 'nt':
         # use Fusion style on Windows
