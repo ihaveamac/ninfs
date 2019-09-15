@@ -2,13 +2,23 @@
 
 import sys
 
+# based on https://github.com/Legrandin/pycryptodome/blob/b3a394d0837ff92919d35d01de9952b8809e802d/setup.py
+with open('ninfs/__init__.py', 'r', encoding='utf-8') as f:
+    for line in f:
+        if line.startswith('__version__'):
+            version = eval(line.split('=')[1])
+
 block_cipher = None
+
+datas = []
+if sys.platform == 'win32':
+    datas.append(['ninfs/data', 'data'])
 
 
 a = Analysis(['ninfs/_pyi_main.py'],
              pathex=['ninfs'],
              binaries=[],
-             datas=[],
+             datas=datas,
              hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
@@ -22,13 +32,15 @@ pyz = PYZ(a.pure, a.zipped_data,
 
 # build exe for Windows
 if sys.platform == 'win32':
+    from platform import architecture
+    name = f'ninfs-{"x86" if architecture()[0] == "32bit" else "x64"}'
     exe = EXE(pyz,
               a.scripts,
               a.binaries,
               a.zipfiles,
               a.datas,
               [],
-              name='ninfs',
+              name=name,
               debug=False,
               bootloader_ignore_signals=False,
               strip=False,
@@ -67,6 +79,6 @@ elif sys.platform == 'darwin':
                      # Qt only supports the 3 latest macOS versions, like Apple does with security updates.
                      'LSMinimumSystemVersion': '10.12.0',
                      'NSHighResolutionCapable': True,
-                     'CFBundleShortVersionString': '2.0',
-                     'CFBundleVersion': '2.0',
+                     'CFBundleShortVersionString': version,
+                     'CFBundleVersion': version,
                  })
