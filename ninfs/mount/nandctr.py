@@ -472,11 +472,12 @@ def main(prog: str = None, args: list = None):
             opts['fstypename'] = 'CTRFS'
             # assuming / is the path separator since macos. but if windows gets support for this,
             #   it will have to be done differently.
+            device_id = f'{mount.crypto.otp_device_id:08X}'
             if _c.macos:
                 path_to_show = os.path.realpath(a.nand).rsplit('/', maxsplit=2)
-                opts['volname'] = f'Nintendo 3DS NAND ({path_to_show[-2]}/{path_to_show[-1]})'
+                opts['volname'] = f'Nintendo 3DS NAND ({device_id}; {path_to_show[-2]}/{path_to_show[-1]})'
             elif _c.windows:
                 # volume label can only be up to 32 chars
-                opts['volname'] = 'Nintendo 3DS NAND'
+                opts['volname'] = f'Nintendo 3DS NAND ({device_id})'
         FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=a.ro, nothreads=True, debug=a.d,
              fsname=os.path.realpath(a.nand).replace(',', '_'), **opts)
