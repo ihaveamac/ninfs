@@ -1,1 +1,4 @@
 include ninfs/hac/aes.h
+include ninfs/hac/libcrypto-1_1.dll
+include ninfs/hac/libcrypto-1_1-x64.dll
+include ninfs/hac/libcrypto.1.1.dylib
