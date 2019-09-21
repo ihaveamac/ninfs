@@ -170,6 +170,13 @@ def main(prog: str = None, args: list = None):
                 opts['volname'] = f'CTR Importable Archive ({display})'
             elif _c.windows:
                 # volume label can only be up to 32 chars
-                opts['volname'] = f'CIA ({r.tmd.title_id.upper()})'
+                try:
+                    title = r.contents[0].exefs.icon.get_app_title().short_desc
+                    if len(title) > 26:
+                        title = title[0:25] + '\u2026'  # ellipsis
+                    display = title
+                except:
+                    display = r.tmd.title_id.upper()
+                opts['volname'] = f'CIA ({display})'
         FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
              fsname=os.path.realpath(a.cia).replace(',', '_'), **opts)
