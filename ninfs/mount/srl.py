@@ -107,6 +107,7 @@ class SRLMount(LoggingMixIn, Operations):
 
         # parse header
         header = TwlHeaderRaw(*twl_header_struct.unpack(srl_fp.read(0x1000)))
+        self.title = header.game_title.decode('ascii').replace('\0', '')
         self.code = header.game_code.decode('ascii')
         self.total_size = 0x20000 << header.device_capacity
 
@@ -286,6 +287,6 @@ def main(prog: str = None, args: list = None):
         mount = SRLMount(srl_fp=f, g_stat=srl_stat)
         if _c.macos or _c.windows:
             opts['fstypename'] = 'SRL'
-            opts['volname'] = f'Nintendo DS ROM image ({mount.code})'
+            opts['volname'] = f'Nintendo DS ROM ({mount.title})'
         FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
              fsname=os.path.realpath(a.srl).replace(',', '_'), **opts)
