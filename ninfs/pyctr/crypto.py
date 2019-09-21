@@ -201,6 +201,7 @@ class CryptoEngine:
     _b9_extdata_otp: bytes = None
     _b9_extdata_keygen: bytes = None
 
+    _otp_device_id: int = None
     _otp_key: bytes = None
     _otp_iv: bytes = None
 
@@ -229,6 +230,11 @@ class CryptoEngine:
     @_requires_bootrom
     def b9_extdata_keygen(self) -> bytes:
         return self._b9_extdata_keygen
+
+    @property
+    @_requires_bootrom
+    def otp_device_id(self) -> int:
+        return self._otp_device_id
 
     @property
     @_requires_bootrom
@@ -494,6 +500,8 @@ class CryptoEngine:
             # encrypted otp
             otp_enc = otp
             otp_dec: bytes = cipher_otp.decrypt(otp)
+
+        self._otp_device_id = int.from_bytes(otp_dec[4:8], 'little')
 
         otp_hash: bytes = otp_dec[0xE0:0x100]
         otp_hash_digest: bytes = sha256(otp_dec[0:0xE0]).digest()
