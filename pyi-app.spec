@@ -77,7 +77,7 @@ elif sys.platform == 'darwin':
                  bundle_identifier='net.ianburgwin.ninfs',
                  info_plist={
                      # Qt only supports the 3 latest macOS versions, like Apple does with security updates.
-                     'LSMinimumSystemVersion': '10.12.0',
+                     'LSMinimumSystemVersion': '10.13.0',
                      'NSHighResolutionCapable': True,
                      'CFBundleShortVersionString': version,
                      'CFBundleVersion': version,
