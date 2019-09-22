@@ -79,6 +79,7 @@ elif sys.platform == 'darwin':
                      # Qt only supports the 3 latest macOS versions, like Apple does with security updates.
                      'LSMinimumSystemVersion': '10.13.0',
                      'NSHighResolutionCapable': True,
+                     'NSRequiresAquaSystemAppearance': False,
                      'CFBundleShortVersionString': version,
                      'CFBundleVersion': version,
                  })
