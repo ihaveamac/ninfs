@@ -4,8 +4,6 @@ REM Variable setting from: https://stackoverflow.com/questions/16203629
 
 for /f "delims=" %%V in ('py -3 -c "from ninfs import __version__; print(__version__)"') do set VERSION=%%V
 
-echo %VERSION%
-
 for %%A in (32,64) do (
     mkdir build\zip-win%%A
     copy dist\ninfs-win%%A.exe build\zip-win%%A\ninfs.exe
