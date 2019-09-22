@@ -18,4 +18,4 @@ ln -s /Applications $BUILDDIR
 cp -pr dist/ninfs.app $BUILDDIR
 # (a line here will eventually copy other resources into the dmg)
 # create final dmg
-hdiutil create -ov -o dist/ninfs-$NV.dmg -format UDBZ -srcfolder $BUILDDIR -fs HFS+
+hdiutil create -ov -o dist/ninfs-$NV-macos.dmg -format UDBZ -srcfolder $BUILDDIR -fs HFS+
