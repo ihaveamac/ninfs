@@ -33,7 +33,7 @@ pyz = PYZ(a.pure, a.zipped_data,
 # build exe for Windows
 if sys.platform == 'win32':
     from platform import architecture
-    name = f'ninfs-{"x86" if architecture()[0] == "32bit" else "x64"}'
+    name = f'ninfs-{"win32" if architecture()[0] == "32bit" else "win64"}'
     exe = EXE(pyz,
               a.scripts,
               a.binaries,
