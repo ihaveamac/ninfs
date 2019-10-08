@@ -9,7 +9,7 @@ from threading import Lock
 from typing import TYPE_CHECKING, NamedTuple
 
 from ..common import PyCTRError, _ReaderOpenFileBase
-from ..types.ncch import NCCHReader
+from ..type.ncch import NCCHReader
 from ..util import readle
 
 if TYPE_CHECKING:

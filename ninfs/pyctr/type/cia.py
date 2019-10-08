@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING, NamedTuple
 
 from ..common import PyCTRError, _ReaderOpenFileBase
 from ..crypto import CryptoEngine, Keyslot
-from ..types.ncch import NCCHReader
-from ..types.tmd import TitleMetadataReader
+from ..type.ncch import NCCHReader
+from ..type.tmd import TitleMetadataReader
 from ..util import readle, roundup
 
 if TYPE_CHECKING:

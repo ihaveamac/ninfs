@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, NamedTuple
 
 from ..common import PyCTRError, _ReaderOpenFileBase
 from ..util import readle
-from ..types.smdh import SMDH, InvalidSMDHError
+from ..type.smdh import SMDH, InvalidSMDHError
 
 if TYPE_CHECKING:
     from typing import BinaryIO, Dict, Union

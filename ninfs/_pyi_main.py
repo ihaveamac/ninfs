@@ -15,7 +15,7 @@ def _():
     import fmt_detect
     import reg_shell
     from mount import _common, cci, cdn, cia, exefs, nandctr, nandhac, nandtwl, ncch, romfs, sd, srl, threedsx, titledir
-    from pyctr.types import crypto, exefs, ncch, romfs, smdh, tmd, util
+    from pyctr.type import crypto, exefs, ncch, romfs, smdh, tmd, util
 
 
 path.insert(0, dirname(realpath(__file__)))
