@@ -7,6 +7,7 @@
 from enum import IntEnum
 from functools import wraps
 from hashlib import sha256
+from io import BufferedIOBase
 from os import environ
 from os.path import getsize, join as pjoin
 from struct import pack, unpack
@@ -16,7 +17,7 @@ from Cryptodome.Cipher import AES
 from Cryptodome.Hash import CMAC
 from Cryptodome.Util import Counter
 
-from .common import PyCTRError
+from .common import PyCTRError, _raise_if_closed
 from .util import config_dirs, readbe, readle
 
 if TYPE_CHECKING:
@@ -27,7 +28,7 @@ if TYPE_CHECKING:
     # noinspection PyProtectedMember
     from Cryptodome.Cipher._mode_ecb import EcbMode
     from Cryptodome.Hash.CMAC import CMAC as CMACObject
-    from typing import Dict, List, Union
+    from typing import BinaryIO, Dict, List, Union
 
 __all__ = ['CryptoError', 'OTPLengthError', 'CorruptBootromError', 'KeyslotMissingError', 'TicketLengthError',
            'BootromNotFoundError', 'CorruptOTPError', 'Keyslot', 'CryptoEngine']

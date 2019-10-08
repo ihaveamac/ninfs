@@ -16,7 +16,7 @@ from struct import unpack
 from sys import exit, argv
 from typing import TYPE_CHECKING, BinaryIO
 
-from pyctr.types.romfs import RomFSReader
+from pyctr.type.romfs import RomFSReader
 from pyctr.util import readle
 from . import _common as _c
 from .romfs import RomFSMount

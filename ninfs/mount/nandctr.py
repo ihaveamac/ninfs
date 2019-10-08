@@ -19,7 +19,7 @@ from traceback import print_exc
 from typing import BinaryIO, AnyStr
 
 from pyctr.crypto import CryptoEngine, Keyslot
-from pyctr.types.exefs import ExeFSFileNotFoundError, ExeFSReader, InvalidExeFSError
+from pyctr.type.exefs import ExeFSFileNotFoundError, ExeFSReader, InvalidExeFSError
 from pyctr.util import readbe, readle, roundup
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code

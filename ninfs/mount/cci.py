@@ -15,7 +15,7 @@ from stat import S_IFDIR, S_IFREG
 from sys import exit, argv
 from typing import TYPE_CHECKING, BinaryIO
 
-from pyctr.types.cci import CCIReader, CCISection
+from pyctr.type.cci import CCIReader, CCISection
 from pyctr.util import readle
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code

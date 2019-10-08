@@ -18,7 +18,7 @@ from stat import S_IFDIR, S_IFREG
 from sys import argv
 from typing import TYPE_CHECKING
 
-from pyctr.types.cia import CIAReader, CIASection
+from pyctr.type.cia import CIAReader, CIASection
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
 from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time, load_custom_boot9

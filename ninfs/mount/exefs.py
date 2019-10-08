@@ -15,7 +15,7 @@ from stat import S_IFDIR, S_IFREG
 from sys import argv
 from typing import TYPE_CHECKING
 
-from pyctr.types.exefs import ExeFSReader, ExeFSFileNotFoundError
+from pyctr.type.exefs import ExeFSReader, ExeFSFileNotFoundError
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
 from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time
