@@ -118,7 +118,10 @@ class SDFilesystemMount(LoggingMixIn, Operations):
 
     def readdir(self, path, fh):
         yield from ('.', '..')
-        ld = os.listdir(path)
+        # due to DSiWare exports having unique crypto that is a pain to handle, this hides it to prevent misleading
+        #   users into thinking that the files are decrypted.
+
+        ld = (d for d in os.listdir(path) if not d.lower() == 'nintendo dsiware')
         if _c.windows:
             # I should figure out how to mark hidden files, if possible
             yield from (d for d in ld if not d.startswith('.'))
