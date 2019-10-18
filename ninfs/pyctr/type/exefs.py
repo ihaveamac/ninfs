@@ -9,6 +9,7 @@ from threading import Lock
 from typing import TYPE_CHECKING, NamedTuple
 
 from ..common import PyCTRError, _ReaderOpenFileBase
+from ..fileio import SubsectionIO
 from ..util import readle
 from ..type.smdh import SMDH, InvalidSMDHError
 
@@ -259,7 +260,12 @@ class ExeFSReader:
         if normalize:
             # remove beginning "/" and ending ".bin"
             path = _normalize_path(path)
-        return _ExeFSOpenFile(self, path)
+        entry = self.entries[path]
+        if entry.offset == -1:
+            # this would be the decompressed .code, if the original .code was compressed
+            return _ExeFSOpenFile(self, path)
+        else:
+            return SubsectionIO(self._fp, self._start + EXEFS_HEADER_SIZE + entry.offset, entry.size)
 
     def get_data(self, info: ExeFSEntry, offset: int, size: int) -> bytes:
         if offset + size > info.size:
