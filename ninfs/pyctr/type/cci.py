@@ -8,7 +8,8 @@ from enum import IntEnum
 from threading import Lock
 from typing import TYPE_CHECKING, NamedTuple
 
-from ..common import PyCTRError, _ReaderOpenFileBase
+from ..common import PyCTRError
+from ..fileio import SubsectionIO
 from ..type.ncch import NCCHReader
 from ..util import readle
 
@@ -45,14 +46,6 @@ class CCIRegion(NamedTuple):
     section: 'Union[int, CCISection]'
     offset: int
     size: int
-
-
-class _CCISectionFile(_ReaderOpenFileBase):
-    """Provides a raw CCI section as a file-like object."""
-
-    def __init__(self, reader: 'CCIReader', path: 'CCISection'):
-        super().__init__(reader, path)
-        self._info = reader.sections[path]
 
 
 class CCIReader:
@@ -138,7 +131,8 @@ class CCIReader:
     def __repr__(self):
         info = [('media_id', self.media_id)]
         try:
-            info.append(('title_name', repr(self.contents[CCISection.Application].exefs.icon.get_app_title().short_desc)))
+            info.append(('title_name',
+                         repr(self.contents[CCISection.Application].exefs.icon.get_app_title().short_desc)))
         except KeyError:
             info.append(('title_name', 'unknown'))
         info.append(('partition_count', len(self.contents)))
@@ -147,13 +141,5 @@ class CCIReader:
 
     def open_raw_section(self, section: 'CCISection'):
         """Open a raw CCI section for reading."""
-        return _CCISectionFile(self, section)
-
-    def get_data(self, region: 'CCIRegion', offset: int, size: int):
-        if offset + size > region.size:
-            # prevent reading past the region
-            size = region.size - offset
-
-        with self._lock:
-            self._fp.seek(self._start + region.offset + offset)
-            return self._fp.read(size)
+        region = self.sections[section]
+        return SubsectionIO(self._fp, self._start + region.offset, region.size)
