@@ -11,11 +11,11 @@ Mounts SD contents under `/Nintendo 3DS`, creating a virtual filesystem with dec
 import logging
 import os
 from errno import EPERM, EACCES
-from hashlib import sha256
 from sys import exit, argv
+from threading import Lock
+from typing import TYPE_CHECKING
 
 from pyctr.crypto import CryptoEngine, Keyslot
-from pyctr.util import readbe
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
 from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
@@ -23,16 +23,36 @@ from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_conte
 if _c.windows:
     from ctypes import c_wchar_p, pointer, c_ulonglong, windll, wintypes
 
+if TYPE_CHECKING:
+    from typing import BinaryIO, Dict, Optional, Tuple
+
 
 class SDFilesystemMount(LoggingMixIn, Operations):
-    fd = 0
 
     @_c.ensure_lower_path
     def path_to_iv(self, path):
         return CryptoEngine.sd_path_to_iv(path[self.root_len + 33:])
 
+    def fd_to_fileobj(self, path, mode, fd):
+        fh = open(fd, mode, buffering=0)
+        lock = Lock()
+        if not (os.path.basename(path).startswith('.') or 'nintendo dsiware' in path.lower()):
+            fh_enc = self.crypto.create_ctr_io(Keyslot.SD, fh, self.path_to_iv(path))
+            fh_group = (fh_enc, fh, lock)
+        else:
+            fh_group = (fh, None, lock)
+        self.fds[fd] = fh_group
+        return fd
+
     def __init__(self, sd_dir: str, movable: bytes, dev: bool = False, readonly: bool = False, boot9: str = None):
         self.crypto = CryptoEngine(boot9=boot9, dev=dev)
+
+        # only allows one create/open/release operation at a time
+        self.global_lock = Lock()
+
+        # each fd contains a tuple with a file object, a base file object (for encrypted files),
+        #   and a thread lock to prevent two read or write operations from screwing with eachother
+        self.fds: 'Dict[int, Tuple[BinaryIO, Optional[BinaryIO], Lock]]' = {}
 
         self.crypto.setup_sd_key(movable)
         self.root_dir = self.crypto.id0.hex()
@@ -66,11 +86,17 @@ class SDFilesystemMount(LoggingMixIn, Operations):
             os.chown(path, *args, **kwargs)
 
     @_c.raise_on_readonly
-    def create(self, path, mode, **kwargs):
-        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode)
-        os.close(fd)
-        self.fd += 1
-        return self.fd
+    def create(self, path, mode, fi=None):
+        # prevent another create/open/release from interfering
+        with self.global_lock:
+            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode)
+            return self.fd_to_fileobj(path, 'wb+', fd)
+
+    @_c.raise_on_readonly
+    def flush(self, path, fh):
+        fd, _, lock = self.fds[fh]
+        with lock:
+            fd.flush()
 
     def getattr(self, path, fh=None):
         st = os.lstat(path)
@@ -81,47 +107,40 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         res['st_gid'] = st.st_gid if st.st_gid != 0 else gid
         return res
 
-    getxattr = None
-
     def link(self, target, source):
         return os.link(source, target)
 
-    listxattr = None
+    @_c.raise_on_readonly
+    def mkdir(self, path, mode):
+        os.mkdir(path, mode)
 
     @_c.raise_on_readonly
-    def mkdir(self, path, *args, **kwargs):
-        os.mkdir(path, *args, **kwargs)
-
-    @_c.raise_on_readonly
-    def mknod(self, path, *args, **kwargs):
+    def mknod(self, path, mode, dev):
         if not _c.windows:
-            os.mknod(path, *args, **kwargs)
+            os.mknod(path, mode, dev)
 
     # open = os.open
     def open(self, path, flags):
-        self.fd += 1
-        return self.fd
+        # prevent another create/open/release from interfering
+        with self.global_lock:
+            fd = os.open(path, flags)
+            return self.fd_to_fileobj(path, 'rb+', fd)
 
     def read(self, path, size, offset, fh):
-        # special check for special files
-        if os.path.basename(path).startswith('.') or 'nintendo dsiware' in path:
-            with open(path, 'rb') as f:
-                f.seek(offset)
-                return f.read(size)
+        fd, _, lock = self.fds[fh]
 
-        before = offset % 16
-        with open(path, 'rb') as f:
-            f.seek(offset - before)
-            data = f.read(size + before)
-        iv = self.path_to_iv(path) + (offset >> 4)
-        return self.crypto.create_ctr_cipher(Keyslot.SD, iv).decrypt(data)[before:]
+        # acquire lock to prevent another read/write from messing with this operation
+        with lock:
+            fd.seek(offset)
+            return fd.read(size)
 
     def readdir(self, path, fh):
         yield from ('.', '..')
+
         # due to DSiWare exports having unique crypto that is a pain to handle, this hides it to prevent misleading
         #   users into thinking that the files are decrypted.
-
         ld = (d for d in os.listdir(path) if not d.lower() == 'nintendo dsiware')
+
         if _c.windows:
             # I should figure out how to mark hidden files, if possible
             yield from (d for d in ld if not d.startswith('.'))
@@ -129,6 +148,20 @@ class SDFilesystemMount(LoggingMixIn, Operations):
             yield from ld
 
     readlink = os.readlink
+
+    def release(self, path, fh):
+        # prevent another create/open/release from interfering
+        with self.global_lock:
+            fd_group = self.fds[fh]
+            # prevent use of the handle while cleaning up, or closing while in use
+            with fd_group[2]:
+                fd_group[0].close()
+                try:
+                    fd_group[1].close()
+                except AttributeError:
+                    # unencrypted files have the second item set to None
+                    pass
+                del self.fds[fh]
 
     @_c.raise_on_readonly
     def rename(self, old, new):
@@ -170,11 +203,18 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         return os.symlink(source, target)
 
     def truncate(self, path, length, fh=None):
-        with open(path, 'r+b') as f:
-            f.truncate(length)
+        try:
+            fd, _, lock = self.fds[fh]
+            # acquire lock to prevent another read/write from messing with this operation
+            with lock:
+                fd.truncate(length)
+
+        except KeyError:  # in case this is not an already open file
+            with open(path, 'rb+') as f:
+                f.truncate(length)
 
     @_c.raise_on_readonly
-    def unlink(self, path, *args, **kwargs):
+    def unlink(self, path):
         os.unlink(path)
 
     @_c.raise_on_readonly
@@ -183,19 +223,12 @@ class SDFilesystemMount(LoggingMixIn, Operations):
 
     @_c.raise_on_readonly
     def write(self, path, data, offset, fh):
-        # special check for special files
-        if os.path.basename(path).startswith('.') or 'nintendo dsiware' in path.lower():
-            with open(path, 'rb+') as f:
-                f.seek(offset)
-                return f.write(data)
+        fd, _, lock = self.fds[fh]
 
-        before = offset % 16
-        iv = self.path_to_iv(path) + (offset >> 4)
-        out_data = self.crypto.create_ctr_cipher(Keyslot.SD, iv).decrypt((b'\0' * before) + data)[before:]
-
-        with open(path, 'rb+') as f:
-            f.seek(offset)
-            return f.write(out_data)
+        # acquire lock to prevent another read/write from messing with this operation
+        with lock:
+            fd.seek(offset)
+            return fd.write(data)
 
 
 def main(prog: str = None, args: list = None):
@@ -227,10 +260,13 @@ def main(prog: str = None, args: list = None):
         opts['fstypename'] = 'SDCard'
         if _c.macos:
             opts['volname'] = f'Nintendo 3DS SD Card ({mount.root_dir})'
-            opts['noappledouble'] = True  # fixes an error. but this is probably not the best way to do it.
+            # this fixes an issue with creating files through Finder
+            # a better fix would probably be to support xattrs properly, but given the kind of data and filesystem
+            #   that this code would interact with, it's not really useful.
+            opts['noappledouble'] = True
         else:
             # windows
             opts['volname'] = f'Nintendo 3DS SD Card ({mount.root_dir[0:8]}…)'
             opts['case_insensitive'] = False
-    FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=a.ro, nothreads=True, debug=a.d,
+    FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=a.ro, debug=a.d,
          fsname=os.path.realpath(a.sd_dir).replace(',', '_'), **opts)
