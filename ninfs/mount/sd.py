@@ -58,10 +58,10 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         self.root_dir = self.crypto.id0.hex()
 
         if not os.path.isdir(sd_dir + '/' + self.root_dir):
-            exit(f'Failed to find {self.root_dir} in the SD dir.')
+            exit(f'Could not find ID0 {self.root_dir} in the SD directory.')
 
-        print('Root dir: ' + self.root_dir)
-        print('Key:      ' + self.crypto.keygen(Keyslot.SD).hex())
+        print('ID0:', self.root_dir)
+        print('Key:', self.crypto.keygen(Keyslot.SD).hex())
 
         self.root = os.path.realpath(sd_dir + '/' + self.root_dir)
         self.root_len = len(self.root)
