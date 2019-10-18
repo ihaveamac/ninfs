@@ -117,15 +117,9 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
             return self.dirs[first_dir].read(_c.remove_first_dir(path), size, offset, fh)
 
         section = self.files[path]
-        region = self.reader.sections[section[0]]
-        # section[2] contains the size of the file, which may be smaller than the actual section
-        # in this case, meta icon and tmdchunks
-        if region.offset + offset > region.offset + section[2]:
-            return b''
-        if offset + size > section[2]:
-            size = section[2] - offset
-
-        return self.reader.get_data(region, offset + section[1], size)
+        with self.reader.open_raw_section(section[0]) as f:
+            f.seek(offset + section[1])
+            return f.read(size)
 
     @_c.ensure_lower_path
     def statfs(self, path):
