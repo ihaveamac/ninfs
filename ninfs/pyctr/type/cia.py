@@ -9,8 +9,9 @@ from io import BytesIO
 from threading import Lock
 from typing import TYPE_CHECKING, NamedTuple
 
-from ..common import PyCTRError, _ReaderOpenFileBase
+from ..common import PyCTRError
 from ..crypto import CryptoEngine, Keyslot
+from ..fileio import SubsectionIO
 from ..type.ncch import NCCHReader
 from ..type.tmd import TitleMetadataReader
 from ..util import readle, roundup
@@ -46,14 +47,6 @@ class CIARegion(NamedTuple):
     offset: int
     size: int
     iv: bytes  # only used for encrypted sections
-
-
-class _CIASectionFile(_ReaderOpenFileBase):
-    """Provides a raw CIA section as a file-like object."""
-
-    def __init__(self, reader: 'CIAReader', path: 'CIASection'):
-        super().__init__(reader, path)
-        self._info = reader.sections[path]
 
 
 class CIAReader:
@@ -206,35 +199,8 @@ class CIAReader:
 
     def open_raw_section(self, section: 'CIASection'):
         """Open a raw CIA section for reading."""
-        return _CIASectionFile(self, section)
-
-    def get_data(self, region: 'CIARegion', offset: int, size: int) -> bytes:
-        if offset + size > region.size:
-            # prevent reading past the region
-            size = region.size - offset
-
-        with self._lock:
-            if region.iv:
-                real_size = size
-                # if encrypted, the block needs to be decrypted first
-                # CBC requires a full block (0x10 in this case). and the previous
-                #   block is used as the IV. so that's quite a bit to read if the
-                #   application requires just a few bytes.
-                # thanks Stary2001 for help with random-access crypto
-                before = offset % 16
-                if size % 16 != 0:
-                    size = size + 16 - size % 16
-                if offset - before == 0:
-                    iv = region.iv
-                else:
-                    self._fp.seek(self._start + region.offset + offset - before - 0x10)
-                    iv = self._fp.read(0x10)
-                # read to block size
-                self._fp.seek(self._start + region.offset + offset - before)
-                # adding x10 to the size fixes some kind of decryption bug I think. this needs more testing.
-                return self._crypto.create_cbc_cipher(Keyslot.DecryptedTitlekey,
-                                                      iv).decrypt(self._fp.read(size + 0x10))[before:real_size + before]
-            else:
-                # no encryption
-                self._fp.seek(self._start + region.offset + offset)
-                return self._fp.read(size)
+        region = self.sections[section]
+        fh = SubsectionIO(self._fp, self._start + region.offset, region.size)
+        if region.iv:
+            fh = self._crypto.create_cbc_io(Keyslot.DecryptedTitlekey, fh, region.iv)
+        return fh
