@@ -112,13 +112,9 @@ class NCCHContainerMount(LoggingMixIn, Operations):
             return self.romfs_fuse.read(_c.remove_first_dir(path), size, offset, fh)
 
         section = self.files[path]
-        region = self.reader.sections[section]
-        if region.offset + offset > region.offset + region.size:
-            return b''
-        if offset + size > region.size:
-            size = region.size - offset
-
-        return self.reader.get_data(region, offset, size)
+        with self.reader.open_raw_section(section) as f:
+            f.seek(offset)
+            return f.read(size)
 
     @_c.ensure_lower_path
     def statfs(self, path):
