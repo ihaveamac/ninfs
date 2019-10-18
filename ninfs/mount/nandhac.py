@@ -8,6 +8,7 @@ import logging
 import os
 from collections import defaultdict
 from errno import ENOENT, EROFS
+from inspect import cleandoc
 from stat import S_IFDIR, S_IFREG
 from sys import argv, exit
 from typing import TYPE_CHECKING
@@ -32,7 +33,8 @@ bis_key_ids = defaultdict(lambda: -1, {
 class HACNandImageMount(LoggingMixIn, Operations):
     fd = 0
 
-    def __init__(self, nand_fp: 'BinaryIO', g_stat: dict, keys: str, readonly: bool = False, emummc: int = 0):
+    def __init__(self, nand_fp: 'BinaryIO', g_stat: dict, keys: str, readonly: bool = False, emummc: int = None,
+                 partition: str = None):
         self.base_addr = emummc or 0
         self.readonly = readonly
         self.g_stat = g_stat
@@ -43,46 +45,55 @@ class HACNandImageMount(LoggingMixIn, Operations):
             self.crypto[x] = XTSN(*bis_keys[x])
 
         self.files = {}
-        nand_fp.seek(0x200 + self.base_addr)
-        gpt_header = nand_fp.read(0x5C)
-        if gpt_header[0:8] != b'EFI PART':
-            exit('GPT header magic not found.')
+        if partition:
+            # we can probably assume this is a real file, and therefore can seek to the end this way...
+            part_name = partition.upper()
+            nand_fp.seek(0, 2)
+            size = nand_fp.tell()
+            self.files[f'/{part_name.lower()}.img'] = {'real_filename': part_name + '.img',
+                                                       'bis_key': bis_key_ids[part_name],
+                                                       'start': 0, 'end': size}
+        else:
+            nand_fp.seek(0x200 + self.base_addr)
+            gpt_header = nand_fp.read(0x5C)
+            if gpt_header[0:8] != b'EFI PART':
+                exit('GPT header magic not found.')
 
-        header_to_hash = gpt_header[0:0x10] + b'\0\0\0\0' + gpt_header[0x14:]
-        crc_expected = int.from_bytes(gpt_header[0x10:0x14], 'little')
-        crc_got = crc32(header_to_hash) & 0xFFFFFFFF
-        if crc_got != crc_expected:
-            exit(f'GPT header crc32 mismatch (expected {crc_expected:08x}, got {crc_got:08x})')
+            header_to_hash = gpt_header[0:0x10] + b'\0\0\0\0' + gpt_header[0x14:]
+            crc_expected = int.from_bytes(gpt_header[0x10:0x14], 'little')
+            crc_got = crc32(header_to_hash) & 0xFFFFFFFF
+            if crc_got != crc_expected:
+                exit(f'GPT header crc32 mismatch (expected {crc_expected:08x}, got {crc_got:08x})')
 
-        gpt_backup_header_location = int.from_bytes(gpt_header[0x20:0x28], 'little')
-        # check if the backup header exists
-        nand_fp.seek(gpt_backup_header_location * 0x200 + self.base_addr)
-        gpt_backup_header = nand_fp.read(0x200)
-        if gpt_backup_header[0:8] != b'EFI PART':
-            if emummc:
-                # it seems sometimes the backup header is not found in an emummc image
-                print('Warning: GPT backup header not found.')
-            else:
-                exit('GPT backup header not found. This likely means an incomplete backup.')
+            gpt_backup_header_location = int.from_bytes(gpt_header[0x20:0x28], 'little')
+            # check if the backup header exists
+            nand_fp.seek(gpt_backup_header_location * 0x200 + self.base_addr)
+            gpt_backup_header = nand_fp.read(0x200)
+            if gpt_backup_header[0:8] != b'EFI PART':
+                if emummc:
+                    # it seems sometimes the backup header is not found in an emummc image
+                    print('Warning: GPT backup header not found.')
+                else:
+                    exit('GPT backup header not found. This likely means an incomplete backup.')
 
-        gpt_part_start = int.from_bytes(gpt_header[0x48:0x50], 'little')
-        gpt_part_count = int.from_bytes(gpt_header[0x50:0x54], 'little')
-        gpt_part_entry_size = int.from_bytes(gpt_header[0x54:0x58], 'little')
+            gpt_part_start = int.from_bytes(gpt_header[0x48:0x50], 'little')
+            gpt_part_count = int.from_bytes(gpt_header[0x50:0x54], 'little')
+            gpt_part_entry_size = int.from_bytes(gpt_header[0x54:0x58], 'little')
 
-        nand_fp.seek(gpt_part_start * 0x200 + self.base_addr)
-        gpt_part_full_raw = nand_fp.read(gpt_part_count * gpt_part_entry_size)
-        gpt_part_crc_expected = int.from_bytes(gpt_header[0x58:0x5C], 'little')
-        gpt_part_crc_got = crc32(gpt_part_full_raw) & 0xFFFFFFFF
-        if gpt_part_crc_got != gpt_part_crc_expected:
-            exit(f'GPT Partition table crc32 mismatch '
-                 f'(expected {gpt_part_crc_expected:08x}, got {gpt_part_crc_got:08x})')
-        gpt_parts_raw = [gpt_part_full_raw[i:i + gpt_part_entry_size] for i in range(0, len(gpt_part_full_raw),
-                                                                                     gpt_part_entry_size)]
-        for part in gpt_parts_raw:
-            name = part[0x38:].decode('utf-16le').rstrip('\0')
-            self.files[f'/{name.lower()}.img'] = {'real_filename': name + '.img', 'bis_key': bis_key_ids[name],
-                                                  'start': int.from_bytes(part[0x20:0x28], 'little') * 0x200,
-                                                  'end': (int.from_bytes(part[0x28:0x30], 'little') + 1) * 0x200}
+            nand_fp.seek(gpt_part_start * 0x200 + self.base_addr)
+            gpt_part_full_raw = nand_fp.read(gpt_part_count * gpt_part_entry_size)
+            gpt_part_crc_expected = int.from_bytes(gpt_header[0x58:0x5C], 'little')
+            gpt_part_crc_got = crc32(gpt_part_full_raw) & 0xFFFFFFFF
+            if gpt_part_crc_got != gpt_part_crc_expected:
+                exit(f'GPT Partition table crc32 mismatch '
+                     f'(expected {gpt_part_crc_expected:08x}, got {gpt_part_crc_got:08x})')
+            gpt_parts_raw = [gpt_part_full_raw[i:i + gpt_part_entry_size] for i in range(0, len(gpt_part_full_raw),
+                                                                                         gpt_part_entry_size)]
+            for part in gpt_parts_raw:
+                name = part[0x38:].decode('utf-16le').rstrip('\0')
+                self.files[f'/{name.lower()}.img'] = {'real_filename': name + '.img', 'bis_key': bis_key_ids[name],
+                                                      'start': int.from_bytes(part[0x20:0x28], 'little') * 0x200,
+                                                      'end': (int.from_bytes(part[0x28:0x30], 'little') + 1) * 0x200}
 
         self.f = nand_fp
 
@@ -197,17 +208,28 @@ class HACNandImageMount(LoggingMixIn, Operations):
 
 
 def main(prog: str = None, args: list = None):
-    from argparse import ArgumentParser
+    from argparse import ArgumentParser, RawDescriptionHelpFormatter
     if args is None:
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description='Mount Nintendo Switch NAND images.',
-                            parents=(_c.default_argp, _c.readonly_argp, _c.main_args('nand', 'NAND image')))
+                            parents=(_c.default_argp, _c.readonly_argp,
+                                     _c.main_args('image', 'NAND image or encrypted partition')),
+                            formatter_class=RawDescriptionHelpFormatter,
+                            epilog=cleandoc('''
+                            partitions:
+                              PRODINFO  (BIS Key 0)
+                              PRODINFOF (BIS Key 0)
+                              SAFE      (BIS Key 1)
+                              SYSTEM    (BIS Key 2)
+                              USER      (BIS KEY 3)
+                            '''))
     parser.add_argument('--keys', help='keys file from biskeydump or Lockpick_RCM',
                         default=os.path.join(os.path.expanduser('~'), '.switch', 'prod.keys'))
     parser.add_argument('-S', '--split-files', help='treat as part of a split file', action='store_true')
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-e', '--emummc', help='is an emuMMC image', action='store_const', const=0x800000)
     group.add_argument('-R', '--raw-emummc', help='is an SD raw emuMMC image', action='store_const', const=0x1800000)
+    group.add_argument('--partition', metavar='PARTNAME', help='is a single encrypted partition')
 
     a = parser.parse_args(args)
     opts = dict(_c.parse_fuse_opts(a.o))
@@ -217,32 +239,32 @@ def main(prog: str = None, args: list = None):
 
     def do_thing(f: 'BinaryIO', k: 'TextIO', nand_stat: dict):
         mount = HACNandImageMount(nand_fp=f, g_stat=nand_stat, keys=k.read(), readonly=a.ro,
-                                  emummc=a.emummc or a.raw_emummc)
+                                  emummc=a.emummc or a.raw_emummc, partition=a.partition)
         if _c.macos or _c.windows:
             opts['fstypename'] = 'HACFS'
             # assuming / is the path separator since macos. but if windows gets support for this,
             #   it will have to be done differently.
             if _c.macos:
-                path_to_show = os.path.realpath(a.nand).rsplit('/', maxsplit=2)
+                path_to_show = os.path.realpath(a.image).rsplit('/', maxsplit=2)
                 opts['volname'] = f'Nintendo Switch NAND ({path_to_show[-2]}/{path_to_show[-1]})'
             elif _c.windows:
                 # volume label can only be up to 32 chars
                 opts['volname'] = 'Nintendo Switch NAND'
         FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=a.ro, nothreads=True, debug=a.d,
-             fsname=os.path.realpath(a.nand).replace(',', '_'), **opts)
+             fsname=os.path.realpath(a.image).replace(',', '_'), **opts)
 
     with open(a.keys, 'r', encoding='utf-8') as k:
         if a.split_files:
             # make sure the ending is an integer
             try:
-                int(a.nand[-2:])
+                int(a.image[-2:])
             except ValueError:
                 exit('Could not find a part number at the end of the filename.\n'
                      'A multi-part Nintendo Switch NAND backup should have filenames in the format of '
                      '"filename.bin.XX", where XX is the part number.')
 
             # try to find all the parts, starting with 00
-            base = a.nand[:-2]
+            base = a.image[:-2]
             count = 0
             while True:
                 if os.path.isfile(base + format(count, '02')):
@@ -257,5 +279,5 @@ def main(prog: str = None, args: list = None):
             do_thing(handler, k, get_time(base + '00'))
 
         else:
-            with open(a.nand, 'r+b') as f:
-                do_thing(f, k, get_time(a.nand))
+            with open(a.image, 'r+b') as f:
+                do_thing(f, k, get_time(a.image))
