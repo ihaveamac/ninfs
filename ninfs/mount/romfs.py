@@ -67,14 +67,11 @@ class RomFSMount(LoggingMixIn, Operations):
 
     def read(self, path, size, offset, fh):
         try:
-            item = self.reader.get_info_from_path(path)
-        except RomFSFileNotFoundError:
+            with self.reader.open(path) as f:
+                f.seek(offset)
+                return f.read(size)
+        except (KeyError, RomFSFileNotFoundError):
             raise FuseOSError(ENOENT)
-        if item.offset + offset > item.offset + item.size:
-            return b''
-        if offset + size > item.size:
-            size = item.size - offset
-        return self.reader.get_data(item, offset, size)
 
     def statfs(self, path):
         try:
