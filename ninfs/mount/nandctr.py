@@ -19,7 +19,7 @@ from traceback import print_exc
 from typing import BinaryIO, AnyStr
 
 from pyctr.crypto import CryptoEngine, Keyslot
-from pyctr.type.exefs import ExeFSFileNotFoundError, ExeFSReader, InvalidExeFSError
+from pyctr.type.exefs import EXEFS_HEADER_SIZE, ExeFSFileNotFoundError, ExeFSReader, InvalidExeFSError
 from pyctr.util import readbe, readle, roundup
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
@@ -106,12 +106,12 @@ class CTRNandImageMount(LoggingMixIn, Operations):
             nand_fp.seek(0x1C0)
             twln_block_0x1c = readbe(nand_fp.read(0x10))
             twl_blk_xored = twln_block_0x1c ^ 0x18000601A03F97000000A97D04000004
-            twl_counter_offs = self.crypto.create_ecb_cipher(0x03).decrypt(twl_blk_xored.to_bytes(0x10, 'little'))
+            twl_counter_offs = self.crypto.create_ecb_cipher(Keyslot.TWLNAND).decrypt(twl_blk_xored.to_bytes(0x10, 'little'))
             twl_counter = int.from_bytes(twl_counter_offs, 'big') - 0x1C
 
             # try the counter
             twln_block_0x1d = nand_fp.read(0x10)
-            out = self.crypto.create_ctr_cipher(0x03, twl_counter + 0x1D).decrypt(twln_block_0x1d)
+            out = self.crypto.create_ctr_cipher(Keyslot.TWLNAND, twl_counter + 0x1D).decrypt(twln_block_0x1d)
             if out == b'\x8e@\x06\x01\xa0\xc3\x8d\x80\x04\x00\xb3\x05\x01\x00\x00\x00':
                 print('Counter for TWL area automatically generated.')
                 self.ctr_twl = twl_counter
@@ -178,16 +178,8 @@ class CTRNandImageMount(LoggingMixIn, Operations):
         if self.ctr_twl:
             twl_mbr = self.crypto.create_ctr_cipher(Keyslot.TWLNAND,
                                                     self.ctr_twl + 0x1B).decrypt(ncsd_header[0xB0:0x100])[0xE:0x50]
-            if twl_mbr[0x40:0x42] == b'\x55\xaa':
-                twl_partitions = [[readle(twl_mbr[i + 8:i + 12]) * 0x200,
-                                   readle(twl_mbr[i + 12:i + 16]) * 0x200] for i in range(0, 0x40, 0x10)]
-            else:
-                twl_partitions = None
-
             self.files['/twlmbr.bin'] = {'size': 0x42, 'offset': 0x1BE, 'keyslot': Keyslot.TWLNAND, 'type': 'twlmbr',
                                          'content': twl_mbr}
-        else:
-            twl_partitions = None
 
         # then actually parse the partitions to create files
         firm_idx = 0
@@ -201,29 +193,6 @@ class CTRNandImageMount(LoggingMixIn, Operations):
                     self.files['/twl_full.img'] = {'size': part[1], 'offset': part[0], 'keyslot': Keyslot.TWLNAND,
                                                    'type': 'enc'}
                     print('/twl_full.img')
-                    if twl_partitions:
-                        twl_part_fstype = 0
-                        for t_idx, t_part in enumerate(twl_partitions):
-                            if t_part[0] != 0:
-                                print(f'twl  idx:{t_idx}                      '
-                                      f'offset:{t_part[0]:08x} size:{t_part[1]:08x} ', end='')
-                                if twl_part_fstype == 0:
-                                    self.files['/twln.img'] = {'size': t_part[1], 'offset': t_part[0],
-                                                               'keyslot': Keyslot.TWLNAND, 'type': 'enc'}
-                                    print('/twln.img')
-                                    twl_part_fstype += 1
-                                elif twl_part_fstype == 1:
-                                    self.files['/twlp.img'] = {'size': t_part[1], 'offset': t_part[0],
-                                                               'keyslot': Keyslot.TWLNAND, 'type': 'enc'}
-                                    print('/twlp.img')
-                                    twl_part_fstype += 1
-                                else:
-                                    self.files[f'/twl_unk{twl_part_fstype}.img'] = {'size': t_part[1],
-                                                                                    'offset': t_part[0],
-                                                                                    'keyslot': Keyslot.TWLNAND,
-                                                                                    'type': 'enc'}
-                                    print(f'/twl_unk{twl_part_fstype}.img')
-                                    twl_part_fstype += 1
                 else:
                     print('<ctr_twl not set>')
 
@@ -240,31 +209,6 @@ class CTRNandImageMount(LoggingMixIn, Operations):
                     self.files['/ctrnand_full.img'] = {'size': part[1], 'offset': part[0], 'keyslot': ctrnand_keyslot,
                                                        'type': 'enc'}
                     print('/ctrnand_full.img')
-                    nand_fp.seek(part[0])
-                    iv = self.ctr + (part[0] >> 4)
-                    ctr_mbr = self.crypto.create_ctr_cipher(ctrnand_keyslot, iv).decrypt(
-                        nand_fp.read(0x200))[0x1BE:0x200]
-                    if ctr_mbr[0x40:0x42] == b'\x55\xaa':
-                        ctr_partitions = [[readle(ctr_mbr[i + 8:i + 12]) * 0x200,
-                                           readle(ctr_mbr[i + 12:i + 16]) * 0x200]
-                                          for i in range(0, 0x40, 0x10)]
-                        ctr_part_fstype = 0
-                        for c_idx, c_part in enumerate(ctr_partitions):
-                            if c_part[0] != 0:
-                                print(f'ctr  idx:{c_idx}                      offset:{part[0] + c_part[0]:08x} '
-                                      f'size:{c_part[1]:08x} ', end='')
-                                if ctr_part_fstype == 0:
-                                    self.files['/ctrnand_fat.img'] = {'size': c_part[1], 'offset': part[0] + c_part[0],
-                                                                      'keyslot': ctrnand_keyslot, 'type': 'enc'}
-                                    print('/ctrnand_fat.img')
-                                    ctr_part_fstype += 1
-                                else:
-                                    self.files[f'/ctr_unk{ctr_part_fstype}.img'] = {'size': c_part[1],
-                                                                                    'offset': part[0] + c_part[0],
-                                                                                    'keyslot': ctrnand_keyslot,
-                                                                                    'type': 'enc'}
-                                    print(f'/ctr_unk{ctr_part_fstype}.img')
-                                    ctr_part_fstype += 1
 
                 elif ncsd_part_fstype[idx] == 4:
                     self.files['/agbsave.bin'] = {'size': part[1], 'offset': part[0], 'keyslot': Keyslot.AGB,
@@ -287,7 +231,7 @@ class CTRNandImageMount(LoggingMixIn, Operations):
         self.f = nand_fp
 
         if exefs is not None:
-            exefs_size = sum(roundup(x.size, 0x200) for x in exefs.entries.values()) + 0x200
+            exefs_size = sum(roundup(x.size, 0x200) for x in exefs.entries.values()) + EXEFS_HEADER_SIZE
             self.files['/essential.exefs'] = {'size': exefs_size, 'offset': 0x200, 'keyslot': 0xFF, 'type': 'raw'}
             try:
                 self.exefs_fuse = ExeFSMount(exefs, g_stat=g_stat)
@@ -361,9 +305,10 @@ class CTRNandImageMount(LoggingMixIn, Operations):
             iv = (self.ctr if fi['keyslot'] > Keyslot.TWLNAND else self.ctr_twl) + (real_offset >> 4)
             data = self.crypto.create_ctr_cipher(fi['keyslot'], iv).decrypt(data)[before:len(data) - after]
 
-        elif fi['type'] in {'keysect', 'twlmbr', 'info'}:
-            # being lazy here since twlmbr starts at a weird offset. i'll do
-            #   it properly some day. maybe.
+        elif fi['type'] == 'twlmbr':
+            return self.read('/twl_full.img', size, offset + 0x1BE, fh)
+
+        elif fi['type'] in {'keysect', 'info'}:
             data = fi['content'][offset:offset + size]
 
         else:
@@ -409,13 +354,22 @@ class CTRNandImageMount(LoggingMixIn, Operations):
 
         elif fi['type'] == 'enc':
             twl = fi['keyslot'] < Keyslot.CTRNANDOld
-            before = offset % 16
             if twl:
-                after = 16 - ((offset + real_len) % 16)
+                # this is used only by twl_full.img and the NCSD header part needs to be ignored.
+                diff = 0
+                if offset < 0x1BE:  # check if trying to write before the twlmbr
+                    # cut off the data before the twlmbr
+                    diff = 0x1BE - offset
+                    real_offset += diff
+                    offset += diff
+                    data = data[diff:]
+                after = 16 - ((offset + (real_len - diff)) % 16)
                 if after == 16:
                     after = 0
             else:
                 after = 0  # not needed for ctr
+            before = offset % 16
+
             iv = (self.ctr_twl if twl else self.ctr) + (real_offset >> 4)
             out_data = self.crypto.create_ctr_cipher(fi['keyslot'], iv).encrypt(
                 (b'\0' * before) + data + (b'\0' * after))
@@ -423,14 +377,8 @@ class CTRNandImageMount(LoggingMixIn, Operations):
             self.f.write(out_data[before:])
 
         elif fi['type'] == 'twlmbr':
-            twlmbr = bytearray(fi['content'])
-            twlmbr[offset:offset + len(data)] = data
-            final = bytes(twlmbr)
-            self.f.seek(fi['offset'])
-            self.f.write(self.crypto.create_ctr_cipher(fi['keyslot'], self.ctr_twl + 0x1B).encrypt(
-                (b'\0' * 0xE) + final)[0xE:0x50])
-            # noinspection PyTypeChecker
-            fi['content'] = final
+            # go through twl_full.img instead
+            return self.write('/twl_full.img', data, offset + 0x1BE, fh)
 
         elif fi['type'] == 'keysect':
             keysect = bytearray(fi['content'])
