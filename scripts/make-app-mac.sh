@@ -7,4 +7,4 @@ set -e
 ./scripts/make-icons.sh
 
 # build application
-python3 -m PyInstaller pyi-app.spec
+python3.7 -m PyInstaller pyi-app.spec
