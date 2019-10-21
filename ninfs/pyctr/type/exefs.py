@@ -166,10 +166,7 @@ class _ExeFSOpenFile(_ReaderOpenFileBase):
 
     def __init__(self, reader: 'ExeFSReader', path: str):
         super().__init__(reader, path)
-        try:
-            self._info = reader.entries[self._path]
-        except KeyError:
-            raise ExeFSFileNotFoundError(self._path)
+        self._info = reader.entries[self._path]
 
 
 class ExeFSReader:
@@ -260,7 +257,10 @@ class ExeFSReader:
         if normalize:
             # remove beginning "/" and ending ".bin"
             path = _normalize_path(path)
-        entry = self.entries[path]
+        try:
+            entry = self.entries[path]
+        except KeyError:
+            raise ExeFSFileNotFoundError(path)
         if entry.offset == -1:
             # this would be the decompressed .code, if the original .code was compressed
             return _ExeFSOpenFile(self, path)
