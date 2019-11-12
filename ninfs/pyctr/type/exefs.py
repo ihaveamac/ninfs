@@ -180,7 +180,7 @@ class ExeFSReader:
     _code_dec = None
     icon: 'SMDH' = None
 
-    def __init__(self, fp: 'Union[str, BinaryIO]', *, _load_icon: bool = True):
+    def __init__(self, fp: 'Union[str, BinaryIO]', *, closefd: bool = True, _load_icon: bool = True):
         if isinstance(fp, str):
             fp = open(fp, 'rb')
 
@@ -188,6 +188,7 @@ class ExeFSReader:
         self._start = fp.tell()
         self._fp = fp
         self._lock = Lock()
+        self._closefd = closefd
 
         self.entries: 'Dict[str, ExeFSEntry]' = {}
 
@@ -239,10 +240,11 @@ class ExeFSReader:
 
     def close(self):
         self.closed = True
-        try:
-            self._fp.close()
-        except AttributeError:
-            pass
+        if self._closefd:
+            try:
+                self._fp.close()
+            except AttributeError:
+                pass
 
     __del__ = close
 
