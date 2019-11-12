@@ -190,9 +190,9 @@ class CTRNandImageMount(LoggingMixIn, Operations):
                   f'offset:{part[0]:08x} size:{part[1]:08x} ', end='')
             if idx == 0:
                 if self.ctr_twl:
-                    self.files['/twl_full.img'] = {'size': part[1], 'offset': part[0], 'keyslot': Keyslot.TWLNAND,
+                    self.files['/twlnand_full.img'] = {'size': part[1], 'offset': part[0], 'keyslot': Keyslot.TWLNAND,
                                                    'type': 'enc'}
-                    print('/twl_full.img')
+                    print('/twlnand_full.img')
                 else:
                     print('<ctr_twl not set>')
 
@@ -306,7 +306,7 @@ class CTRNandImageMount(LoggingMixIn, Operations):
             data = self.crypto.create_ctr_cipher(fi['keyslot'], iv).decrypt(data)[before:len(data) - after]
 
         elif fi['type'] == 'twlmbr':
-            return self.read('/twl_full.img', size, offset + 0x1BE, fh)
+            return self.read('/twlnand_full.img', size, offset + 0x1BE, fh)
 
         elif fi['type'] in {'keysect', 'info'}:
             data = fi['content'][offset:offset + size]
@@ -355,7 +355,7 @@ class CTRNandImageMount(LoggingMixIn, Operations):
         elif fi['type'] == 'enc':
             twl = fi['keyslot'] < Keyslot.CTRNANDOld
             if twl:
-                # this is used only by twl_full.img and the NCSD header part needs to be ignored.
+                # this is used only by twlnand_full.img and the NCSD header part needs to be ignored.
                 diff = 0
                 if offset < 0x1BE:  # check if trying to write before the twlmbr
                     # cut off the data before the twlmbr
@@ -377,8 +377,8 @@ class CTRNandImageMount(LoggingMixIn, Operations):
             self.f.write(out_data[before:])
 
         elif fi['type'] == 'twlmbr':
-            # go through twl_full.img instead
-            return self.write('/twl_full.img', data, offset + 0x1BE, fh)
+            # go through twlnand_full.img instead
+            return self.write('/twlnand_full.img', data, offset + 0x1BE, fh)
 
         elif fi['type'] == 'keysect':
             keysect = bytearray(fi['content'])
