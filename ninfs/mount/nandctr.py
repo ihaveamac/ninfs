@@ -52,7 +52,7 @@ class CTRNandImageMount(LoggingMixIn, Operations):
         # check for essential.exefs
         nand_fp.seek(0x200)
         try:
-            exefs = ExeFSReader(nand_fp)
+            exefs = ExeFSReader(nand_fp, closefd=False)
         except InvalidExeFSError:
             exefs = None
 
