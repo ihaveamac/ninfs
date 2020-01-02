@@ -16,9 +16,8 @@ Windows, macOS, and Linux are supported.
   * Read-only Filesystem (".romfs", "romfs.bin")
   * SD Card Contents ("Nintendo 3DS" from SD)
   * 3DSX Homebrew (".3dsx")
-  * Titles directory ("title" from NAND or SD)
 * Nintendo DS / DSi
-  * Nintendo DSi NAND backup ("nand_dsi.bin")
+  * Nintendo DSi NAND backup ("nand\_dsi.bin")
   * Nintendo DS ROM image (".nds", ".srl")
 * Nintendo Switch
   * Nintendo Switch NAND backup ("rawnand.bin")
@@ -95,6 +94,8 @@ Run a mount script by using "`mount_<type>`" (e.g. `mount_cci game.3ds mountpoin
 If it doesn't work, the other way is to use `<python-cmd> -mninfs <type>` (e.g. Windows: `py -3 -mninfs cci game.3ds mountpoint`, \*nix: `python3 -mninfs cci game.3ds mountpoint`).
 
 Windows users can use a drive letter like `F:` as a mountpoint, or use `*` and a drive letter will be automatically chosen.
+
+Developer-unit contents are encrypted with different keys, which can be used with `--dev` with CCI, CDN, CIA, NANDCTR, NCCH, and SD.
 
 #### Unmounting
 * Windows: Press <kbd>Ctrl</kbd> + <kbd>C</kbd> in the command prompt/PowerShell window.
