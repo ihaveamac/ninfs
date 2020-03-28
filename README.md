@@ -55,12 +55,12 @@ Python 3.6.1+ and pycryptodomex are required. PySide2 is required for the GUI.
 ### Windows
 Windows 7 or later is required.
 
-(GUI in progress of being re-created.) Python does not have to be installed, but [WinFsp](http://www.secfs.net/winfsp/download/) is still required.
+(GUI in progress of being re-created.) Python does not have to be installed, but [WinFsp](http://www.secfs.net/winfsp/rel/) is still required.
 
 #### Install with existing Python
 * Install the latest version of [Python 3](https://www.python.org/downloads/). The x86-64 version is preferred on 64-bit Windows.
   * Alternatively, use [Python 3.7 from the Microsoft Store](https://www.microsoft.com/en-us/p/python-37/9nj46sx7x90p). Note that `python` or `python3` must be used, not `py -3`.
-* Install the latest version of [WinFsp](http://www.secfs.net/winfsp/download/).
+* Install the latest version of [WinFsp](http://www.secfs.net/winfsp/rel/).
 * Install ninfs with `py -3 -m pip install --upgrade https://github.com/ihaveamac/ninfs/archive/master.zip`.
   * With GUI support: `py -3 -m pip install --upgrade https://github.com/ihaveamac/ninfs/archive/master.zip#egg=ninfs[gui]`
 
