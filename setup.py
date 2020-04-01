@@ -46,7 +46,7 @@ setup(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
     ],
-    install_requires=['pycryptodomex'],
+    install_requires=['pycryptodomex', 'pyctr==0.1.0'],
     # fusepy should be added here once the main repo has a new release with Windows support.
     extras_require={'gui': ['pyside2']},
     entry_points={'console_scripts': ['ninfs = ninfs.main:gui',
