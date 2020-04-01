@@ -48,7 +48,6 @@ setup(
     ],
     install_requires=['pycryptodomex', 'pyctr==0.1.0'],
     # fusepy should be added here once the main repo has a new release with Windows support.
-    extras_require={'gui': ['pyside2']},
     entry_points={'console_scripts': ['ninfs = ninfs.main:gui',
                                       # not putting in gui_scripts since the cmd window is required and trying to
                                       # remove it breaks some other stuff with subprocess management ?!?
