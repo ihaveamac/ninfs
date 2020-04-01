@@ -14,11 +14,11 @@ import os
 from errno import EPERM, ENOENT, EROFS
 from hashlib import sha1, sha256
 from stat import S_IFDIR, S_IFREG
-from sys import exit, argv
+from sys import argv, exit, stderr
 from traceback import print_exc
 from typing import BinaryIO, AnyStr
 
-from pyctr.crypto import CryptoEngine, Keyslot
+from pyctr.crypto import CryptoEngine, Keyslot, CorruptOTPError
 from pyctr.type.exefs import EXEFS_HEADER_SIZE, ExeFSFileNotFoundError, ExeFSReader, InvalidExeFSError
 from pyctr.util import readbe, readle, roundup
 from . import _common as _c
@@ -76,7 +76,13 @@ class CTRNandImageMount(LoggingMixIn, Operations):
                 except ExeFSFileNotFoundError:
                     exit('"otp" not found in essentials backup, update with GodMode9 or provide with --otp')
 
-        self.crypto.setup_keys_from_otp(otp_data)
+        try:
+            self.crypto.setup_keys_from_otp(otp_data)
+        except CorruptOTPError:
+            print('The OTP could not be validated.', file=stderr)
+            print('Either the file is corrupt or it is meant for a devunit system.', file=stderr)
+            print('If it is the latter then use --dev to decrypt it with devunit keys.', file=stderr)
+            exit(1)
 
         def generate_ctr():
             print('Attempting to generate Counter for CTR/TWL areas. If errors occur, provide the CID manually.')
