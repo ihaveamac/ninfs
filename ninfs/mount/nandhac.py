@@ -42,7 +42,11 @@ class HACNandImageMount(LoggingMixIn, Operations):
         bis_keys = parse_biskeydump(keys)
         self.crypto: List[XTSN] = [None] * 4
         for x in range(4):
-            self.crypto[x] = XTSN(*bis_keys[x])
+            try:
+                self.crypto[x] = XTSN(*bis_keys[x])
+            except TypeError:
+                print(f"Couldn't get BIS KEY {x}. The associated partition(s) will not be available.")
+                self.crypto[x] = None
 
         self.files = {}
         if partition:
@@ -91,9 +95,11 @@ class HACNandImageMount(LoggingMixIn, Operations):
                                                                                          gpt_part_entry_size)]
             for part in gpt_parts_raw:
                 name = part[0x38:].decode('utf-16le').rstrip('\0')
-                self.files[f'/{name.lower()}.img'] = {'real_filename': name + '.img', 'bis_key': bis_key_ids[name],
-                                                      'start': int.from_bytes(part[0x20:0x28], 'little') * 0x200,
-                                                      'end': (int.from_bytes(part[0x28:0x30], 'little') + 1) * 0x200}
+                # check if we have a key for this partition
+                if self.crypto[bis_key_ids[name]] is not None:
+                    self.files[f'/{name.lower()}.img'] = {'real_filename': name + '.img', 'bis_key': bis_key_ids[name],
+                                                          'start': int.from_bytes(part[0x20:0x28], 'little') * 0x200,
+                                                          'end': (int.from_bytes(part[0x28:0x30], 'little') + 1) * 0x200}
 
         self.f = nand_fp
 
