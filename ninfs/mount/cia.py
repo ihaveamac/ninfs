@@ -18,6 +18,7 @@ from stat import S_IFDIR, S_IFREG
 from sys import argv
 from typing import TYPE_CHECKING
 
+from pyctr.crypto import load_seeddb
 from pyctr.type.cia import CIAReader, CIASection
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
@@ -148,7 +149,10 @@ def main(prog: str = None, args: list = None):
 
     load_custom_boot9(a.boot9)
 
-    with CIAReader(a.cia, dev=a.dev, seeddb=a.seeddb) as r:
+    if a.seeddb:
+        load_seeddb(a.seeddb)
+
+    with CIAReader(a.cia, dev=a.dev) as r:
         mount = CTRImportableArchiveMount(reader=r, g_stat=cia_stat)
         if _c.macos or _c.windows:
             opts['fstypename'] = 'CIA'
