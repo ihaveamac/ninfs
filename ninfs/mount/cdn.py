@@ -15,7 +15,7 @@ from stat import S_IFDIR, S_IFREG
 from sys import exit, argv
 from typing import TYPE_CHECKING
 
-from pyctr.crypto import CryptoEngine, Keyslot
+from pyctr.crypto import CryptoEngine, Keyslot, load_seeddb
 from pyctr.type.ncch import NCCHReader
 from pyctr.type.tmd import TitleMetadataReader, CHUNK_RECORD_SIZE
 from . import _common as _c
@@ -36,7 +36,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
         return os.path.join(self.cdn_dir, path)
 
     def __init__(self, tmd_file: str = None, cdn_dir: str = None, dec_key: str = None, dev: bool = False,
-                 seeddb: str = None, boot9: str = None):
+                 boot9: str = None):
         if tmd_file:
             self.cdn_dir = os.path.dirname(tmd_file)
         else:
@@ -47,7 +47,6 @@ class CDNContentsMount(LoggingMixIn, Operations):
 
         self.cdn_content_size = 0
         self.dev = dev
-        self.seeddb = seeddb
 
         # get status change, modify, and file access times
         try:
@@ -118,7 +117,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
                 if is_srl:
                     content_fuse = SRLMount(content_vfp, g_stat=f_time)
                 else:
-                    content_reader = NCCHReader(content_vfp, dev=self.dev, seeddb=self.seeddb)
+                    content_reader = NCCHReader(content_vfp, dev=self.dev)
                     content_fuse = NCCHContainerMount(content_reader, g_stat=f_time)
                 content_fuse.init(path)
                 self.dirs[dirname] = content_fuse
@@ -233,7 +232,10 @@ def main(prog: str = None, args: list = None):
 
     load_custom_boot9(a.boot9)
 
-    mount = CDNContentsMount(dev=a.dev, dec_key=a.dec_key, seeddb=a.seeddb, boot9=a.boot9, **mount_opts)
+    if a.seeddb:
+        load_seeddb(a.seeddb)
+
+    mount = CDNContentsMount(dev=a.dev, dec_key=a.dec_key, boot9=a.boot9, **mount_opts)
     if _c.macos or _c.windows:
         opts['fstypename'] = 'CDN'
         opts['volname'] = f'CDN Contents ({mount.title_id.upper()})'
