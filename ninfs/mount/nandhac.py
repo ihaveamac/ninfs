@@ -259,6 +259,8 @@ def main(prog: str = None, args: list = None):
         FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=a.ro, nothreads=True, debug=a.d,
              fsname=os.path.realpath(a.image).replace(',', '_'), **opts)
 
+    mode = 'rb' if a.ro else 'r+b'
+
     with open(a.keys, 'r', encoding='utf-8') as k:
         if a.split_files:
             # make sure the ending is an integer
@@ -281,9 +283,9 @@ def main(prog: str = None, args: list = None):
             if count == 0:
                 exit('Could not find the first part of the multi-part backup.')
 
-            handler = _c.SplitFileHandler(base + format(x, '02') for x in range(count))
+            handler = _c.SplitFileHandler((base + format(x, '02') for x in range(count)), mode)
             do_thing(handler, k, get_time(base + '00'))
 
         else:
-            with open(a.image, 'r+b') as f:
+            with open(a.image, mode) as f:
                 do_thing(f, k, get_time(a.image))
