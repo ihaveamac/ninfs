@@ -45,6 +45,7 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
     ],
     install_requires=['pycryptodomex', 'pyctr==0.4.1'],
     # fusepy should be added here once the main repo has a new release with Windows support.
