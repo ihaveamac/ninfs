@@ -76,8 +76,11 @@ Versions of macOS supported by Apple are highly recommended. OS X Mavericks is t
   * With GUI support: `python3 -m pip install --upgrade https://github.com/ihaveamac/ninfs/archive/2.0.zip#egg=ninfs[gui]`
 
 ### Linux
-* Arch Linux: ninfs is available in the AUR: [normal](https://aur.archlinux.org/packages/ninfs/), [with gui](https://aur.archlinux.org/packages/ninfs-gui/), [git](https://aur.archlinux.org/packages/ninfs-git/), [git with gui](https://aur.archlinux.org/packages/ninfs-gui-git/)
-* Recent distributions should have Python 3.6.1 or later pre-installed, or included in its repositories. If not, you can use an extra repository (e.g. [deadsnakes's PPA](https://launchpad.net/%7Edeadsnakes/+archive/ubuntu/ppa) for Ubuntu), [build from source](https://www.python.org/downloads/source/), or use a tool like [pyenv](https://github.com/pyenv/pyenv).
+#### Arch Linux
+ninfs is available in the AUR: [normal](https://aur.archlinux.org/packages/ninfs/), [with gui](https://aur.archlinux.org/packages/ninfs-gui/), [git](https://aur.archlinux.org/packages/ninfs-git/), [git with gui](https://aur.archlinux.org/packages/ninfs-gui-git/)
+
+#### Other distributions
+* Recent distributions (e.g. Ubuntu 18.04 and later) should have Python 3.6.1 or later pre-installed, or included in its repositories. If not, you can use an extra repository (e.g. [deadsnakes's PPA](https://launchpad.net/%7Edeadsnakes/+archive/ubuntu/ppa) for Ubuntu), [build from source](https://www.python.org/downloads/source/), or use a tool like [pyenv](https://github.com/pyenv/pyenv).
 * Most distributions should have libfuse enabled/installed by default. Use your package manager if it isn't.
 * Some dependencies may need to be installed to build and install ninfs.
   * On Debian-based systems, `g++` and `python3-dev` are required for the C extensions. To build and install as a package, `python3-setuptools` and `python3-wheel` are required.
