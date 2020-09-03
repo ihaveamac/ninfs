@@ -39,17 +39,28 @@ def exit_print_types():
 
 def mount(mount_type: str, return_doc: bool = False) -> int:
     if mount_type in {'gui', 'gui_i_want_to_be_an_admin_pls'}:
-        return gui(_allow_admin=mount_type == 'gui_i_want_to_be_an_admin_pls')
+        return gui()
 
     # noinspection PyProtectedMember
     from pyctr.crypto import BootromNotFoundError
 
     if windows:
-        from ctypes import windll
+        from ctypes import windll, get_last_error
+
         if windll.shell32.IsUserAnAdmin():
             print('- Note: This should *not* be run as an administrator.',
                   '- The mount will not be normally accessible.',
                   '- This should be run from a non-administrator command prompt or PowerShell prompt.', sep='\n')
+
+        # this allows for the gui parent process to send signal.CTRL_BREAK_EVENT and for this process to receive it
+        try:
+            import os
+            parent_pid = int(environ['NINFS_GUI_PARENT_PID'])
+            if windll.kernel32.AttachConsole(parent_pid) == 0:  # ATTACH_PARENT_PROCESS
+                print(f'Failed to do AttachConsole({parent_pid}):', get_last_error())
+        except KeyError:
+            pass
+
     if mount_type not in mount_types and mount_type not in mount_aliases:
         exit_print_types()
 
@@ -109,8 +120,8 @@ def main():
 
 
 def gui(_allow_admin: bool = False):
-    import _gui
-    return _gui.main(_allow_admin=_allow_admin)
+    from gui import start_gui
+    return start_gui()
 
 
 if __name__ == '__main__':
