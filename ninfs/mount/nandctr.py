@@ -21,9 +21,10 @@ from typing import BinaryIO, AnyStr
 from pyctr.crypto import CryptoEngine, Keyslot, CorruptOTPError
 from pyctr.type.exefs import EXEFS_HEADER_SIZE, ExeFSFileNotFoundError, ExeFSReader, InvalidExeFSError
 from pyctr.util import readbe, readle, roundup
+
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
-from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time, realpath
 from .exefs import ExeFSMount
 
 # ncsd image doesn't have the actual size
@@ -428,10 +429,10 @@ def main(prog: str = None, args: list = None):
             #   it will have to be done differently.
             device_id = f'{mount.crypto.otp_device_id:08X}'
             if _c.macos:
-                path_to_show = os.path.realpath(a.nand).rsplit('/', maxsplit=2)
+                path_to_show = realpath(a.nand).rsplit('/', maxsplit=2)
                 opts['volname'] = f'Nintendo 3DS NAND ({device_id}; {path_to_show[-2]}/{path_to_show[-1]})'
             elif _c.windows:
                 # volume label can only be up to 32 chars
                 opts['volname'] = f'Nintendo 3DS NAND ({device_id})'
         FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=a.ro, nothreads=True, debug=a.d,
-             fsname=os.path.realpath(a.nand).replace(',', '_'), **opts)
+             fsname=realpath(a.nand).replace(',', '_'), **opts)

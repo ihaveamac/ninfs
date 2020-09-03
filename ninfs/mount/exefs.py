@@ -16,9 +16,10 @@ from sys import argv
 from typing import TYPE_CHECKING
 
 from pyctr.type.exefs import ExeFSReader, ExeFSFileNotFoundError
+
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
-from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time, realpath
 
 if TYPE_CHECKING:
     from typing import Dict
@@ -117,11 +118,11 @@ def main(prog: str = None, args: list = None):
             opts['fstypename'] = 'ExeFS'
             # assuming / is the path separator since macos. but if windows gets support for this,
             #   it will have to be done differently.
-            path_to_show = os.path.realpath(a.exefs).rsplit('/', maxsplit=2)
+            path_to_show = realpath(a.exefs).rsplit('/', maxsplit=2)
             if _c.macos:
                 opts['volname'] = f'Nintendo 3DS ExeFS ({path_to_show[-2]}/{path_to_show[-1]})'
             elif _c.windows:
                 # volume label can only be up to 32 chars
                 opts['volname'] = 'Nintendo 3DS ExeFS'
         FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
-             fsname=os.path.realpath(a.exefs).replace(',', '_'), **opts)
+             fsname=realpath(a.exefs).replace(',', '_'), **opts)

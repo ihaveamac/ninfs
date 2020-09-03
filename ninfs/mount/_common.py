@@ -11,6 +11,7 @@ from errno import EROFS
 from functools import wraps
 from io import BufferedIOBase
 from os import stat, stat_result
+from os.path import realpath as real_realpath
 from sys import exit, platform
 from typing import TYPE_CHECKING
 
@@ -32,6 +33,15 @@ try:
 except Exception as e:
     exit(f'Failed to import the fuse module:\n'
          f'{type(e).__name__}: {e}')
+
+
+def realpath(path):
+    try:
+        return real_realpath(path)
+    except OSError:
+        # can happen on Windows when using it on files inside a WinFsp mount
+        pass
+    return path
 
 
 def get_time(path: 'Union[str, PathLike, stat_result]'):

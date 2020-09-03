@@ -9,7 +9,6 @@ Mounts 3DSX Homebrew files, creating a virtual filesystem with the 3DSX's RomFS 
 """
 
 import logging
-import os
 from errno import ENOENT
 from stat import S_IFDIR, S_IFREG
 from struct import unpack
@@ -18,10 +17,11 @@ from typing import TYPE_CHECKING, BinaryIO
 
 from pyctr.type.romfs import RomFSReader
 from pyctr.util import readle
+
 from . import _common as _c
-from .romfs import RomFSMount
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
-from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time, realpath
+from .romfs import RomFSMount
 
 if TYPE_CHECKING:
     from typing import Dict
@@ -143,11 +143,11 @@ def main(prog: str = None, args: list = None):
             opts['fstypename'] = '3DSX'
             # assuming / is the path separator since macos. but if windows gets support for this,
             #   it will have to be done differently.
-            path_to_show = os.path.realpath(a.threedsx).rsplit('/', maxsplit=2)
+            path_to_show = realpath(a.threedsx).rsplit('/', maxsplit=2)
             if _c.macos:
                 opts['volname'] = f'3DSX Homebrew ({path_to_show[-2]}/{path_to_show[-1]})'
             elif _c.windows:
                 # volume label can only be up to 32 chars
                 opts['volname'] = '3DSX Homebrew'
         FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
-             fsname=os.path.realpath(a.threedsx).replace(',', '_'), **opts)
+             fsname=realpath(a.threedsx).replace(',', '_'), **opts)

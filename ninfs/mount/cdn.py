@@ -18,9 +18,11 @@ from typing import TYPE_CHECKING
 from pyctr.crypto import CryptoEngine, Keyslot, load_seeddb
 from pyctr.type.ncch import NCCHReader
 from pyctr.type.tmd import TitleMetadataReader, CHUNK_RECORD_SIZE
+
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
-from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time, load_custom_boot9
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time, load_custom_boot9, \
+    realpath
 from .ncch import NCCHContainerMount
 from .srl import SRLMount
 
@@ -240,4 +242,4 @@ def main(prog: str = None, args: list = None):
         opts['fstypename'] = 'CDN'
         opts['volname'] = f'CDN Contents ({mount.title_id.upper()})'
     FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
-         fsname=os.path.realpath(a.content).replace(',', '_'), **opts)
+         fsname=realpath(a.content).replace(',', '_'), **opts)

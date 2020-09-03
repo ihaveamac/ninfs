@@ -19,9 +19,10 @@ from typing import BinaryIO
 
 from pyctr.crypto import CryptoEngine, Keyslot
 from pyctr.util import readbe, readle
+
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
-from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time, realpath
 
 
 class TWLNandImageMount(LoggingMixIn, Operations):
@@ -239,10 +240,10 @@ def main(prog: str = None, args: list = None):
             # assuming / is the path separator since macos. but if windows gets support for this,
             #   it will have to be done differently.
             if _c.macos:
-                path_to_show = os.path.realpath(a.nand).rsplit('/', maxsplit=2)
+                path_to_show = realpath(a.nand).rsplit('/', maxsplit=2)
                 opts['volname'] = f'Nintendo DSi NAND ({path_to_show[-2]}/{path_to_show[-1]})'
             elif _c.windows:
                 # volume label can only be up to 32 chars
                 opts['volname'] = 'Nintendo DSi NAND'
         FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=a.ro, nothreads=True, debug=a.d,
-             fsname=os.path.realpath(a.nand).replace(',', '_'), **opts)
+             fsname=realpath(a.nand).replace(',', '_'), **opts)

@@ -9,7 +9,6 @@ Mounts Nintendo DS ROM images, creating a virtual filesystem of the RomFS conten
 """
 
 import logging
-import os
 from collections import defaultdict
 from errno import ENOENT
 from functools import lru_cache
@@ -20,7 +19,7 @@ from typing import BinaryIO, NamedTuple
 
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
-from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time, realpath
 
 twl_header_format = ('<12s 4s 2s B B B 7x B B B B I I I I I I I I I I I I I I I I I I I H H I I Q I I 56x 156s HH 32x '
                      # twl stuff
@@ -289,4 +288,4 @@ def main(prog: str = None, args: list = None):
             opts['fstypename'] = 'SRL'
             opts['volname'] = f'Nintendo DS ROM ({mount.title})'
         FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
-             fsname=os.path.realpath(a.srl).replace(',', '_'), **opts)
+             fsname=realpath(a.srl).replace(',', '_'), **opts)

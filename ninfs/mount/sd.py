@@ -16,9 +16,10 @@ from threading import Lock
 from typing import TYPE_CHECKING
 
 from pyctr.crypto import CryptoEngine, Keyslot
+
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
-from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, realpath
 
 if _c.windows:
     from ctypes import c_wchar_p, pointer, c_ulonglong, windll, wintypes
@@ -63,7 +64,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         print('ID0:', self.root_dir)
         print('Key:', self.crypto.keygen(Keyslot.SD).hex())
 
-        self.root = os.path.realpath(sd_dir + '/' + self.root_dir)
+        self.root = realpath(sd_dir + '/' + self.root_dir)
         self.root_len = len(self.root)
 
         self.readonly = readonly
@@ -269,4 +270,4 @@ def main(prog: str = None, args: list = None):
             opts['volname'] = f'Nintendo 3DS SD Card ({mount.root_dir[0:8]}…)'
             opts['case_insensitive'] = False
     FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=a.ro, debug=a.d,
-         fsname=os.path.realpath(a.sd_dir).replace(',', '_'), **opts)
+         fsname=realpath(a.sd_dir).replace(',', '_'), **opts)

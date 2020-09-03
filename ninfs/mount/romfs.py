@@ -10,15 +10,15 @@ without an IVFC header (original HANS format).
 """
 
 import logging
-import os
 from errno import ENOENT
 from stat import S_IFDIR, S_IFREG
 from sys import argv
 
 from pyctr.type.romfs import RomFSReader, RomFSFileNotFoundError
+
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
-from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time, realpath
 
 
 class RomFSMount(LoggingMixIn, Operations):
@@ -103,11 +103,11 @@ def main(prog: str = None, args: list = None):
             opts['fstypename'] = 'RomFS'
             # assuming / is the path separator since macos. but if windows gets support for this,
             #   it will have to be done differently.
-            path_to_show = os.path.realpath(a.romfs).rsplit('/', maxsplit=2)
+            path_to_show = realpath(a.romfs).rsplit('/', maxsplit=2)
             if _c.macos:
                 opts['volname'] = f'Nintendo 3DS RomFS ({path_to_show[-2]}/{path_to_show[-1]})'
             elif _c.windows:
                 # volume label can only be up to 32 chars
                 opts['volname'] = 'Nintendo 3DS RomFS'
         FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
-             fsname=os.path.realpath(a.romfs).replace(',', '_'), **opts)
+             fsname=realpath(a.romfs).replace(',', '_'), **opts)

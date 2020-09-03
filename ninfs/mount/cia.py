@@ -12,7 +12,6 @@ DLC with missing contents is currently not supported.
 """
 
 import logging
-import os
 from errno import ENOENT
 from stat import S_IFDIR, S_IFREG
 from sys import argv
@@ -20,9 +19,11 @@ from typing import TYPE_CHECKING
 
 from pyctr.crypto import load_seeddb
 from pyctr.type.cia import CIAReader, CIASection
+
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
-from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time, load_custom_boot9
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time, load_custom_boot9, \
+    realpath
 from .ncch import NCCHContainerMount
 from .srl import SRLMount
 
@@ -177,4 +178,4 @@ def main(prog: str = None, args: list = None):
                     display = r.tmd.title_id.upper()
                 opts['volname'] = f'CIA ({display})'
         FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
-             fsname=os.path.realpath(a.cia).replace(',', '_'), **opts)
+             fsname=realpath(a.cia).replace(',', '_'), **opts)
