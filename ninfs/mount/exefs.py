@@ -15,7 +15,7 @@ from stat import S_IFDIR, S_IFREG
 from sys import argv
 from typing import TYPE_CHECKING
 
-from pyctr.type.exefs import ExeFSReader, ExeFSFileNotFoundError
+from pyctr.type.exefs import ExeFSReader, ExeFSFileNotFoundError, CodeDecompressionError
 
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
@@ -50,11 +50,15 @@ class ExeFSMount(LoggingMixIn, Operations):
     def init(self, path, data=None):
         if self.decompress_code:
             print('ExeFS: Decompressing code...')
-            res = self.reader.decompress_code()
-            if res:
-                print('ExeFS: Done!')
+            try:
+                res = self.reader.decompress_code()
+            except CodeDecompressionError as e:
+                print(f'ExeFS: Failed to decompress code: {e}')
             else:
-                print('ExeFS: No decompression needed')
+                if res:
+                    print('ExeFS: Done!')
+                else:
+                    print('ExeFS: No decompression needed')
 
         # displayed name associated with real entry name
         self.files = {'/' + x.name.replace('.', '', 1) + '.bin': x.name for x in self.reader.entries.values()}
