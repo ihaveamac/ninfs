@@ -153,7 +153,7 @@ def main(prog: str = None, args: list = None):
     if a.seeddb:
         load_seeddb(a.seeddb)
 
-    with CIAReader(a.cia, dev=a.dev) as r:
+    with CIAReader(a.cia, dev=a.dev, seed=a.seed) as r:
         mount = CTRImportableArchiveMount(reader=r, g_stat=cia_stat)
         if _c.macos or _c.windows:
             opts['fstypename'] = 'CIA'

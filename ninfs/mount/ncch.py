@@ -151,7 +151,7 @@ def main(prog: str = None, args: list = None):
     if a.seeddb:
         load_seeddb(a.seeddb)
 
-    with NCCHReader(a.ncch, dev=a.dev, assume_decrypted=a.dec) as r:
+    with NCCHReader(a.ncch, dev=a.dev, assume_decrypted=a.dec, seed=a.seed) as r:
         mount = NCCHContainerMount(reader=r, g_stat=ncch_stat)
         if _c.macos or _c.windows:
             opts['fstypename'] = 'NCCH'

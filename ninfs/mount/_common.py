@@ -91,7 +91,9 @@ ctrcrypto_argp.add_argument('--boot9', help='path to boot9.bin')
 ctrcrypto_argp.add_argument('--dev', help='use dev keys', action='store_const', const=1, default=0)
 
 seeddb_argp = ArgumentParser(add_help=False)
-seeddb_argp.add_argument('--seeddb', help='path to seeddb.bin')
+seeddb_argp_group = seeddb_argp.add_mutually_exclusive_group()
+seeddb_argp_group.add_argument('--seeddb', help='path to seeddb.bin')
+seeddb_argp_group.add_argument('--seed', help='seed as hexstring')
 
 
 def main_args(name: str, help: str) -> ArgumentParser:

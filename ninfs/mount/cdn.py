@@ -15,7 +15,7 @@ from stat import S_IFDIR, S_IFREG
 from sys import exit, argv
 from typing import TYPE_CHECKING
 
-from pyctr.crypto import CryptoEngine, Keyslot, load_seeddb
+from pyctr.crypto import CryptoEngine, Keyslot, load_seeddb, add_seed
 from pyctr.type.ncch import NCCHReader
 from pyctr.type.tmd import TitleMetadataReader, CHUNK_RECORD_SIZE
 
@@ -38,7 +38,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
         return os.path.join(self.cdn_dir, path)
 
     def __init__(self, tmd_file: str = None, cdn_dir: str = None, dec_key: str = None, dev: bool = False,
-                 boot9: str = None):
+                 boot9: str = None, seed: str = None):
         if tmd_file:
             self.cdn_dir = os.path.dirname(tmd_file)
         else:
@@ -60,6 +60,9 @@ class CDNContentsMount(LoggingMixIn, Operations):
 
         # noinspection PyUnboundLocalVariable
         self.title_id = self.tmd.title_id
+
+        if seed:
+            add_seed(self.title_id, seed)
 
         if not os.path.isfile(self.rp('cetk')):
             if not dec_key:
@@ -237,7 +240,7 @@ def main(prog: str = None, args: list = None):
     if a.seeddb:
         load_seeddb(a.seeddb)
 
-    mount = CDNContentsMount(dev=a.dev, dec_key=a.dec_key, boot9=a.boot9, **mount_opts)
+    mount = CDNContentsMount(dev=a.dev, dec_key=a.dec_key, boot9=a.boot9, seed=a.seed, **mount_opts)
     if _c.macos or _c.windows:
         opts['fstypename'] = 'CDN'
         opts['volname'] = f'CDN Contents ({mount.title_id.upper()})'
