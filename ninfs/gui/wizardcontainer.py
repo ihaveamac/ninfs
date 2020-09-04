@@ -200,21 +200,24 @@ class WizardContainer(tk.Toplevel):
         super().__init__(parent)
         self.parent = parent
 
+        container = ttk.Frame(self)
+        container.pack(fill=tk.BOTH, expand=True)
+
         self.wm_title('ninfs - Mount content')
         self.wm_minsize(500, 350)
 
-        self.rowconfigure(0, weight=0)
-        self.rowconfigure(1, weight=1)
-        self.rowconfigure(2, weight=0)
-        self.columnconfigure(0, weight=1)
+        container.rowconfigure(0, weight=0)
+        container.rowconfigure(1, weight=1)
+        container.rowconfigure(2, weight=0)
+        container.columnconfigure(0, weight=1)
 
-        self.header = ttk.Label(self, text='Mount new content', font=(None, 15, 'bold'), justify=tk.LEFT)
+        self.header = ttk.Label(container, text='Mount new content', font=(None, 15, 'bold'), justify=tk.LEFT)
         self.header.grid(row=0, column=0, padx=10, pady=10, sticky=tk.W)
 
-        self.container = ttk.Frame(self)
+        self.container = ttk.Frame(container)
         self.container.grid(row=1, column=0, padx=10, sticky=tk.NSEW)
 
-        self.footer_buttons = ttk.Frame(self)
+        self.footer_buttons = ttk.Frame(container)
         self.footer_buttons.grid(row=2, column=0, padx=10, pady=10, sticky=tk.E)
 
         def next_pressed():

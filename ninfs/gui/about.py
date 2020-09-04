@@ -24,14 +24,17 @@ class NinfsAbout(tk.Toplevel):
         super().__init__(parent)
         self.parent = parent
 
+        container = ttk.Frame(self)
+        container.pack(fill=tk.BOTH, expand=True)
+
         self.wm_title('About ninfs')
         self.wm_resizable(width=tk.FALSE, height=tk.FALSE)
 
-        header_label = ttk.Label(self, text=f'ninfs {ninfs_version}', font=(None, 15, 'bold'))
+        header_label = ttk.Label(container, text=f'ninfs {ninfs_version}', font=(None, 15, 'bold'))
         header_label.grid(row=0, column=0, padx=pad, pady=pad, sticky=tk.W)
 
-        copyright_label = ttk.Label(self, text=ninfs_copyright)
+        copyright_label = ttk.Label(container, text=ninfs_copyright)
         copyright_label.grid(row=1, column=0, padx=pad, pady=(0, pad), sticky=tk.W)
 
-        info_label = ttk.Label(self, text=f'Running on Python {python_version}\n' + os_ver)
+        info_label = ttk.Label(container, text=f'Running on Python {python_version}\n' + os_ver)
         info_label.grid(row=2, column=0, padx=pad, pady=(0, pad), sticky=tk.W)
