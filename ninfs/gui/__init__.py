@@ -48,11 +48,10 @@ def thread_output_reader(gui: 'NinfsGUI', proc: 'Popen', uuid: 'str', output_lis
 
     # if the uuid is not in the mounts dict, then it was killed by this script
     if proc.returncode and uuid in gui.mounts:
+        gui.remove_mount_info(uuid)
         wizard_window = WizardContainer(gui)
         wizard_window.change_frame(WizardFailedMount, returncode=proc.returncode, output=output_list, kind='crash')
         wizard_window.focus()
-        gui.mount_treeview.delete(uuid)
-        del gui.mounts[uuid]
 
 
 class NinfsGUI(tk.Tk):
@@ -176,6 +175,10 @@ class NinfsGUI(tk.Tk):
         for uuid in reversed(self.mount_treeview.get_children()):
             self.unmount(uuid, force=force)
 
+    def remove_mount_info(self, uuid: str):
+        self.mount_treeview.delete(uuid)
+        del self.mounts[uuid]
+
     def unmount(self, uuid: 'str', *, force: bool = False):
         mount_info = self.mounts[uuid]
         if is_windows:
@@ -184,22 +187,24 @@ class NinfsGUI(tk.Tk):
                 mount_info[0].wait(3)
             except TimeoutExpired:
                 if force:
-                    self.mount_treeview.delete(uuid)
-                    del self.mounts[uuid]
+                    self.remove_mount_info(uuid)
                     mount_info[0].kill()
                 else:
                     res = mb.askyesno('Mount not responding', 'The mount subprocess is not responding.\nTerminate it?')
                     if res:
-                        self.mount_treeview.delete(uuid)
-                        del self.mounts[uuid]
+                        self.remove_mount_info(uuid)
                         mount_info[0].kill()
+            else:
+                self.remove_mount_info(uuid)
         else:
             # I think this is cheating
             if is_mac:
                 check_call(['diskutil', 'unmount', mount_info[3]])
+                self.remove_mount_info(uuid)
             else:
                 # assuming linux or bsd, which have fusermount
                 check_call(['fusermount', '-u', mount_info[3]])
+                self.remove_mount_info(uuid)
 
     @staticmethod
     def show_tutorial():
