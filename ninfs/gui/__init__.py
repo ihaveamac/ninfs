@@ -61,23 +61,26 @@ class NinfsGUI(tk.Tk):
 
         self.mounts: Dict[str, Tuple[Popen, Thread, List[str], str]] = {}
 
+        container = ttk.Frame(self)
+        container.pack(fill=tk.BOTH, expand=True)
+
         self.wm_title('ninfs')
 
         self.wm_minsize(500, 300)
         self.create_menu_bar()
 
-        style = ttk.Style(self)
+        style = ttk.Style(container)
         style.configure('TMenubutton', background='gainsboro')
 
-        self.rowconfigure(0, weight=0)
-        self.rowconfigure(1, weight=1)
-        self.rowconfigure(2, weight=0)
-        self.columnconfigure(0, weight=1)
+        container.rowconfigure(0, weight=0)
+        container.rowconfigure(1, weight=1)
+        container.rowconfigure(2, weight=0)
+        container.columnconfigure(0, weight=1)
 
-        header = ttk.Label(self, text='Mounted contents', font=(None, 15, 'bold'), justify=tk.LEFT)
+        header = ttk.Label(container, text='Mounted contents', font=(None, 15, 'bold'), justify=tk.LEFT)
         header.grid(row=0, column=0, padx=10, pady=8, sticky=tk.W)
 
-        mount_treeview_frame = ttk.Frame(self)
+        mount_treeview_frame = ttk.Frame(container)
         mount_treeview_frame.grid(row=1, column=0, sticky=tk.NSEW, padx=10)
         mount_treeview_frame.rowconfigure(0, weight=1)
         mount_treeview_frame.columnconfigure(0, weight=1)
@@ -99,7 +102,7 @@ class NinfsGUI(tk.Tk):
         self.mount_treeview.configure(yscrollcommand=mount_treeview_scrollbar.set)
         mount_treeview_scrollbar.grid(row=0, column=1, sticky=tk.NS)
 
-        actions_frame = ttk.Frame(self)
+        actions_frame = ttk.Frame(container)
         actions_frame.grid(row=2, column=0, padx=10, pady=10, sticky=tk.W)
 
         new_mount_button = ttk.Button(actions_frame, text='New mount', command=self.show_wizard)
