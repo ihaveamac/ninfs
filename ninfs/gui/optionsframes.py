@@ -9,7 +9,7 @@ import tkinter.ttk as ttk
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Dict, List
+    from typing import Dict, List, Tuple
 
 
 class CheckbuttonContainer(ttk.Frame):
@@ -26,3 +26,19 @@ class CheckbuttonContainer(ttk.Frame):
 
     def get_values(self) -> 'Dict[str, bool]':
         return {x: y.get() for x, y in self.variables.items()}
+
+
+class RadiobuttonContainer(ttk.Frame):
+    def __init__(self, parent: 'tk.BaseWidget' = None, *, options: 'List[Tuple[str, str]]',
+                 default: 'str'):
+        super().__init__(parent)
+
+        self.variable = tk.StringVar(self)
+        for idx, opt in enumerate(options):
+            rb = ttk.Radiobutton(self, variable=self.variable, text=opt[0], value=opt[1])
+            rb.grid(row=idx, column=0, sticky=tk.W)
+
+        self.variable.set(default)
+
+    def get_selected(self):
+        return self.variable.get()
