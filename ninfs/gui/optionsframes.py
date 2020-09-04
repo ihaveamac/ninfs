@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from typing import Dict, List
 
 
-class OptionsContainer(ttk.Frame):
+class CheckbuttonContainer(ttk.Frame):
     def __init__(self, parent: 'tk.BaseWidget' = None, *, labeltext: 'str', options: 'List[str]'):
         super().__init__(parent)
 

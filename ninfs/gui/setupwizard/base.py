@@ -9,7 +9,7 @@ import tkinter.ttk as ttk
 import tkinter.filedialog as fd
 from typing import TYPE_CHECKING
 
-from ..optionsframes import OptionsContainer
+from ..optionsframes import CheckbuttonContainer
 
 if TYPE_CHECKING:
     from typing import List, Tuple
@@ -116,4 +116,4 @@ class WizardBase(ttk.Frame):
         return container, optionmenu, optionmenu_variable
 
     def make_checkbox_options(self, labeltext: str, options: 'List[str]'):
-        return OptionsContainer(self, labeltext=labeltext, options=options)
+        return CheckbuttonContainer(self, labeltext=labeltext, options=options)
