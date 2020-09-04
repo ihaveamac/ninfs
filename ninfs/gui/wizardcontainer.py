@@ -12,6 +12,7 @@ import tkinter.filedialog as fd
 from typing import TYPE_CHECKING
 
 from .opendir import open_directory
+from .optionsframes import RadiobuttonContainer
 from .outputviewer import OutputViewer
 from .setupwizard import *
 from .typeinfo import mount_types, ctr_types, twl_types, hac_types
@@ -88,6 +89,47 @@ class WizardTypeSelector(WizardBase):
         self.wizardcontainer.change_frame(next_base)
 
 
+class WizardMountAdvancedOptions(tk.Toplevel):
+    def __init__(self, parent: 'tk.Wm' = None, *, current: 'dict'):
+        super().__init__(parent)
+
+        self.wm_title('Advanced mount options')
+        self.wm_resizable(width=tk.FALSE, height=tk.FALSE)
+
+        self.wm_transient(parent)
+        self.grab_set()
+
+        self.ok_clicked = False
+
+        container = ttk.Frame(self)
+        container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        label = ttk.Label(container, text='External user access')
+        label.grid(row=0, column=0, padx=(0, 8), sticky=tk.NW)
+
+        opts = [
+            ("Don't allow other users", 'none'),
+            ('Allow access by root (-o allow_root)', 'allow_root'),
+            ('Allow access by other users (-o allow_other)', 'allow_other'),
+        ]
+        self.rb_container = RadiobuttonContainer(container, options=opts, default=current['user_access'])
+        self.rb_container.grid(row=0, column=1)
+
+        def ok():
+            self.ok_clicked = True
+            self.destroy()
+
+        ok_button = ttk.Button(container, text='OK', command=ok)
+        ok_button.grid(row=1, column=0, columnspan=2, pady=(10, 0))
+
+    def get_options(self):
+        return {'user_access': self.rb_container.get_selected()}
+
+    def wait_for_response(self):
+        self.wait_window()
+        return self.ok_clicked
+
+
 class WizardMountPointSelector(WizardBase):
 
     mount_point_var: 'tk.StringVar'
@@ -97,6 +139,8 @@ class WizardMountPointSelector(WizardBase):
         super().__init__(parent, wizardcontainer=wizardcontainer)
         self.mounttype = mounttype
         self.cmdargs = cmdargs
+
+        self.adv_options = {'user_access': 'none'}
 
         if platform == 'win32':
             drive_letters = [x + ':' for x in get_unused_drives()]
@@ -118,12 +162,24 @@ class WizardMountPointSelector(WizardBase):
             container, mount_textbox, mount_textbox_var = self.make_directory_picker(labeltext, 'Select mountpoint')
             container.pack(fill=tk.X, expand=True)
 
+            adv_options_button = ttk.Button(self, text='Advanced mount options', command=self.show_advanced_options)
+            adv_options_button.pack(fill=tk.X, expand=True)
+
             mount_textbox_var.trace_add('write', callback)
 
             self.mount_point_var = mount_textbox_var
 
+    def show_advanced_options(self):
+        adv_options_window = WizardMountAdvancedOptions(self.wizardcontainer, current=self.adv_options)
+        adv_options_window.focus_set()
+        if adv_options_window.wait_for_response():
+            self.adv_options.update(adv_options_window.get_options())
+
     def next_pressed(self):
-        self.wizardcontainer.mount(self.mounttype, self.cmdargs, self.mount_point_var.get())
+        extra_args = []
+        if self.adv_options['user_access'] != 'none':
+            extra_args.extend(('-o', self.adv_options['user_access']))
+        self.wizardcontainer.mount(self.mounttype, self.cmdargs + extra_args, self.mount_point_var.get())
 
 
 class WizardMountStep(WizardBase):
