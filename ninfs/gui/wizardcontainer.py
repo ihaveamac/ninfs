@@ -96,9 +96,9 @@ class WizardMountPointSelector(WizardBase):
         super().__init__(parent, wizardcontainer=wizardcontainer)
         self.cmdargs = cmdargs
 
-        drive_letters = [x + ':' for x in get_unused_drives()]
-
         if platform == 'win32':
+            drive_letters = [x + ':' for x in get_unused_drives()]
+
             container, drive_selector, drive_selector_var = self.make_option_menu('Select the drive letter to use:',
                                                                                   *drive_letters)
             container.pack(fill=tk.X, expand=True)
