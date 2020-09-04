@@ -9,28 +9,11 @@ import tkinter.ttk as ttk
 import tkinter.filedialog as fd
 from typing import TYPE_CHECKING
 
+from ..optionsframes import OptionsContainer
+
 if TYPE_CHECKING:
-    from typing import Dict, List, Tuple
+    from typing import List, Tuple
     from ..wizardcontainer import WizardContainer
-
-
-class OptionsContainer(ttk.Frame):
-    def __init__(self, parent: 'tk.BaseWidget' = None, *, labeltext: 'str', options: 'List[str]'):
-        super().__init__(parent)
-
-        label = ttk.Label(self, text=labeltext, justify=tk.LEFT)
-        label.pack(fill=tk.X, expand=True)
-
-        self.variables = {}
-        for opt in options:
-            var = tk.BooleanVar(self)
-            cb = ttk.Checkbutton(self, variable=var, text=opt)
-            cb.pack(fill=tk.X, expand=True)
-
-            self.variables[opt] = var
-
-    def get_values(self) -> 'Dict[str, bool]':
-        return {x: y.get() for x, y in self.variables.items()}
 
 
 class WizardBase(ttk.Frame):
