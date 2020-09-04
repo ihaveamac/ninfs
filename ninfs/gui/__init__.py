@@ -11,7 +11,7 @@ import tkinter.messagebox as mb
 import webbrowser
 from os.path import dirname
 from pprint import pformat
-from subprocess import Popen, PIPE, CREATE_NEW_PROCESS_GROUP, STDOUT, TimeoutExpired, check_call
+from subprocess import Popen, PIPE, STDOUT, TimeoutExpired, check_call
 from threading import Thread
 from typing import TYPE_CHECKING
 from uuid import uuid4
@@ -34,6 +34,7 @@ frozen = getattr(sys, 'frozen', None)
 if is_windows:
     from os.path import isdir as check_mountpoint
     from signal import CTRL_BREAK_EVENT
+    from subprocess import CREATE_NEW_PROCESS_GROUP
 else:
     from os.path import ismount as check_mountpoint
 
