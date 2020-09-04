@@ -13,20 +13,14 @@ if TYPE_CHECKING:
 
 
 class CheckbuttonContainer(ttk.Frame):
-    def __init__(self, parent: 'tk.BaseWidget' = None, *, labeltext: 'str', options: 'List[str]'):
+    def __init__(self, parent: 'tk.BaseWidget' = None, *, options: 'List[str]'):
         super().__init__(parent)
 
-        label = ttk.Label(self, text=labeltext, justify=tk.LEFT)
-        label.grid(row=0, column=0, padx=(0, 8), sticky=tk.N)
-
-        cb_container = ttk.Frame(self)
-        cb_container.grid(row=0, column=1)
-
         self.variables = {}
-        for idx, opt in enumerate(options):
+        for opt in options:
             var = tk.BooleanVar(self)
-            cb = ttk.Checkbutton(cb_container, variable=var, text=opt)
-            cb.grid(row=idx, column=0, sticky=tk.W)
+            cb = ttk.Checkbutton(self, variable=var, text=opt)
+            cb.pack(side=tk.LEFT)
 
             self.variables[opt] = var
 

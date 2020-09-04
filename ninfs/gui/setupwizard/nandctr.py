@@ -34,8 +34,9 @@ class CTRNandImageSetup(WizardBase):
         otp_container, otp_textbox, otp_textbox_var = self.make_file_picker(labeltext, 'Select OTP file')
         otp_container.pack(fill=tk.X, expand=True)
 
-        self.options_frame = self.make_checkbox_options('Options:', ['Allow writing'])
-        self.options_frame.pack(fill=tk.X, expand=True)
+        options_frame, cb_container = self.make_checkbox_options('Options:', ['Allow writing'])
+        options_frame.pack(fill=tk.X, expand=True)
+        self.cb_container = cb_container
 
         self.main_textbox_var = main_textbox_var
         self.b9_textbox_var = b9_textbox_var
@@ -57,7 +58,7 @@ class CTRNandImageSetup(WizardBase):
             supportfiles.last_b9_file = b9_file
 
         args = ['nandctr', main_file]
-        opts = self.options_frame.get_values()
+        opts = self.cb_container.get_values()
         if not opts['Allow writing']:
             args.append('-r')
         if b9_file:

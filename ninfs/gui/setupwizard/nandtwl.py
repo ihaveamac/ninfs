@@ -30,8 +30,9 @@ class TWLNandImageSetup(WizardBase):
         consoleid_container, consoleid_textbox, consoleid_textbox_var = self.make_entry(labeltext)
         consoleid_container.pack(fill=tk.X, expand=True)
 
-        self.options_frame = self.make_checkbox_options('Options:', ['Allow writing'])
-        self.options_frame.pack(fill=tk.X, expand=True)
+        options_frame, cb_container = self.make_checkbox_options('Options:', ['Allow writing'])
+        options_frame.pack(fill=tk.X, expand=True)
+        self.cb_container = cb_container
 
         self.main_textbox_var = main_textbox_var
         self.consoleid_textbox_var = consoleid_textbox_var
@@ -46,7 +47,7 @@ class TWLNandImageSetup(WizardBase):
         consoleid = self.consoleid_textbox_var.get().strip()
 
         args = ['nandtwl', main_file]
-        opts = self.options_frame.get_values()
+        opts = self.cb_container.get_values()
         if not opts['Allow writing']:
             args.append('-r')
         if consoleid:

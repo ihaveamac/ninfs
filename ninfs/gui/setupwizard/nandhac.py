@@ -31,8 +31,9 @@ class HACNandImageSetup(WizardBase):
                                                                                'Select BIS keys file')
         keys_container.pack(fill=tk.X, expand=True)
 
-        self.options_frame = self.make_checkbox_options('Options:', ['Allow writing'])
-        self.options_frame.pack(fill=tk.X, expand=True)
+        options_frame, cb_container = self.make_checkbox_options('Options:', ['Allow writing'])
+        options_frame.pack(fill=tk.X, expand=True)
+        self.cb_container = cb_container
 
         self.main_textbox_var = main_textbox_var
         self.keys_textbox_var = keys_textbox_var
@@ -56,7 +57,7 @@ class HACNandImageSetup(WizardBase):
             else:
                 # is a split file
                 args.append('--split-files')
-        opts = self.options_frame.get_values()
+        opts = self.cb_container.get_values()
         if not opts['Allow writing']:
             args.append('-r')
         if keys_file:

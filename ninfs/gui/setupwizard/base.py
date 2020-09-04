@@ -116,4 +116,11 @@ class WizardBase(ttk.Frame):
         return container, optionmenu, optionmenu_variable
 
     def make_checkbox_options(self, labeltext: str, options: 'List[str]'):
-        return CheckbuttonContainer(self, labeltext=labeltext, options=options)
+        container = ttk.Frame(self)
+        label = ttk.Label(container, text=labeltext)
+        label.grid(row=0, column=0, padx=(0, 4), sticky=tk.NW)
+
+        cb = CheckbuttonContainer(container, options=options)
+        cb.grid(row=0, column=1, sticky=tk.W)
+
+        return container, cb
