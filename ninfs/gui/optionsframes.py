@@ -6,6 +6,10 @@
 
 import tkinter as tk
 import tkinter.ttk as ttk
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Dict, List
 
 
 class OptionsContainer(ttk.Frame):
