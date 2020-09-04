@@ -103,7 +103,7 @@ class WizardMountAdvancedOptions(tk.Toplevel):
 
         # prevent background issues on macOS and Linux
         outer_container = ttk.Frame(self)
-        outer_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        outer_container.pack(fill=tk.BOTH, expand=True)
 
         container = ttk.Frame(outer_container)
         container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
