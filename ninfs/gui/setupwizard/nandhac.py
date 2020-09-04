@@ -62,4 +62,4 @@ class HACNandImageSetup(WizardBase):
         if keys_file:
             args += ['--keys', keys_file]
 
-        self.wizardcontainer.show_mount_point_selector(args)
+        self.wizardcontainer.show_mount_point_selector('Switch NAND', args)

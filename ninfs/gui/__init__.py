@@ -85,10 +85,12 @@ class NinfsGUI(tk.Tk):
 
         self.mount_treeview = ttk.Treeview(mount_treeview_frame)
         self.mount_treeview.grid(row=0, column=0, sticky=tk.NSEW)
-        self.mount_treeview.configure(columns=('mount_path', 'mounted_item'), show='headings')
+        self.mount_treeview.configure(columns=('mount_path', 'mount_type', 'mounted_item'), show='headings')
 
         self.mount_treeview.column('mount_path', width=100, anchor=tk.W)
         self.mount_treeview.heading('mount_path', text='Mount Path')
+        self.mount_treeview.column('mount_type', width=50, anchor=tk.W)
+        self.mount_treeview.heading('mount_type', text='Type')
         self.mount_treeview.column('mounted_item', width=200, anchor=tk.W)
         self.mount_treeview.heading('mounted_item', text='Mounted Content')
 
@@ -120,7 +122,8 @@ class NinfsGUI(tk.Tk):
         wizard_window.change_frame(WizardTypeSelector)
         wizard_window.focus()
 
-    def mount(self, cmdargs: 'List[str]', mountpoint: str, callback_success: 'Callable', callback_failed: 'Callable'):
+    def mount(self, mounttype: 'str', cmdargs: 'List[str]', mountpoint: str, callback_success: 'Callable',
+              callback_failed: 'Callable'):
         args = [sys.executable]
         if not frozen:
             args.append(dirname(dirname(__file__)))
@@ -142,7 +145,7 @@ class NinfsGUI(tk.Tk):
 
         def check_loop():
             if check_mountpoint(mountpoint):
-                self.mount_treeview.insert('', tk.END, text=uuid, iid=uuid, values=(mountpoint, cmdargs[1]))
+                self.mount_treeview.insert('', tk.END, text=uuid, iid=uuid, values=(mountpoint, mounttype, cmdargs[1]))
                 self.mounts[uuid] = mount_info
                 callback_success()
                 return

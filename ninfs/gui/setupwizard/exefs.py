@@ -36,4 +36,4 @@ class ExeFSSetup(WizardBase):
 
         args = ['exefs', main_file]
 
-        self.wizardcontainer.show_mount_point_selector(args)
+        self.wizardcontainer.show_mount_point_selector('ExeFS', args)

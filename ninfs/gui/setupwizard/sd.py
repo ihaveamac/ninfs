@@ -68,4 +68,4 @@ class SDFilesystemSetup(WizardBase):
         if movable_file:
             args += ['--movable', movable_file]
 
-        self.wizardcontainer.show_mount_point_selector(args)
+        self.wizardcontainer.show_mount_point_selector('3DS SD', args)

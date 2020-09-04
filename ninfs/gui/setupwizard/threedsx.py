@@ -36,4 +36,4 @@ class ThreeDSXSetup(WizardBase):
 
         args = ['threedsx', main_file]
 
-        self.wizardcontainer.show_mount_point_selector(args)
+        self.wizardcontainer.show_mount_point_selector('3DSX', args)

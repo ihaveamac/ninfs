@@ -65,4 +65,4 @@ class CTRNandImageSetup(WizardBase):
         if otp_file:
             args += ['--otp', otp_file]
 
-        self.wizardcontainer.show_mount_point_selector(args)
+        self.wizardcontainer.show_mount_point_selector('3DS NAND', args)

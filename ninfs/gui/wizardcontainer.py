@@ -92,8 +92,10 @@ class WizardMountPointSelector(WizardBase):
 
     mount_point_var: 'tk.StringVar'
 
-    def __init__(self, parent: 'tk.BaseWidget' = None, *, wizardcontainer: 'WizardContainer', cmdargs: 'List[str]'):
+    def __init__(self, parent: 'tk.BaseWidget' = None, *, wizardcontainer: 'WizardContainer', mounttype: 'str',
+                 cmdargs: 'List[str]'):
         super().__init__(parent, wizardcontainer=wizardcontainer)
+        self.mounttype = mounttype
         self.cmdargs = cmdargs
 
         drive_letters = [x + ':' for x in get_unused_drives()]
@@ -121,23 +123,22 @@ class WizardMountPointSelector(WizardBase):
             self.mount_point_var = mount_textbox_var
 
     def next_pressed(self):
-        self.wizardcontainer.mount(self.cmdargs, self.mount_point_var.get())
+        self.wizardcontainer.mount(self.mounttype, self.cmdargs, self.mount_point_var.get())
 
 
 class WizardMountStep(WizardBase):
-    def __init__(self, parent: 'tk.BaseWidget' = None, *, wizardcontainer: 'WizardContainer', cmdargs: 'List[str]',
-                 mountpoint: 'str'):
+    def __init__(self, parent: 'tk.BaseWidget' = None, *, wizardcontainer: 'WizardContainer', mounttype: 'str',
+                 cmdargs: 'List[str]', mountpoint: 'str'):
         super().__init__(parent, wizardcontainer=wizardcontainer)
 
         self.wizardcontainer.set_cancel_enabled(False)
 
-        self.cmdargs = cmdargs
         self.mountpoint = mountpoint
 
         label = ttk.Label(self, text='Starting mount process...')
         label.pack(fill=tk.X, expand=True)
 
-        self.wizardcontainer.parent.mount(cmdargs, mountpoint, self.callback_success, self.callback_failed)
+        self.wizardcontainer.parent.mount(mounttype, cmdargs, mountpoint, self.callback_success, self.callback_failed)
 
     def callback_success(self):
         opened = open_directory(self.mountpoint)
@@ -236,12 +237,12 @@ class WizardContainer(tk.Toplevel):
     def set_next_enabled(self, status: bool):
         self.next_button.configure(state=tk.NORMAL if status else tk.DISABLED)
 
-    def show_mount_point_selector(self, cmdargs: 'List[str]'):
+    def show_mount_point_selector(self, mounttype: 'str', cmdargs: 'List[str]'):
         self.next_button.configure(text='Mount')
-        self.change_frame(WizardMountPointSelector, cmdargs=cmdargs)
+        self.change_frame(WizardMountPointSelector, cmdargs=cmdargs, mounttype=mounttype)
 
-    def mount(self, cmdargs: 'List[str]', mountpoint: str):
-        self.change_frame(WizardMountStep, cmdargs=cmdargs, mountpoint=mountpoint)
+    def mount(self, mounttype: 'str', cmdargs: 'List[str]', mountpoint: str):
+        self.change_frame(WizardMountStep, mounttype=mounttype, cmdargs=cmdargs, mountpoint=mountpoint)
 
     def change_frame(self, target: 'Type[WizardBase]', *args, **kwargs):
         if self.current_frame:

@@ -51,4 +51,4 @@ class CCISetup(WizardBase):
         if b9_file:
             args += ['--boot9', b9_file]
 
-        self.wizardcontainer.show_mount_point_selector(args)
+        self.wizardcontainer.show_mount_point_selector('3DS/CCI', args)

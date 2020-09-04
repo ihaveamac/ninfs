@@ -36,4 +36,4 @@ class RomFSSetup(WizardBase):
 
         args = ['romfs', main_file]
 
-        self.wizardcontainer.show_mount_point_selector(args)
+        self.wizardcontainer.show_mount_point_selector('RomFS', args)

@@ -62,4 +62,4 @@ class NCCHSetup(WizardBase):
         if seeddb_file:
             args += ['--seeddb', seeddb_file]
 
-        self.wizardcontainer.show_mount_point_selector(args)
+        self.wizardcontainer.show_mount_point_selector('NCCH', args)
