@@ -101,7 +101,11 @@ class WizardMountAdvancedOptions(tk.Toplevel):
 
         self.ok_clicked = False
 
-        container = ttk.Frame(self)
+        # prevent background issues on macOS and Linux
+        outer_container = ttk.Frame(self)
+        outer_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        container = ttk.Frame(outer_container)
         container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         label = ttk.Label(container, text='External user access')
