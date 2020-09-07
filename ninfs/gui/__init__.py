@@ -17,7 +17,9 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from .about import NinfsAbout
+from .confighandler import get_bool, set_bool
 from .typeinfo import mount_types, ctr_types, twl_types, hac_types, uses_directory
+from .updatecheck import thread_update_check
 from .wizardcontainer import WizardContainer, WizardTypeSelector, WizardFailedMount
 
 if TYPE_CHECKING:
@@ -111,6 +113,12 @@ class NinfsGUI(tk.Tk):
         unmount.pack(side=tk.LEFT)
 
         self.wm_protocol('WM_DELETE_WINDOW', self.on_close)
+
+    def mainloop(self, n=0):
+        if get_bool('update', 'onlinecheck'):
+            update_thread = Thread(target=thread_update_check, args=(self,))
+            update_thread.start()
+        super().mainloop(n)
 
     def on_close(self):
         self.unmount_all(force=True)
