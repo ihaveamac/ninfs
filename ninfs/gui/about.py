@@ -29,6 +29,7 @@ class NinfsAbout(tk.Toplevel):
         self.parent = parent
 
         self.wm_withdraw()
+        self.wm_iconbitmap(self.parent.ico_path)
         self.wm_transient(self.parent)
 
         container = ttk.Frame(self)

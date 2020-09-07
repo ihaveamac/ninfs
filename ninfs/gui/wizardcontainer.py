@@ -97,6 +97,7 @@ class WizardMountAdvancedOptions(tk.Toplevel):
         self.wm_resizable(width=tk.FALSE, height=tk.FALSE)
 
         self.wm_transient(parent)
+        self.wm_iconbitmap(parent.parent.ico_path)
         self.grab_set()
 
         self.ok_clicked = False
@@ -266,6 +267,7 @@ class WizardContainer(tk.Toplevel):
         self.parent = parent
 
         self.wm_withdraw()
+        self.wm_iconbitmap(self.parent.ico_path)
         self.wm_transient(parent)
 
         container = ttk.Frame(self)

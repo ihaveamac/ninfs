@@ -9,7 +9,7 @@ import tkinter as tk
 import tkinter.ttk as ttk
 import tkinter.messagebox as mb
 import webbrowser
-from os.path import dirname
+from os.path import dirname, join
 from pprint import pformat
 from subprocess import Popen, PIPE, STDOUT, TimeoutExpired, check_call
 from threading import Thread
@@ -68,7 +68,7 @@ class NinfsGUI(tk.Tk):
         self.wm_title('ninfs')
 
         self.ico_path = join(dirname(__file__), 'data', 'windows.ico')
-        self.wm_iconbitmap()
+        self.wm_iconbitmap(self.ico_path)
 
         self.wm_minsize(500, 300)
         self.create_menu_bar()
