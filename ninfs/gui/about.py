@@ -20,9 +20,12 @@ os_ver = get_os_ver()
 
 
 class NinfsAbout(tk.Toplevel):
-    def __init__(self, parent: 'tk.Wm' = None):
+    def __init__(self, parent: 'NinfsAbout' = None):
         super().__init__(parent)
         self.parent = parent
+
+        self.wm_withdraw()
+        self.wm_transient(self.parent)
 
         container = ttk.Frame(self)
         container.pack(fill=tk.BOTH, expand=True)
@@ -38,3 +41,7 @@ class NinfsAbout(tk.Toplevel):
 
         info_label = ttk.Label(container, text=f'Running on Python {python_version}\n' + os_ver)
         info_label.grid(row=2, column=0, padx=pad, pady=(0, pad), sticky=tk.W)
+
+        self.geometry("+%d+%d" % (parent.winfo_rootx() + 50, parent.winfo_rooty() + 50))
+
+        self.wm_deiconify()
