@@ -23,6 +23,18 @@ class HACNandImageSetup(WizardBase):
             keys_file = self.keys_textbox_var.get().strip()
             self.wizardcontainer.set_next_enabled(main_file and keys_file)
 
+        filetypes = [
+            'Full NAND image',
+            'PRODINFO',
+            'PRODINFOF',
+            'SAFE',
+            'SYSTEM',
+            'USER',
+        ]
+        filetype_container, filetype_menu, filetype_menu_var = self.make_option_menu('Select the file type:',
+                                                                                     *filetypes)
+        filetype_container.pack(fill=tk.X, expand=True)
+
         labeltext = 'Select the NAND file (full or split):'
         main_container, main_textbox, main_textbox_var = self.make_file_picker(labeltext, 'Select NAND file')
         main_container.pack(fill=tk.X, expand=True)
@@ -37,6 +49,7 @@ class HACNandImageSetup(WizardBase):
 
         self.main_textbox_var = main_textbox_var
         self.keys_textbox_var = keys_textbox_var
+        self.filetype_var = filetype_menu_var
 
         main_textbox_var.trace_add('write', callback)
         keys_textbox_var.trace_add('write', callback)
@@ -46,6 +59,7 @@ class HACNandImageSetup(WizardBase):
     def next_pressed(self):
         main_file = self.main_textbox_var.get().strip()
         keys_file = self.keys_textbox_var.get().strip()
+        filetype = self.filetype_var.get()
 
         args = ['nandhac', main_file]
         if main_file[-3] == '.':
@@ -62,5 +76,7 @@ class HACNandImageSetup(WizardBase):
             args.append('-r')
         if keys_file:
             args += ['--keys', keys_file]
+        if filetype != 'Full NAND image':
+            args += ['--partition', filetype]
 
         self.wizardcontainer.show_mount_point_selector('Switch NAND', args)
