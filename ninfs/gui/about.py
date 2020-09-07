@@ -7,11 +7,15 @@
 import sys
 import tkinter as tk
 import tkinter.ttk as ttk
+from typing import TYPE_CHECKING
 
 from .osver import get_os_ver
 # "from .. import" didn't work :/
 from __init__ import __copyright__ as ninfs_copyright
 from __init__ import __version__ as ninfs_version
+
+if TYPE_CHECKING:
+    from . import NinfsGUI
 
 pad = 10
 
@@ -20,7 +24,7 @@ os_ver = get_os_ver()
 
 
 class NinfsAbout(tk.Toplevel):
-    def __init__(self, parent: 'NinfsAbout' = None):
+    def __init__(self, parent: 'NinfsGUI' = None):
         super().__init__(parent)
         self.parent = parent
 
