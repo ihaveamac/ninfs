@@ -36,12 +36,13 @@ class SDFilesystemSetup(WizardBase):
                                                                                         'Select movable.sed file')
         movable_container.pack(fill=tk.X, expand=True)
 
-        self.options_frame = self.make_checkbox_options('Options:', ['Allow writing'])
-        self.options_frame.pack(fill=tk.X, expand=True)
+        options_container, options_frame = self.make_checkbox_options('Options:', ['Allow writing'])
+        options_container.pack(fill=tk.X, expand=True)
 
         self.main_textbox_var = main_textbox_var
         self.b9_textbox_var = b9_textbox_var
         self.movable_textbox_var = movable_textbox_var
+        self.options_frame = options_frame
 
         main_textbox_var.trace_add('write', callback)
         b9_textbox_var.trace_add('write', callback)
