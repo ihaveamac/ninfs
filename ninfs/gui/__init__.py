@@ -67,6 +67,9 @@ class NinfsGUI(tk.Tk):
 
         self.wm_title('ninfs')
 
+        self.ico_path = join(dirname(__file__), 'data', 'windows.ico')
+        self.wm_iconbitmap()
+
         self.wm_minsize(500, 300)
         self.create_menu_bar()
 
