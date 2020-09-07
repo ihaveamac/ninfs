@@ -63,6 +63,7 @@ def get_latest_release() -> 'dict':
     if not version.is_prerelease:
         url += '/latest'
 
+    print('UPDATE: Requesting', url)
     req = Request(url, headers={'Accept': 'application/vnd.github.v3+json'})
     with urlopen(req) as u:  # type: HTTPResponse
         data = json.load(u)
@@ -77,6 +78,7 @@ def thread_update_check(gui: 'NinfsGUI'):
     rel = get_latest_release()
     latest_version: 'Version' = parse_version(rel['tag_name'])
 
+    print('UPDATE: Latest version:', latest_version)
     if latest_version > version:
         wizard_window = WizardContainer(gui)
         wizard_window.change_frame(UpdateNotificationWindow, releaseinfo=rel)

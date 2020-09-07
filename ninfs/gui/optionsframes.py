@@ -13,14 +13,18 @@ if TYPE_CHECKING:
 
 
 class CheckbuttonContainer(ttk.Frame):
-    def __init__(self, parent: 'tk.BaseWidget' = None, *, options: 'List[str]'):
+    def __init__(self, parent: 'tk.BaseWidget' = None, *, options: 'List[str]', enabled: 'List[str]' = None):
         super().__init__(parent)
+        if not enabled:
+            enabled = []
 
         self.variables = {}
         for opt in options:
             var = tk.BooleanVar(self)
             cb = ttk.Checkbutton(self, variable=var, text=opt)
             cb.pack(side=tk.LEFT)
+            if opt in enabled:
+                var.set(True)
 
             self.variables[opt] = var
 

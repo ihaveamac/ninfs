@@ -9,6 +9,7 @@ import tkinter as tk
 import tkinter.ttk as ttk
 import tkinter.messagebox as mb
 import webbrowser
+from inspect import cleandoc
 from os.path import dirname, join
 from pprint import pformat
 from subprocess import Popen, PIPE, STDOUT, TimeoutExpired, check_call
@@ -18,6 +19,7 @@ from uuid import uuid4
 
 from .about import NinfsAbout
 from .confighandler import get_bool, set_bool
+from .settings import NinfsSettings
 from .typeinfo import mount_types, ctr_types, twl_types, hac_types, uses_directory
 from .updatecheck import thread_update_check
 from .wizardcontainer import WizardContainer, WizardTypeSelector, WizardFailedMount
@@ -118,6 +120,17 @@ class NinfsGUI(tk.Tk):
         self.wm_protocol('WM_DELETE_WINDOW', self.on_close)
 
     def mainloop(self, n=0):
+        if not get_bool('internal', 'askedonlinecheck'):
+            message = '''
+            Check for updates online?
+            This will make a request to GitHub every time the ninfs gui is opened.
+            
+            This can be changed any time in Settings.
+            '''
+            if mb.askyesno('Check for updates', cleandoc(message)):
+                set_bool('update', 'onlinecheck', True)
+            set_bool('internal', 'askedonlinecheck', True)
+
         if get_bool('update', 'onlinecheck'):
             update_thread = Thread(target=thread_update_check, args=(self,))
             update_thread.start()
@@ -127,8 +140,9 @@ class NinfsGUI(tk.Tk):
         self.unmount_all(force=True)
         self.destroy()
 
-    def show_preferences(self):
-        print('soon')
+    def show_settings(self):
+        settings_window = NinfsSettings(self)
+        settings_window.focus()
 
     def show_wizard(self):
         wizard_window = WizardContainer(self)
@@ -235,11 +249,11 @@ class NinfsGUI(tk.Tk):
             apple_menu.add_separator()
             menubar.add_cascade(menu=apple_menu)
 
-            self.createcommand('tk::mac::ShowPreferences', self.show_preferences)
+            self.createcommand('tk::mac::ShowPreferences', self.show_settings)
 
         file_menu = tk.Menu(menubar)
         if not is_mac:
-            file_menu.add_command(label='Settings', command=self.show_preferences)
+            file_menu.add_command(label='Settings', command=self.show_settings)
 
         help_menu = tk.Menu(menubar)
         help_menu.add_command(label='Open tutorial on GBAtemp', command=self.show_tutorial)

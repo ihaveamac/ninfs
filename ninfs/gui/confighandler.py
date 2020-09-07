@@ -51,6 +51,8 @@ parser = ConfigParser()
 # defaults
 parser['update'] = {}
 parser['update']['onlinecheck'] = 'false'
+parser['internal'] = {}
+parser['internal']['askedonlinecheck'] = 'false'
 
 
 def save_config():
