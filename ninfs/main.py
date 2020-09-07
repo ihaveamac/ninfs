@@ -109,7 +109,7 @@ def create_desktop_entry(prefix: str = None):
     for s in ('1024x1024', '128x128', '64x64', '32x32', '16x16'):
         img_dir = pjoin(prefix, 'icons', 'hicolor', s, 'apps')
         makedirs(img_dir, exist_ok=True)
-        with open(pjoin(dirname(__file__), 'data', s + '.png'), 'rb') as i, \
+        with open(pjoin(dirname(__file__), 'gui/data', s + '.png'), 'rb') as i, \
                 open(pjoin(img_dir, 'ninfs.png'), 'wb') as o:
             print('Writing', o.name)
             o.write(i.read())
