@@ -90,7 +90,7 @@ class WizardTypeSelector(WizardBase):
 
 
 class WizardMountAdvancedOptions(tk.Toplevel):
-    def __init__(self, parent: 'tk.Wm' = None, *, current: 'dict'):
+    def __init__(self, parent: 'WizardContainer' = None, *, current: 'dict'):
         super().__init__(parent)
 
         self.wm_title('Advanced mount options')
@@ -125,6 +125,10 @@ class WizardMountAdvancedOptions(tk.Toplevel):
 
         ok_button = ttk.Button(container, text='OK', command=ok)
         ok_button.grid(row=1, column=0, columnspan=2, pady=(10, 0))
+
+        self.geometry("+%d+%d" % (parent.winfo_rootx() + 50, parent.winfo_rooty() + 50))
+
+        self.wm_deiconify()
 
     def get_options(self):
         return {'user_access': self.rb_container.get_selected()}
@@ -261,6 +265,9 @@ class WizardContainer(tk.Toplevel):
         super().__init__(parent)
         self.parent = parent
 
+        self.wm_withdraw()
+        self.wm_transient(parent)
+
         container = ttk.Frame(self)
         container.pack(fill=tk.BOTH, expand=True)
 
@@ -293,6 +300,10 @@ class WizardContainer(tk.Toplevel):
 
         self.cancel_button = ttk.Button(self.footer_buttons, text='Cancel', command=cancel_pressed)
         self.cancel_button.pack(side=tk.RIGHT)
+
+        self.geometry("+%d+%d" % (parent.winfo_rootx() + 50, parent.winfo_rooty() + 50))
+
+        self.wm_deiconify()
 
     def set_cancel_enabled(self, status: bool):
         self.cancel_button.configure(state=tk.NORMAL if status else tk.DISABLED)
