@@ -47,7 +47,7 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
     ],
-    install_requires=['pycryptodomex==3.9.8', 'pyctr==0.4.3'],
+    install_requires=['pycryptodomex==3.9.8', 'pyctr==0.4.3', 'haccrypto==0.1.0'],
     # fusepy should be added here once the main repo has a new release with Windows support.
     entry_points={'console_scripts': ['ninfs = ninfs.main:gui',
                                       # not putting in gui_scripts since the cmd window is required and trying to
@@ -74,8 +74,5 @@ setup(
                                       'mount_nand = ninfs.main:main',
                                       'mount_nanddsi = ninfs.main:main',
                                       'mount_nandswitch = ninfs.main:main',
-                                      'mount_nds = ninfs.main:main']},
-    ext_modules=[Extension('ninfs.hac._crypto', sources=['ninfs/hac/_crypto.cpp', 'ninfs/hac/aes.cpp'],
-                           extra_compile_args=['/Ox' if sys.platform == 'win32' else '-O3',
-                                               '' if sys.platform == 'win32' else '-std=c++11'])]
+                                      'mount_nds = ninfs.main:main']}
 )

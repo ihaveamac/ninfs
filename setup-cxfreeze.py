@@ -40,9 +40,18 @@ build_msi_options = {
     'install_icon': 'ninfs/gui/data/windows.ico'
 }
 
-base = None
+executables = [
+    Executable('ninfs/_frozen_main.py',
+               base='Win32GUI' if sys.platform == 'win32' else None,
+               targetName='ninfs',
+               icon='ninfs/gui/data/windows.ico')
+]
+
 if sys.platform == 'win32':
-    base = 'Win32GUI'
+    executables.append(Executable('ninfs/_frozen_main.py',
+                                  base=None,
+                                  targetName='ninfs-console',
+                                  icon='ninfs/gui/data/windows.ico'))
 
 # based on https://github.com/Legrandin/pycryptodome/blob/b3a394d0837ff92919d35d01de9952b8809e802d/setup.py
 with open('ninfs/__init__.py', 'r', encoding='utf-8') as f:
@@ -55,9 +64,5 @@ setup(
     version=version,
     description='FUSE filesystem Python scripts for Nintendo console files',
     options={'build_exe': build_exe_options},
-    executables=[Executable('ninfs/_frozen_main.py', base=base, targetName='ninfs', icon='ninfs/gui/data/windows.ico',
-                            shortcutDir='ninfs', shortcutName='ninfs')],
-    ext_modules=[Extension('ninfs.hac._crypto', sources=['ninfs/hac/_crypto.cpp', 'ninfs/hac/aes.cpp'],
-                           extra_compile_args=['/Ox' if sys.platform == 'win32' else '-O3',
-                                               '' if sys.platform == 'win32' else '-std=c++11'])]
+    executables=executables
 )

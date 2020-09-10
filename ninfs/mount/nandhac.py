@@ -14,7 +14,7 @@ from sys import argv, exit
 from typing import TYPE_CHECKING
 from zlib import crc32
 
-from hac.crypto import XTSN, parse_biskeydump
+from haccrypto.crypto import XTSN, parse_biskeydump
 from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time, realpath
 from . import _common as _c
 
