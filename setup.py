@@ -27,7 +27,7 @@ setup(
     description='FUSE filesystem Python scripts for Nintendo console files',
     long_description=readme,
     long_description_content_type='text/markdown',
-    package_data={'ninfs': ['data/*.png', 'data/*.ico'], 'ninfs.hac': ['openssl-license.txt'] + libcrypto},
+    package_data={'ninfs': ['data/*.png', 'data/*.ico']},
     classifiers=[
         'Topic :: Utilities',
         'License :: OSI Approved :: MIT License',
