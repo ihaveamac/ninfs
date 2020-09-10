@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import platform
 import sys
 
 from setuptools import setup, find_packages, Extension
@@ -10,16 +9,6 @@ if sys.hexversion < 0x030601f0:
 
 with open('README.md', 'r', encoding='utf-8') as f:
     readme = f.read()
-
-if sys.platform == 'darwin':
-    libcrypto = ['libcrypto.1.1.dylib']
-elif sys.platform == 'win32':
-    if platform.architecture()[0] == '32bit':
-        libcrypto = ['libcrypto-1_1.dll']
-    else:
-        libcrypto = ['libcrypto-1_1-x64.dll']
-else:
-    libcrypto = []
 
 # based on https://github.com/Legrandin/pycryptodome/blob/b3a394d0837ff92919d35d01de9952b8809e802d/setup.py
 with open('ninfs/__init__.py', 'r', encoding='utf-8') as f:
