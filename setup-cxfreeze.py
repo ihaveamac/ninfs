@@ -6,7 +6,6 @@ build_exe_options = {
     'includes': [
         'ninfs',
         'ninfs.gui',
-        'ninfs.hac.crypto',
         'ninfs.mount.cci',
         'ninfs.mount.cdn',
         'ninfs.mount.cia',
