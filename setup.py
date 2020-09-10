@@ -64,7 +64,6 @@ setup(
                                       'mount_sd = ninfs.main:main',
                                       'mount_srl = ninfs.main:main',
                                       'mount_threedsx = ninfs.main:main',
-                                      'mount_titledir = ninfs.main:main',
                                       # aliases
                                       'mount_3ds = ninfs.main:main',
                                       'mount_3dsx = ninfs.main:main',
