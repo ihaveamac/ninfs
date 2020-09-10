@@ -1,6 +1,5 @@
 import sys
 from cx_Freeze import setup, Executable
-from distutils.core import Extension
 
 build_exe_options = {
     'includes': [
