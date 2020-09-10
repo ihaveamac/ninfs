@@ -35,10 +35,16 @@ is_mac = sys.platform == 'darwin'
 # cx_Freeze, PyInstaller, etc.
 frozen = getattr(sys, 'frozen', None)
 
+executable = sys.executable
 if is_windows:
     from os.path import isdir as check_mountpoint
     from signal import CTRL_BREAK_EVENT
     from subprocess import CREATE_NEW_PROCESS_GROUP
+
+    if frozen:
+        print('Using console exe')
+        executable = join(dirname(sys.executable), 'ninfs-console.exe')
+        print(executable)
 else:
     from os.path import ismount as check_mountpoint
 
@@ -151,7 +157,7 @@ class NinfsGUI(tk.Tk):
 
     def mount(self, mounttype: 'str', cmdargs: 'List[str]', mountpoint: str, callback_success: 'Callable',
               callback_failed: 'Callable'):
-        args = [sys.executable]
+        args = [executable]
         if not frozen:
             args.append(dirname(dirname(__file__)))
         args.extend(cmdargs)
