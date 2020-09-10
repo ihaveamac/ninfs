@@ -8,7 +8,6 @@ import tkinter as tk
 from typing import TYPE_CHECKING
 
 from .base import WizardBase
-from .. import supportfiles
 
 if TYPE_CHECKING:
     from .. import WizardContainer
