@@ -2,7 +2,7 @@
 
 import sys
 
-from setuptools import setup, find_packages, Extension
+from setuptools import setup, find_packages
 
 if sys.hexversion < 0x030601f0:
     sys.exit('Python 3.6.1+ is required.')
@@ -27,7 +27,7 @@ setup(
     description='FUSE filesystem Python scripts for Nintendo console files',
     long_description=readme,
     long_description_content_type='text/markdown',
-    package_data={'ninfs': ['data/*.png', 'data/*.ico']},
+    package_data={'ninfs.gui': ['data/*.png', 'data/*.ico']},
     classifiers=[
         'Topic :: Utilities',
         'License :: OSI Approved :: MIT License',
