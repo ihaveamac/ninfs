@@ -9,6 +9,8 @@ import tkinter as tk
 import tkinter.ttk as ttk
 from typing import TYPE_CHECKING
 
+from Cryptodome import __version__ as pycryptodomex_version
+
 from .osver import get_os_ver
 # "from .. import" didn't work :/
 from __init__ import __copyright__ as ninfs_copyright
@@ -45,7 +47,14 @@ class NinfsAbout(tk.Toplevel):
         copyright_label.grid(row=1, column=0, padx=pad, pady=(0, pad), sticky=tk.W)
 
         info_label = ttk.Label(container, text=f'Running on Python {python_version}\n' + os_ver)
-        info_label.grid(row=2, column=0, padx=pad, pady=(0, pad), sticky=tk.W)
+        info_label.grid(row=2, column=0, padx=pad, pady=(0, 5), sticky=tk.W)
+
+        module_frame = ttk.Frame(container)
+        module_frame.grid(row=3, column=0, padx=pad, pady=(0, pad//2), sticky=tk.NSEW)
+
+        for idx, l in enumerate([f'pycryptodomex {pycryptodomex_version}', 'pyctr 0.4.3', 'haccrypto 0.1.0']):
+            module_label = ttk.Label(module_frame, text=' - ' + l)
+            module_label.grid(row=idx, column=0, pady=(0, pad//2), sticky=tk.W)
 
         self.geometry("+%d+%d" % (parent.winfo_rootx() + 50, parent.winfo_rooty() + 50))
 
