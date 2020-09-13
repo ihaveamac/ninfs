@@ -6,7 +6,7 @@ Windows, macOS, and Linux are supported.
 <p align="center"><img src="https://github.com/ihaveamac/ninfs/raw/master/resources/ciamount-mac.png" width="882"></p>
 
 ## Supported types
-* Nintendo 3DS:
+* Nintendo 3DS
   * CTR Cart Image (".3ds", ".cci")
   * CDN contents ("cetk", "tmd", and contents)
   * CTR Importable Archive (".cia")
@@ -49,13 +49,12 @@ SeedDB is checked in order of:
 * `~/.3ds/seeddb.bin`
 * `~/3ds/seeddb.bin`
 
-Python 3.6.1+ and pycryptodomex are required. PySide2 is required for the GUI.
-* [fusepy](https://github.com/fusepy/fusepy) is pre-included until [refuse](https://github.com/pleiszenburg/refuse) has a fully stable release.
+Python 3.6.1 or later is required.
 
 ### Windows
-Windows 7 or later is required.
+Windows 8.1 or later is required. [Standalone releases](https://github.com/ihaveamac/ninfs/releases) are available.
 
-(GUI in progress of being re-created.) Python does not have to be installed, but [WinFsp](http://www.secfs.net/winfsp/rel/) is still required.
+[WinFsp](http://www.secfs.net/winfsp/rel/) is required.
 
 #### Install with existing Python
 * Install the latest version of [Python 3](https://www.python.org/downloads/). The x86-64 version is preferred on 64-bit Windows.
@@ -64,18 +63,19 @@ Windows 7 or later is required.
 * Install ninfs with `py -3 -m pip install --upgrade https://github.com/ihaveamac/ninfs/archive/2.0.zip`
 
 ### macOS
-(GUI in progress of being re-created.) Python does not have to be installed, but [FUSE for macOS](https://osxfuse.github.io/) is still required.
+Versions of macOS supported by Apple are highly recommended. OS X Mavericks is the oldest version that should work. [FUSE for macOS](https://osxfuse.github.io/) is required.
+
+No standalone build is available at the moment.
 
 #### Install with existing Python
-Versions of macOS supported by Apple are highly recommended. OS X Mavericks is the oldest version that should work.
-
 * Install the latest version of Python 3. The recommended way is [Homebrew](https://brew.sh). You can also use an installer from [python.org](https://www.python.org/downloads/) or a tool like [pyenv](https://github.com/pyenv/pyenv).
 * Install the latest version of [FUSE for macOS](https://github.com/osxfuse/osxfuse/releases/latest).
 * Install ninfs with `python3 -m pip install --upgrade https://github.com/ihaveamac/ninfs/archive/2.0.zip`
 
 ### Linux
 #### Arch Linux
-ninfs is available in the AUR: [normal](https://aur.archlinux.org/packages/ninfs/), [with gui](https://aur.archlinux.org/packages/ninfs-gui/), [git](https://aur.archlinux.org/packages/ninfs-git/), [git with gui](https://aur.archlinux.org/packages/ninfs-gui-git/)
+(NOTE: git versions out of date while build process stabilizes)  
+ninfs is available in the AUR: [normal](https://aur.archlinux.org/packages/ninfs/), [with gui](https://aur.archlinux.org/packages/ninfs-gui/), ~~[git](https://aur.archlinux.org/packages/ninfs-git/), [git with gui](https://aur.archlinux.org/packages/ninfs-gui-git/)~~
 
 #### Other distributions
 * Recent distributions (e.g. Ubuntu 18.04 and later) should have Python 3.6.1 or later pre-installed, or included in its repositories. If not, you can use an extra repository (e.g. [deadsnakes's PPA](https://launchpad.net/%7Edeadsnakes/+archive/ubuntu/ppa) for Ubuntu), [build from source](https://www.python.org/downloads/source/), or use a tool like [pyenv](https://github.com/pyenv/pyenv).
@@ -85,10 +85,11 @@ ninfs is available in the AUR: [normal](https://aur.archlinux.org/packages/ninfs
 * Install ninfs with `python3 -m pip install --upgrade --user https://github.com/ihaveamac/ninfs/archive/2.0.zip`
   * `--user` is not needed if you are using a virtual environment.
 * You can add a desktop entry with `python3 -m ninfs --install-desktop-entry`. If you want to install to a location other than the default (`$XDG_DATA_HOME`), you can add another argument with a path like `/usr/local/share`.
+* To use the GUI, tkinter needs to be installed. On Debian-/Ubuntu-based systems this is `python3-tk`. On Fedora this is `python3-tkinter`.
 
 ## Usage
 ### Graphical user interface
-A GUI can be used, if ninfs was installed with GUI support, by specifying the type to be `gui` (e.g. Windows: `py -3 -mninfs gui`, \*nix: `python3 -mninfs gui`). The GUI controls mounting and unmounting.
+A GUI can be used by specifying the type to be `gui` (e.g. Windows: `py -3 -mninfs gui`, \*nix: `python3 -mninfs gui`). The GUI controls mounting and unmounting.
 
 ### Command line
 Run a mount script by using "`mount_<type>`" (e.g. `mount_cci game.3ds mountpoint`). Use `-h` to view arguments for a script.
@@ -135,6 +136,8 @@ Developer-unit contents are encrypted with different keys, which can be used wit
   `mount_nandhac --keys prod.keys rawnand.bin mountpoint`
 * Switch NAND backup in multiple parts  
   `mount_nandhac --keys prod.keys -S rawnand.bin.00 mountpoint`
+* Switch NAND encrypted partition dump  
+  `mount_nandhac --keys prod.keys --partition SYSTEM SYSTEM.bin mountpoint`
 * NCCH container (.app, .cxi, .cfa, .ncch):  
   `mount_ncch content.cxi mountpoint`
 * RomFS:  
@@ -150,8 +153,8 @@ Developer-unit contents are encrypted with different keys, which can be used wit
 
 ## Useful tools
 * wwylele's [3ds-save-tool](https://github.com/wwylele/3ds-save-tool) can be used to extract game saves and extra data (DISA and DIFF, respectively).
-  * wwylele's [save3ds](https://github.com/wwylele/save3ds) is a FUSE mount for 3DS save files. Currently only supports macOS and Linux.
-* [OSFMount](https://www.osforensics.com/tools/mount-disk-images.html) for Windows can mount FAT12/FAT16 partitions in NAND backups.
+  * wwylele's [save3ds](https://github.com/wwylele/save3ds) is a tool to interact with 3DS save files and extdata. Extracting and importing works on all platforms. The FUSE part only works on macOS and Linux.
+* [OSFMount](https://www.osforensics.com/tools/mount-disk-images.html) for Windows can mount FAT12/FAT16/FAT32 partitions in NAND backups.
 
 ## Related tools
 * roothorick's [BUSEHAC](https://gitlab.com/roothorick/busehac) is a Linux driver for encrypted Nintendo Switch NANDs.
