@@ -61,8 +61,7 @@ Windows 7 or later is required.
 * Install the latest version of [Python 3](https://www.python.org/downloads/). The x86-64 version is preferred on 64-bit Windows.
   * Alternatively, use [Python 3.7 from the Microsoft Store](https://www.microsoft.com/en-us/p/python-37/9nj46sx7x90p). Note that `python` or `python3` must be used, not `py -3`.
 * Install the latest version of [WinFsp](http://www.secfs.net/winfsp/rel/).
-* Install ninfs with `py -3 -m pip install --upgrade https://github.com/ihaveamac/ninfs/archive/2.0.zip`.
-  * With GUI support: `py -3 -m pip install --upgrade https://github.com/ihaveamac/ninfs/archive/2.0.zip#egg=ninfs[gui]`
+* Install ninfs with `py -3 -m pip install --upgrade https://github.com/ihaveamac/ninfs/archive/2.0.zip`
 
 ### macOS
 (GUI in progress of being re-created.) Python does not have to be installed, but [FUSE for macOS](https://osxfuse.github.io/) is still required.
@@ -72,8 +71,7 @@ Versions of macOS supported by Apple are highly recommended. OS X Mavericks is t
 
 * Install the latest version of Python 3. The recommended way is [Homebrew](https://brew.sh). You can also use an installer from [python.org](https://www.python.org/downloads/) or a tool like [pyenv](https://github.com/pyenv/pyenv).
 * Install the latest version of [FUSE for macOS](https://github.com/osxfuse/osxfuse/releases/latest).
-* Install ninfs with `python3 -m pip install --upgrade https://github.com/ihaveamac/ninfs/archive/2.0.zip`.
-  * With GUI support: `python3 -m pip install --upgrade https://github.com/ihaveamac/ninfs/archive/2.0.zip#egg=ninfs[gui]`
+* Install ninfs with `python3 -m pip install --upgrade https://github.com/ihaveamac/ninfs/archive/2.0.zip`
 
 ### Linux
 #### Arch Linux
@@ -84,9 +82,8 @@ ninfs is available in the AUR: [normal](https://aur.archlinux.org/packages/ninfs
 * Most distributions should have libfuse enabled/installed by default. Use your package manager if it isn't.
 * Some dependencies may need to be installed to build and install ninfs.
   * On Debian-based systems, `g++` and `python3-dev` are required for the C extensions. To build and install as a package, `python3-setuptools` and `python3-wheel` are required.
-* Install ninfs with `python3 -m pip install --upgrade --user https://github.com/ihaveamac/ninfs/archive/2.0.zip`.
+* Install ninfs with `python3 -m pip install --upgrade --user https://github.com/ihaveamac/ninfs/archive/2.0.zip`
   * `--user` is not needed if you are using a virtual environment.
-  * With GUI support: `python3 -m pip install --upgrade --user https://github.com/ihaveamac/ninfs/archive/2.0.zip#egg=ninfs[gui]`
 * You can add a desktop entry with `python3 -m ninfs --install-desktop-entry`. If you want to install to a location other than the default (`$XDG_DATA_HOME`), you can add another argument with a path like `/usr/local/share`.
 
 ## Usage
