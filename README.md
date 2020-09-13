@@ -59,7 +59,7 @@ Windows 7 or later is required.
 
 #### Install with existing Python
 * Install the latest version of [Python 3](https://www.python.org/downloads/). The x86-64 version is preferred on 64-bit Windows.
-  * Alternatively, use [Python 3.7 from the Microsoft Store](https://www.microsoft.com/en-us/p/python-37/9nj46sx7x90p). Note that `python` or `python3` must be used, not `py -3`.
+  * Python from the Microsoft Store can also be used. If this is used, `python3` must be used instead of `py -3`. This version has some limitations however, such as not being able to mount to directories.
 * Install the latest version of [WinFsp](http://www.secfs.net/winfsp/rel/).
 * Install ninfs with `py -3 -m pip install --upgrade https://github.com/ihaveamac/ninfs/archive/2.0.zip`
 
