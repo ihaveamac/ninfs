@@ -40,15 +40,15 @@ build_msi_options = {
 
 executables = [
     Executable('ninfs/_frozen_main.py',
-               base='Win32GUI' if sys.platform == 'win32' else None,
+               base=None,
                targetName='ninfs',
                icon='ninfs/gui/data/windows.ico')
 ]
 
 if sys.platform == 'win32':
     executables.append(Executable('ninfs/_frozen_main.py',
-                                  base=None,
-                                  targetName='ninfs-console',
+                                  base='Win32GUI',
+                                  targetName='ninfsw',
                                   icon='ninfs/gui/data/windows.ico'))
 
 # based on https://github.com/Legrandin/pycryptodome/blob/b3a394d0837ff92919d35d01de9952b8809e802d/setup.py
