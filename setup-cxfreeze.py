@@ -40,7 +40,6 @@ build_msi_options = {
 
 executables = [
     Executable('ninfs/_frozen_main.py',
-               base=None,
                targetName='ninfs',
                icon='ninfs/gui/data/windows.ico')
 ]
@@ -50,6 +49,9 @@ if sys.platform == 'win32':
                                   base='Win32GUI',
                                   targetName='ninfsw',
                                   icon='ninfs/gui/data/windows.ico'))
+
+    executables.append(Executable('ninfs/winpathmodify.py',
+                                  targetName='winpathmodify'))
 
 # based on https://github.com/Legrandin/pycryptodome/blob/b3a394d0837ff92919d35d01de9952b8809e802d/setup.py
 with open('ninfs/__init__.py', 'r', encoding='utf-8') as f:

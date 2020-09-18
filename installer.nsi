@@ -1,0 +1,149 @@
+; This file is a part of ninfs.
+;
+; Copyright (c) 2017-2020 Ian Burgwin
+; This file is licensed under The MIT License (MIT).
+; You can find the full license text in LICENSE.md in the root of this project.
+
+;NSIS Modern User Interface
+;Basic Example Script
+;Written by Joost Verburg
+
+Unicode True
+
+;--------------------------------
+;Include Modern UI
+
+  !include "MUI2.nsh"
+
+;--------------------------------
+;General
+
+  !define REG_ROOT "HKCU"
+  !define REG_PATH "Software\ninfs"
+
+  !define NAME "ninfs ${VERSION}"
+
+  ;Name and file
+  Name "${NAME}"
+  OutFile "dist\ninfs-${VERSION}-win32-installer.exe"
+
+  ;Default installation folder
+  InstallDir "$LOCALAPPDATA\ninfs"
+  
+  ;Get installation folder from registry if available
+  InstallDirRegKey "${REG_ROOT}" "${REG_PATH}" ""
+
+  ;Request application privileges for Windows Vista
+  RequestExecutionLevel user
+
+;!include LogicLib.nsh
+
+;--------------------------------
+;Interface Settings
+
+  !define MUI_ABORTWARNING
+
+  !define MUI_STARTMENUPAGE_DEFAULTFOLDER "ninfs"
+  !define MUI_STARTMENUPAGE_REGISTRY_ROOT "${REG_ROOT}"
+  !define MUI_STARTMENUPAGE_REGISTRY_KEY "${REG_PATH}"
+  !define MUI_STARTMENUPAGE_REGISTRY_VALUENAME "Start Menu Folder"
+
+;--------------------------------
+;Pages
+
+  !insertmacro MUI_PAGE_WELCOME
+  !insertmacro MUI_PAGE_LICENSE "LICENSE.md"
+  !insertmacro MUI_PAGE_COMPONENTS
+  !insertmacro MUI_PAGE_DIRECTORY
+  Var StartMenuFolder
+  !insertmacro MUI_PAGE_STARTMENU "Application" $StartMenuFolder
+  !insertmacro MUI_PAGE_INSTFILES
+  
+  !insertmacro MUI_UNPAGE_CONFIRM
+  !insertmacro MUI_UNPAGE_INSTFILES
+  
+;--------------------------------
+;Languages
+
+  !insertmacro MUI_LANGUAGE "English"
+
+;--------------------------------
+;Installer Sections
+
+Section "ninfs Application" SecInstall
+  SectionIn RO
+
+  SetOutPath "$INSTDIR"
+  
+  ;ADD YOUR OWN FILES HERE...
+  File "LICENSE.md"
+  File "README.md"
+  File /r "build\exe.win32-3.8\"
+
+  ;Store installation folder
+  WriteRegStr HKCU "Software\ninfs" "" $INSTDIR
+  
+  ;Create uninstaller
+  WriteUninstaller "$INSTDIR\Uninstall.exe"
+
+  !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
+  CreateDirectory "$SMPROGRAMS\$StartMenuFolder"
+  Delete "$SMPROGRAMS\$StartMenuFolder\ninfs*.lnk"
+  CreateShortCut "$SMPROGRAMS\$StartMenuFolder\${NAME}.lnk" "$OUTDIR\ninfsw.exe" "" "$OUTDIR\lib\ninfs\gui\data\windows.ico"
+  CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk" "$OUTDIR\Uninstall.exe"
+  !insertmacro MUI_STARTMENU_WRITE_END
+
+SectionEnd
+
+Section /o "Add to PATH" SecPATH
+  ExecWait '"$INSTDIR/winpathmodify.exe" add "$INSTDIR"'
+SectionEnd
+
+LangString DESC_SecInstall ${LANG_ENGLISH} "The main ninfs application."
+LangString DESC_SecPATH ${LANG_ENGLISH} "Add the install directory to PATH for command line use."
+
+!insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecInstall} $(DESC_SecInstall)
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecPATH} $(DESC_SecPATH)
+!insertmacro MUI_FUNCTION_DESCRIPTION_END
+
+;--------------------------------
+;Descriptions
+
+;   ;Language strings
+;   LangString DESC_SecDummy ${LANG_ENGLISH} "A test section."
+; 
+;   ;Assign language strings to sections
+;   !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
+;     !insertmacro MUI_DESCRIPTION_TEXT ${SecDummy} $(DESC_SecDummy)
+;   !insertmacro MUI_FUNCTION_DESCRIPTION_END
+
+;--------------------------------
+;Uninstaller Section
+
+Section "Uninstall"
+
+  !insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder
+  Delete "$SMPROGRAMS\$StartMenuFolder\ninfs*.lnk"
+  Delete "$SMPROGRAMS\$StartMenuFolder\uninstall.lnk"
+  RMDir "$SMPROGRAMS\$StartMenuFolder"
+
+  ExecWait '"$INSTDIR/winpathmodify.exe" remove "$INSTDIR"'
+
+  Delete "$INSTDIR\LICENSE.md"
+  Delete "$INSTDIR\README.md"
+  Delete "$INSTDIR\api-ms-win-crt-*.dll"
+  Delete "$INSTDIR\python3.dll"
+  Delete "$INSTDIR\python38.dll"
+  Delete "$INSTDIR\vcruntime140.dll"
+  Delete "$INSTDIR\ninfs.exe"
+  Delete "$INSTDIR\ninfsw.exe"
+  RMDir /r "$INSTDIR\lib"
+
+  Delete "$INSTDIR\Uninstall.exe"
+
+  RMDir "$INSTDIR"
+
+  DeleteRegKey /ifempty HKCU "Software\ninfs"
+
+SectionEnd
