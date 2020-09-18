@@ -43,7 +43,7 @@ if is_windows:
 
     if frozen:
         print('Using console exe')
-        executable = join(dirname(sys.executable), 'ninfs-console.exe')
+        executable = join(dirname(sys.executable), 'ninfs.exe')
         print(executable)
 else:
     from os.path import ismount as check_mountpoint
