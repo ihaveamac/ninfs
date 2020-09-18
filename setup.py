@@ -38,7 +38,8 @@ setup(
     ],
     install_requires=['pycryptodomex==3.9.8', 'pyctr==0.4.3', 'haccrypto==0.1.0'],
     # fusepy should be added here once the main repo has a new release with Windows support.
-    entry_points={'console_scripts': ['ninfs = ninfs.main:gui',
+    entry_points={'gui_scripts': ['ninfsw = ninfs.main:gui'],
+                  'console_scripts': ['ninfs = ninfs.main:gui',
                                       # not putting in gui_scripts since the cmd window is required and trying to
                                       # remove it breaks some other stuff with subprocess management ?!?
                                       'mount_cci = ninfs.main:main',
