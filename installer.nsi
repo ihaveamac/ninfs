@@ -138,6 +138,7 @@ Section "Uninstall"
   Delete "$INSTDIR\vcruntime140.dll"
   Delete "$INSTDIR\ninfs.exe"
   Delete "$INSTDIR\ninfsw.exe"
+  Delete "$INSTDIR\winpathmodify.exe"
   RMDir /r "$INSTDIR\lib"
 
   Delete "$INSTDIR\Uninstall.exe"
