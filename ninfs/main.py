@@ -120,8 +120,11 @@ def main():
 
 
 def gui(_allow_admin: bool = False):
-    from gui import start_gui
-    return start_gui()
+    if len(argv) < 2 or argv[1] in {'gui', 'gui_i_want_to_be_an_admin_pls'}:
+        from gui import start_gui
+        start_gui()
+    else:
+        exit(mount(argv.pop(1).lower()))
 
 
 if __name__ == '__main__':
