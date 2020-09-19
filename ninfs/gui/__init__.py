@@ -75,7 +75,7 @@ class NinfsGUI(tk.Tk):
 
         self.wm_title('ninfs')
 
-        self.ico_path = join(dirname(__file__), 'data', 'windows.ico')
+        self.ico_path = self.get_data_file(join('data', 'windows.ico'))
         self.wm_iconbitmap(self.ico_path)
 
         self.wm_minsize(500, 300)
@@ -124,6 +124,9 @@ class NinfsGUI(tk.Tk):
         unmount.pack(side=tk.LEFT)
 
         self.wm_protocol('WM_DELETE_WINDOW', self.on_close)
+
+    def get_data_file(self, path):
+        return join(dirname(__file__), path)
 
     def mainloop(self, n=0):
         if not get_bool('internal', 'askedonlinecheck'):

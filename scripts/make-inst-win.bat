@@ -2,4 +2,4 @@ for /f "delims=" %%V in ('py -3 -c "from ninfs import __version__; print(__versi
 
 mkdir dist
 
-"C:\Program Files (x86)\NSIS\makensis.exe" /DVERSION=%VERSION% installer.nsi
+"C:\Program Files (x86)\NSIS\makensis.exe" /NOCD /DVERSION=%VERSION% wininstbuild\installer.nsi

@@ -7,6 +7,8 @@
 import sys
 import tkinter as tk
 import tkinter.ttk as ttk
+import webbrowser
+from os.path import join
 from typing import TYPE_CHECKING
 
 from Cryptodome import __version__ as pycryptodomex_version
@@ -23,6 +25,27 @@ pad = 10
 
 python_version = sys.version.split()[0]
 os_ver = get_os_ver()
+
+
+class LicenseViewer(ttk.Frame):
+    def __init__(self, parent: 'tk.BaseWidget' = None, *, text: str):
+        super().__init__(parent)
+
+        self.rowconfigure(0, weight=1)
+        self.columnconfigure(0, weight=1)
+        self.columnconfigure(1, weight=0)
+
+        scrollbar = ttk.Scrollbar(self, orient=tk.VERTICAL)
+        scrollbar.grid(row=0, column=1, sticky=tk.NSEW)
+
+        textarea = tk.Text(self, wrap='word', yscrollcommand=scrollbar.set)
+        textarea.grid(row=0, column=0, sticky=tk.NSEW)
+
+        scrollbar.configure(command=textarea.yview)
+
+        textarea.insert(tk.END, text)
+
+        textarea.configure(state=tk.DISABLED)
 
 
 class NinfsAbout(tk.Toplevel):
@@ -46,15 +69,43 @@ class NinfsAbout(tk.Toplevel):
         copyright_label = ttk.Label(container, text=ninfs_copyright)
         copyright_label.grid(row=1, column=0, padx=pad, pady=(0, pad), sticky=tk.W)
 
-        info_label = ttk.Label(container, text=f'Running on Python {python_version}\n' + os_ver)
-        info_label.grid(row=2, column=0, padx=pad, pady=(0, 5), sticky=tk.W)
+        copyright_label = ttk.Label(container, text='This program uses several libraries and modules, which have '
+                                                    'their licenses below.')
+        copyright_label.grid(row=2, column=0, padx=pad, pady=(0, pad), sticky=tk.W)
 
-        module_frame = ttk.Frame(container)
-        module_frame.grid(row=3, column=0, padx=pad, pady=(0, pad//2), sticky=tk.NSEW)
+        # tab name, license file name, url
+        info = [
+            (f'ninfs {ninfs_version}', 'ninfs.md', 'https://github.com/ihaveamac/ninfs',
+             'ninfs - Copyright (c) 2017-2020 Ian Burgwin'),
+            (f'WinFsp 2020.1', 'winfsp.txt', 'https://github.com/billziss-gh/winfsp',
+             'WinFsp - Windows File System Proxy, Copyright (C) Bill Zissimopoulos'),
+            (f'pycryptodomex {pycryptodomex_version}', 'pycryptodome.rst',
+             'https://github.com/Legrandin/pycryptodome', 'PyCryptodome - multiple licenses'),
+            ('pyctr 0.4.3', 'pyctr', 'https://github.com/ihaveamac/pyctr',
+             'pyctr - Copyright (c) 2017-2020 Ian Burgwin'),
+            ('haccrypto 0.1.0', 'haccrypto.md', 'https://github.com/luigoalma/haccrypto',
+             'haccrypto - Copyright (c) 2017-2020 Ian Burgwin & Copyright (c) 2020 Luis Marques')
+        ]
 
-        for idx, l in enumerate([f'pycryptodomex {pycryptodomex_version}', 'pyctr 0.4.3', 'haccrypto 0.1.0']):
-            module_label = ttk.Label(module_frame, text=' - ' + l)
-            module_label.grid(row=idx, column=0, pady=(0, pad//2), sticky=tk.W)
+        license_notebook = ttk.Notebook(container)
+        license_notebook.grid(row=3, column=0, padx=pad, pady=(0, pad))
+
+        for tab_name, license_file, url, header in info:
+            print([tab_name, license_file, url])
+            frame = ttk.Frame(license_notebook)
+            license_notebook.add(frame, text=tab_name)
+
+            license_header_label = ttk.Label(frame, text=header)
+            license_header_label.grid(row=0, sticky=tk.W, padx=pad//2, pady=pad//2)
+
+            url_button = ttk.Button(frame,
+                                    text='Open website - ' + url,
+                                    command=lambda: webbrowser.open(url))
+            url_button.grid(row=1)
+
+            with open(parent.get_data_file(join('data', 'licenses', license_file)), 'r', encoding='utf-8') as f:
+                license_frame = LicenseViewer(frame, text=f.read())
+                license_frame.grid(row=2)
 
         self.geometry("+%d+%d" % (parent.winfo_rootx() + 50, parent.winfo_rooty() + 50))
 

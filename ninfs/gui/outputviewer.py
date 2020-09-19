@@ -9,11 +9,11 @@ import tkinter.ttk as ttk
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import List
+    from typing import Iterable
 
 
 class OutputViewer(ttk.Frame):
-    def __init__(self, parent: 'tk.BaseWidget' = None, *, output: 'List[str]'):
+    def __init__(self, parent: 'tk.BaseWidget' = None, *, output: 'Iterable[str]'):
         super().__init__(parent)
 
         self.rowconfigure(0, weight=1)

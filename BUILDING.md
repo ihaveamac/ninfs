@@ -20,6 +20,11 @@ Build the standalone zip:
 scripts\make-zip-win.bat
 ```
 
+Build the NSIS installer (by default this depends on it being installed to `C:\Program Files (x86)\NSIS`):
+```
+scripts\make-inst-win.bat
+```
+
 ## Wheel and source dist build
 `py -3 setup.py bdist_wheel` - build multi-platform py3 wheel
 `py -3 setup.py sdist` - build source distribution

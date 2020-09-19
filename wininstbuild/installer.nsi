@@ -23,6 +23,8 @@ Unicode True
 
   !define NAME "ninfs ${VERSION}"
 
+  !define WINFSP_MSI_NAME "winfsp-1.7.20172.msi"
+
   ;Name and file
   Name "${NAME}"
   OutFile "dist\ninfs-${VERSION}-win32-installer.exe"
@@ -36,7 +38,7 @@ Unicode True
   ;Request application privileges for Windows Vista
   RequestExecutionLevel user
 
-;!include LogicLib.nsh
+  !include LogicLib.nsh
 
 ;--------------------------------
 ;Interface Settings
@@ -58,10 +60,13 @@ Unicode True
   Var StartMenuFolder
   !insertmacro MUI_PAGE_STARTMENU "Application" $StartMenuFolder
   !insertmacro MUI_PAGE_INSTFILES
-  
+  !insertmacro MUI_PAGE_FINISH
+
+  !define MUI_FINISHPAGE_TEXT "${NAME} has been uninstalled from your computer.$\r$\n$\r$\nNOTE: WinFsp needs to be removed separately if it is not being used for any other application."
   !insertmacro MUI_UNPAGE_CONFIRM
   !insertmacro MUI_UNPAGE_INSTFILES
-  
+  !insertmacro MUI_UNPAGE_FINISH
+
 ;--------------------------------
 ;Languages
 
@@ -74,8 +79,14 @@ Section "ninfs Application" SecInstall
   SectionIn RO
 
   SetOutPath "$INSTDIR"
-  
-  ;ADD YOUR OWN FILES HERE...
+
+  ReadRegStr $0 HKLM "SOFTWARE\WinFsp" "InstallDir"
+  ${If} ${Errors}
+    ; WinFsp needs installing
+    File "wininstbuild\${WINFSP_MSI_NAME}"
+    ExecWait 'msiexec /i "$INSTDIR\${WINFSP_MSI_NAME}" /passive'
+  ${EndIf}
+
   File "LICENSE.md"
   File "README.md"
   File /r "build\exe.win32-3.8\"
@@ -99,29 +110,21 @@ Section /o "Add to PATH" SecPATH
   ExecWait '"$INSTDIR/winpathmodify.exe" add "$INSTDIR"'
 SectionEnd
 
-LangString DESC_SecInstall ${LANG_ENGLISH} "The main ninfs application."
-LangString DESC_SecPATH ${LANG_ENGLISH} "Add the install directory to PATH for command line use."
-
-!insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
-  !insertmacro MUI_DESCRIPTION_TEXT ${SecInstall} $(DESC_SecInstall)
-  !insertmacro MUI_DESCRIPTION_TEXT ${SecPATH} $(DESC_SecPATH)
-!insertmacro MUI_FUNCTION_DESCRIPTION_END
-
 ;--------------------------------
 ;Descriptions
 
-;   ;Language strings
-;   LangString DESC_SecDummy ${LANG_ENGLISH} "A test section."
-; 
-;   ;Assign language strings to sections
-;   !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
-;     !insertmacro MUI_DESCRIPTION_TEXT ${SecDummy} $(DESC_SecDummy)
-;   !insertmacro MUI_FUNCTION_DESCRIPTION_END
+  LangString DESC_SecInstall ${LANG_ENGLISH} "The main ninfs application."
+  LangString DESC_SecPATH ${LANG_ENGLISH} "Add the install directory to PATH for command line use."
+
+  !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
+    !insertmacro MUI_DESCRIPTION_TEXT ${SecInstall} $(DESC_SecInstall)
+    !insertmacro MUI_DESCRIPTION_TEXT ${SecPATH} $(DESC_SecPATH)
+  !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 ;--------------------------------
 ;Uninstaller Section
 
-Section "Uninstall"
+Section "Uninstall" SecUninstall
 
   !insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder
   Delete "$SMPROGRAMS\$StartMenuFolder\ninfs*.lnk"
@@ -139,6 +142,7 @@ Section "Uninstall"
   Delete "$INSTDIR\ninfs.exe"
   Delete "$INSTDIR\ninfsw.exe"
   Delete "$INSTDIR\winpathmodify.exe"
+  Delete "$INSTDIR\winfsp*.msi"
   RMDir /r "$INSTDIR\lib"
 
   Delete "$INSTDIR\Uninstall.exe"
