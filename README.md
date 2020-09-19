@@ -52,9 +52,13 @@ SeedDB is checked in order of:
 Python 3.6.1 or later is required.
 
 ### Windows
-Windows 8.1 or later is required. [Standalone releases](https://github.com/ihaveamac/ninfs/releases) are available.
+Windows 8.1 or later is required.
 
-[WinFsp](http://www.secfs.net/winfsp/rel/) is required.
+#### Installer
+An installer is provided in [releases](https://github.com/ihaveamac/ninfs/releases). It includes both ninfs and WinFsp, which is installed if required.
+
+#### Standalone release
+A standalone zip is also provided in [releases](https://github.com/ihaveamac/ninfs/releases). [WinFsp](http://www.secfs.net/winfsp/rel/) must be installed separately.
 
 #### Install with existing Python
 * Install the latest version of [Python 3](https://www.python.org/downloads/). The x86-64 version is preferred on 64-bit Windows.
