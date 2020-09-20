@@ -1,0 +1,3 @@
+pyctr==0.4.3
+haccrypto==0.1.0
+pycryptodomex==3.9.8
