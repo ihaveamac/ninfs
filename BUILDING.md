@@ -7,7 +7,7 @@ This expects Python 3.8 32-bit to be installed.
 
 Install the dependencies:
 ```batch
-py -3.8-32 -m pip install --user pycryptodomex==3.9.8 pyctr==0.4.3 cx-Freeze==6.2
+py -3.8-32 -m pip install --user cx-Freeze==6.2 -r requirements.txt
 ```
 
 Build the exe:
