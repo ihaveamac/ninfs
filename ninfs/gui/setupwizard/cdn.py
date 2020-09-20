@@ -34,9 +34,14 @@ class CDNSetup(WizardBase):
                                                                                      'Select seeddb file')
         seeddb_container.pack(fill=tk.X, expand=True)
 
+        seed_container, seed_textbox, seed_textbox_var = self.make_entry('OR Enter the seed '
+                                                                         '(optional if seeddb is used):')
+        seed_container.pack(fill=tk.X, expand=True)
+
         self.main_textbox_var = main_textbox_var
         self.b9_textbox_var = b9_textbox_var
         self.seeddb_textbox_var = seeddb_textbox_var
+        self.seed_textbox_var = seed_textbox_var
 
         main_textbox_var.trace_add('write', callback)
         b9_textbox_var.trace_add('write', callback)
@@ -50,6 +55,7 @@ class CDNSetup(WizardBase):
         main_file = self.main_textbox_var.get().strip()
         b9_file = self.b9_textbox_var.get().strip()
         seeddb_file = self.seeddb_textbox_var.get().strip()
+        seed = self.seed_textbox_var.get().replace(' ', '')
 
         if b9_file:
             supportfiles.last_b9_file = b9_file
@@ -59,7 +65,9 @@ class CDNSetup(WizardBase):
         args = ['cdn', main_file]
         if b9_file:
             args += ['--boot9', b9_file]
-        if seeddb_file:
+        if seed:
+            args += ['--seed', seed]
+        elif seeddb_file:
             args += ['--seeddb', seeddb_file]
 
         self.wizardcontainer.show_mount_point_selector('CDN', args)
