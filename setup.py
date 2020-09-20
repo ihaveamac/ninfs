@@ -36,7 +36,7 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
     ],
-    install_requires=['pycryptodomex==3.9.8', 'pyctr==0.4.3', 'haccrypto==0.1.0'],
+    install_requires=['pycryptodomex==3.9.8', 'pyctr==0.4.4', 'haccrypto==0.1.0'],
     # fusepy should be added here once the main repo has a new release with Windows support.
     entry_points={'gui_scripts': ['ninfsw = ninfs.main:gui'],
                   'console_scripts': ['ninfs = ninfs.main:gui',
