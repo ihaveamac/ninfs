@@ -14,6 +14,7 @@ from os.path import dirname, join
 from pprint import pformat
 from subprocess import Popen, PIPE, STDOUT, TimeoutExpired, check_call
 from threading import Thread
+from traceback import format_exc
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
@@ -73,6 +74,8 @@ class NinfsGUI(tk.Tk):
         container = ttk.Frame(self)
         container.pack(fill=tk.BOTH, expand=True)
 
+        self.wm_withdraw()
+
         self.wm_title('ninfs')
 
         self.ico_path = self.get_data_file(join('data', 'windows.ico'))
@@ -128,7 +131,36 @@ class NinfsGUI(tk.Tk):
     def get_data_file(self, path):
         return join(dirname(__file__), path)
 
+    def check_fuse(self):
+        try:
+            from ninfs import fuse
+        except EnvironmentError as e:
+            if e.args[0] == 'Unable to find libfuse':
+                if is_windows:
+                    res = mb.askyesno('Failed to load libfuse',
+                                      'Failed to load libfuse. WinFsp needs to be installed.\n\n'
+                                      'Would you like to open the WinFsp download page?\n'
+                                      'http://www.secfs.net/winfsp/rel/')
+                    if res:
+                        webbrowser.open('http://www.secfs.net/winfsp/rel/')
+                elif is_mac:
+                    res = mb.askyesno('Failed to load libfuse',
+                                      'Failed to load libfuse. FUSE for macOS needs to be installed.\n\n'
+                                      'Would you like to open the FUSE for macOS download page?\n'
+                                      'https://osxfuse.github.io')
+                    if res:
+                        webbrowser.open('https://osxfuse.github.io')
+                else:
+                    mb.showerror('Failed to load libfuse.')
+                return False
+        except Exception:
+            mb.showerror('Failed to import fusepy.\n\n' + format_exc())
+            return False
+        return True
+
     def mainloop(self, n=0):
+        self.wm_deiconify()
+
         if not get_bool('internal', 'askedonlinecheck'):
             message = '''
             Check for updates online?
@@ -296,6 +328,8 @@ def start_gui():
             else:
                 windll.user32.ShowWindow(windll.kernel32.GetConsoleWindow(), 0)  # SW_HIDE
 
-    window.mainloop()
-
-    return 0
+    if window.check_fuse():
+        window.mainloop()
+        return 0
+    else:
+        return 70
