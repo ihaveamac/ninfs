@@ -90,6 +90,11 @@ class NinfsAbout(tk.Toplevel):
         license_notebook = ttk.Notebook(container)
         license_notebook.grid(row=3, column=0, padx=pad, pady=(0, pad))
 
+        def cmd_maker(do_url):
+            def func():
+                webbrowser.open(do_url)
+            return func
+
         for tab_name, license_file, url, header in info:
             print([tab_name, license_file, url])
             frame = ttk.Frame(license_notebook)
@@ -100,7 +105,7 @@ class NinfsAbout(tk.Toplevel):
 
             url_button = ttk.Button(frame,
                                     text='Open website - ' + url,
-                                    command=lambda: webbrowser.open(url))
+                                    command=cmd_maker(url))
             url_button.grid(row=1)
 
             with open(parent.get_data_file(join('data', 'licenses', license_file)), 'r', encoding='utf-8') as f:
