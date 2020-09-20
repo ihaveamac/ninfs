@@ -168,12 +168,12 @@ class CTRNandImageMount(LoggingMixIn, Operations):
         nand_fp.seek(0x12C00)
         keysect_enc = nand_fp.read(0x200)
         if len(set(keysect_enc)) != 1:
-            keysect_dec = self.crypto.create_ecb_cipher(0x11).decrypt(keysect_enc)
+            keysect_dec = self.crypto.create_ecb_cipher(Keyslot.New3DSKeySector).decrypt(keysect_enc)
             # i'm cheating here by putting the decrypted version in memory and
             #   not reading from the image every time. but it's not AES-CTR so
             #   fuck that.
-            self.files['/sector0x96.bin'] = {'size': 0x200, 'offset': 0x12C00, 'keyslot': 0x11, 'type': 'keysect',
-                                             'content': keysect_dec}
+            self.files['/sector0x96.bin'] = {'size': 0x200, 'offset': 0x12C00, 'keyslot': Keyslot.New3DSKeySector,
+                                             'type': 'keysect', 'content': keysect_dec}
 
         ncsd_part_fstype = ncsd_header[0x10:0x18]
         ncsd_part_crypttype = ncsd_header[0x18:0x20]
@@ -391,7 +391,7 @@ class CTRNandImageMount(LoggingMixIn, Operations):
             keysect = bytearray(fi['content'])
             keysect[offset:offset + len(data)] = data
             final = bytes(keysect)
-            cipher_keysect = self.crypto.create_ecb_cipher(0x11)
+            cipher_keysect = self.crypto.create_ecb_cipher(fi['keyslot'])
             self.f.seek(fi['offset'])
             self.f.write(cipher_keysect.encrypt(final))
             # noinspection PyTypeChecker
