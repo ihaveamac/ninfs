@@ -20,14 +20,4 @@ if argv[1] == '--install-desktop-entry':
     create_desktop_entry(prefix)
     exit(0)
 
-if argv[1] in {'-V', '--version'}:
-    # this kinda feels wrong...
-    from __init__ import __version__
-    pyver = '{0[0]}.{0[1]}.{0[2]}'.format(version_info)
-    if version_info[3] != 'final':
-        pyver += '{0[3][0]}{0[4]}'.format(version_info)
-    # this should stay as str.format so it runs on older versions
-    print('ninfs v{0} on Python {1} - https://github.com/ihaveamac/ninfs'.format(__version__, pyver))
-    exit(0)
-
 exit(mount(argv.pop(1).lower()))

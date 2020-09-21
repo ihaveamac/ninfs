@@ -39,7 +39,18 @@ def exit_print_types():
 
 def mount(mount_type: str, return_doc: bool = False) -> int:
     if mount_type in {'gui', 'gui_i_want_to_be_an_admin_pls'}:
-        return gui()
+        from gui import start_gui
+        return start_gui()
+
+    if mount_type in {'-v', '--version'}:
+        # this kinda feels wrong...
+        from __init__ import __version__
+        pyver = '{0[0]}.{0[1]}.{0[2]}'.format(version_info)
+        if version_info[3] != 'final':
+            pyver += '{0[3][0]}{0[4]}'.format(version_info)
+        # this should stay as str.format so it runs on older versions
+        print('ninfs v{0} on Python {1} - https://github.com/ihaveamac/ninfs'.format(__version__, pyver))
+        return 0
 
     # noinspection PyProtectedMember
     from pyctr.crypto import BootromNotFoundError
