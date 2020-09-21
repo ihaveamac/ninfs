@@ -64,5 +64,6 @@ setup(
                                       'mount_nand = ninfs.main:main',
                                       'mount_nanddsi = ninfs.main:main',
                                       'mount_nandswitch = ninfs.main:main',
+                                      'mount_nandnx = ninfs.main:main',
                                       'mount_nds = ninfs.main:main']}
 )
