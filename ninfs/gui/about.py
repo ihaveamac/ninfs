@@ -24,6 +24,7 @@ if TYPE_CHECKING:
 pad = 10
 
 python_version = sys.version.split()[0]
+pybits = 64 if sys.maxsize > 0xFFFFFFFF else 32
 os_ver = get_os_ver()
 
 
@@ -66,8 +67,8 @@ class NinfsAbout(tk.Toplevel):
         header_label = ttk.Label(container, text=f'ninfs {ninfs_version}', font=(None, 15, 'bold'))
         header_label.grid(row=0, column=0, padx=pad, pady=pad, sticky=tk.W)
 
-        copyright_label = ttk.Label(container, text=ninfs_copyright)
-        copyright_label.grid(row=1, column=0, padx=pad, pady=(0, pad), sticky=tk.W)
+        version_label = ttk.Label(container, text=f'Running on {python_version} {pybits}-bit')
+        version_label.grid(row=1, column=0, padx=pad, pady=(0, pad), sticky=tk.W)
 
         copyright_label = ttk.Label(container, text='This program uses several libraries and modules, which have '
                                                     'their licenses below.')
