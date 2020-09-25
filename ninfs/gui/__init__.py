@@ -178,8 +178,12 @@ class NinfsGUI(tk.Tk):
         super().mainloop(n)
 
     def on_close(self):
-        self.unmount_all(force=True)
-        self.destroy()
+        if self.mounts:
+            if mb.askokcancel('Exiting', 'Closing ninfs will unmount all contents.'):
+                self.unmount_all(force=True)
+                self.destroy()
+        else:
+            self.destroy()
 
     def show_settings(self):
         settings_window = NinfsSettings(self)
