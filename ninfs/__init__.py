@@ -7,4 +7,4 @@
 __author__    = 'ihaveamac'
 __copyright__ = 'Copyright (c) 2017-2020 Ian Burgwin'
 __license__   = 'MIT'
-__version__   = '2.0a2'
+__version__   = '2.0a3'
