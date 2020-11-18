@@ -24,7 +24,7 @@ class NinfsSettings(tk.Toplevel):
         self.parent = parent
 
         self.wm_withdraw()
-        self.wm_iconbitmap(self.parent.ico_path)
+        self.parent.set_icon(self)
         self.wm_transient(self.parent)
         self.grab_set()
         self.wm_title('Settings')

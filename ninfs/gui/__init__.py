@@ -79,7 +79,6 @@ class NinfsGUI(tk.Tk):
         self.wm_title('ninfs')
 
         self.ico_path = self.get_data_file(join('data', 'windows.ico'))
-        self.wm_iconbitmap(self.ico_path)
 
         self.wm_minsize(500, 300)
         self.create_menu_bar()
@@ -130,6 +129,11 @@ class NinfsGUI(tk.Tk):
 
     def get_data_file(self, path):
         return join(dirname(__file__), path)
+
+    def set_icon(self, wm: 'tk.Wm'):
+        # just in case this also works on other platforms, but this assumption is likely wrong lol
+        if not is_mac:
+            wm.wm_iconbitmap(self.ico_path)
 
     def check_fuse(self):
         try:
