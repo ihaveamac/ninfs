@@ -48,7 +48,7 @@ class ExeFSMount(LoggingMixIn, Operations):
 
     # TODO: maybe do this in a way that allows for multiprocessing (titledir)
     def init(self, path, data=None):
-        if self.decompress_code:
+        if self.decompress_code and '.code' in self.reader.entries:
             print('ExeFS: Decompressing code...')
             try:
                 res = self.reader.decompress_code()
