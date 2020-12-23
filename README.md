@@ -84,8 +84,6 @@ ninfs is available in the AUR: [normal](https://aur.archlinux.org/packages/ninfs
 #### Other distributions
 * Recent distributions (e.g. Ubuntu 18.04 and later) should have Python 3.6.1 or later pre-installed, or included in its repositories. If not, you can use an extra repository (e.g. [deadsnakes's PPA](https://launchpad.net/%7Edeadsnakes/+archive/ubuntu/ppa) for Ubuntu), [build from source](https://www.python.org/downloads/source/), or use a tool like [pyenv](https://github.com/pyenv/pyenv).
 * Most distributions should have libfuse enabled/installed by default. Use your package manager if it isn't.
-* Some dependencies may need to be installed to build and install ninfs.
-  * On Debian-based systems, `g++` and `python3-dev` are required for the C extensions. To build and install as a package, `python3-setuptools` and `python3-wheel` are required.
 * Install ninfs with `python3 -m pip install --upgrade --user https://github.com/ihaveamac/ninfs/archive/2.0.zip`
   * `--user` is not needed if you are using a virtual environment.
 * You can add a desktop entry with `python3 -m ninfs --install-desktop-entry`. If you want to install to a location other than the default (`$XDG_DATA_HOME`), you can add another argument with a path like `/usr/local/share`.
