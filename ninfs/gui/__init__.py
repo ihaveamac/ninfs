@@ -132,7 +132,8 @@ class NinfsGUI(tk.Tk):
 
     def set_icon(self, wm: 'tk.Wm'):
         # just in case this also works on other platforms, but this assumption is likely wrong lol
-        if not is_mac:
+        # TODO: fix this for Linux
+        if is_windows:
             wm.wm_iconbitmap(self.ico_path)
 
     def check_fuse(self):
