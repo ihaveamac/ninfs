@@ -138,7 +138,7 @@ class NinfsGUI(tk.Tk):
 
     def check_fuse(self):
         try:
-            from ninfs import fuse
+            import fuse
         except EnvironmentError as e:
             if e.args[0] == 'Unable to find libfuse':
                 if is_windows:
@@ -159,7 +159,7 @@ class NinfsGUI(tk.Tk):
                     mb.showerror('Failed to load libfuse.')
                 return False
         except Exception:
-            mb.showerror('Failed to import fusepy.\n\n' + format_exc())
+            mb.showerror('Failed to import fusepy', 'Failed to import fusepy.\n\n' + format_exc())
             return False
         return True
 
