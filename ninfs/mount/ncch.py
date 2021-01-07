@@ -156,7 +156,7 @@ def main(prog: str = None, args: list = None):
         if _c.macos or _c.windows:
             opts['fstypename'] = 'NCCH'
             if _c.macos:
-                display = f'{r.partition_id:016X}; {r.product_code}'
+                display = f'{r.partition_id.upper()}; {r.product_code}'
                 try:
                     title = r.exefs.icon.get_app_title()
                     if title.short_desc != 'unknown':
@@ -172,7 +172,7 @@ def main(prog: str = None, args: list = None):
                         title = title[0:25] + '\u2026'  # ellipsis
                     display = title
                 except:
-                    display = r.tmd.title_id.upper()
+                    display = r.partition_id.upper()
                 opts['volname'] = f'NCCH ({display})'
         FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
              fsname=realpath(a.ncch).replace(',', '_'), **opts)
