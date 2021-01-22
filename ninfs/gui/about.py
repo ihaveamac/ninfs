@@ -1,6 +1,6 @@
 # This file is a part of ninfs.
 #
-# Copyright (c) 2017-2020 Ian Burgwin
+# Copyright (c) 2017-2021 Ian Burgwin
 # This file is licensed under The MIT License (MIT).
 # You can find the full license text in LICENSE.md in the root of this project.
 
@@ -77,15 +77,15 @@ class NinfsAbout(tk.Toplevel):
         # tab name, license file name, url
         info = [
             (f'ninfs {ninfs_version}', 'ninfs.md', 'https://github.com/ihaveamac/ninfs',
-             'ninfs - Copyright (c) 2017-2020 Ian Burgwin'),
+             'ninfs - Copyright (c) 2017-2021 Ian Burgwin'),
             (f'WinFsp 2020.1', 'winfsp.txt', 'https://github.com/billziss-gh/winfsp',
              'WinFsp - Windows File System Proxy, Copyright (C) Bill Zissimopoulos'),
             (f'pycryptodomex {pycryptodomex_version}', 'pycryptodome.rst',
              'https://github.com/Legrandin/pycryptodome', 'PyCryptodome - multiple licenses'),
             ('pyctr 0.4.3', 'pyctr', 'https://github.com/ihaveamac/pyctr',
-             'pyctr - Copyright (c) 2017-2020 Ian Burgwin'),
+             'pyctr - Copyright (c) 2017-2021 Ian Burgwin'),
             ('haccrypto 0.1.0', 'haccrypto.md', 'https://github.com/luigoalma/haccrypto',
-             'haccrypto - Copyright (c) 2017-2020 Ian Burgwin & Copyright (c) 2020 Luis Marques')
+             'haccrypto - Copyright (c) 2017-2021 Ian Burgwin & Copyright (c) 2020-2021 Luis Marques')
         ]
 
         license_notebook = ttk.Notebook(container)
