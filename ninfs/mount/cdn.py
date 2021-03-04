@@ -160,7 +160,11 @@ def main(prog: str = None, args: list = None):
     if a.seeddb:
         load_seeddb(a.seeddb)
 
-    with CDNReader(tmd_file, dev=a.dev, seed=a.seed, case_insensitive=True) as r:
+    dec_key = None
+    if a.dec_key:
+        dec_key = bytes.fromhex(a.dec_key)
+
+    with CDNReader(tmd_file, dev=a.dev, seed=a.seed, case_insensitive=True, decrypted_titlekey=dec_key) as r:
         mount = CDNContentsMount(reader=r, g_stat=cdn_stat)
         if _c.macos or _c.windows:
             opts['fstypename'] = 'CIA'
