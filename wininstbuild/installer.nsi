@@ -23,7 +23,7 @@ Unicode True
 
   !define NAME "ninfs ${VERSION}"
 
-  !define WINFSP_MSI_NAME "winfsp-1.7.20172.msi"
+  !define WINFSP_MSI_NAME "winfsp-1.8.20304.msi"
 
   ;Name and file
   Name "${NAME}"
