@@ -7,7 +7,7 @@ This expects Python 3.8 32-bit to be installed.
 
 Install the dependencies:
 ```batch
-py -3.8-32 -m pip install --user cx-Freeze==6.3 -r requirements.txt
+py -3.8-32 -m pip install --user cx-Freeze==6.5.3 -r requirements.txt
 ```
 
 Build the exe:
