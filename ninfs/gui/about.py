@@ -78,7 +78,7 @@ class NinfsAbout(tk.Toplevel):
         info = [
             (f'ninfs {ninfs_version}', 'ninfs.md', 'https://github.com/ihaveamac/ninfs',
              'ninfs - Copyright (c) 2017-2021 Ian Burgwin'),
-            (f'WinFsp 2020.1', 'winfsp.txt', 'https://github.com/billziss-gh/winfsp',
+            (f'WinFsp 2020.2', 'winfsp.txt', 'https://github.com/billziss-gh/winfsp',
              'WinFsp - Windows File System Proxy, Copyright (C) Bill Zissimopoulos'),
             (f'pycryptodomex {pycryptodomex_version}', 'pycryptodome.rst',
              'https://github.com/Legrandin/pycryptodome', 'PyCryptodome - multiple licenses'),
