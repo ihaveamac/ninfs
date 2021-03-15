@@ -67,7 +67,7 @@ A standalone zip is also provided in [releases](https://github.com/ihaveamac/nin
 * Install ninfs with `py -3 -m pip install --upgrade https://github.com/ihaveamac/ninfs/archive/2.0.zip`
 
 ### macOS
-Versions of macOS supported by Apple are highly recommended. OS X Mavericks is the oldest version that should work. [FUSE for macOS](https://osxfuse.github.io/) is required.
+Versions of macOS supported by Apple are highly recommended. macOS Sierra is the oldest version that should work. [macFUSE](https://osxfuse.github.io/) is required.
 
 No standalone build is available at the moment.
 
