@@ -12,6 +12,7 @@ from os.path import join
 from typing import TYPE_CHECKING
 
 from Cryptodome import __version__ as pycryptodomex_version
+from pyctr import __version__ as pyctr_version
 
 from .osver import get_os_ver
 # "from .. import" didn't work :/
@@ -82,7 +83,7 @@ class NinfsAbout(tk.Toplevel):
              'WinFsp - Windows File System Proxy, Copyright (C) Bill Zissimopoulos'),
             (f'pycryptodomex {pycryptodomex_version}', 'pycryptodome.rst',
              'https://github.com/Legrandin/pycryptodome', 'PyCryptodome - multiple licenses'),
-            ('pyctr 0.4.3', 'pyctr', 'https://github.com/ihaveamac/pyctr',
+            (f'pyctr {pyctr_version}', 'pyctr', 'https://github.com/ihaveamac/pyctr',
              'pyctr - Copyright (c) 2017-2021 Ian Burgwin'),
             ('haccrypto 0.1.0', 'haccrypto.md', 'https://github.com/luigoalma/haccrypto',
              'haccrypto - Copyright (c) 2017-2021 Ian Burgwin & Copyright (c) 2020-2021 Luis Marques')
