@@ -269,5 +269,5 @@ def main(prog: str = None, args: list = None):
             # windows
             opts['volname'] = f'Nintendo 3DS SD Card ({mount.root_dir[0:8]}…)'
             opts['case_insensitive'] = False
-    FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=a.ro, debug=a.d,
+    FUSE(mount, a.mount_point, foreground=a.fg or a.d, ro=a.ro, debug=a.d,
          fsname=realpath(a.sd_dir).replace(',', '_'), **opts)

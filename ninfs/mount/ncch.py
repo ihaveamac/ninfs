@@ -174,5 +174,5 @@ def main(prog: str = None, args: list = None):
                 except:
                     display = r.partition_id.upper()
                 opts['volname'] = f'NCCH ({display})'
-        FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
+        FUSE(mount, a.mount_point, foreground=a.fg or a.d, ro=True, nothreads=True, debug=a.d,
              fsname=realpath(a.ncch).replace(',', '_'), **opts)

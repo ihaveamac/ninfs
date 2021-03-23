@@ -149,5 +149,5 @@ def main(prog: str = None, args: list = None):
             elif _c.windows:
                 # volume label can only be up to 32 chars
                 opts['volname'] = '3DSX Homebrew'
-        FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
+        FUSE(mount, a.mount_point, foreground=a.fg or a.d, ro=True, nothreads=True, debug=a.d,
              fsname=realpath(a.threedsx).replace(',', '_'), **opts)

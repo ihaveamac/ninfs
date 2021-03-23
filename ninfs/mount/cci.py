@@ -157,5 +157,5 @@ def main(prog: str = None, args: list = None):
                 except:
                     display = r.tmd.title_id.upper()
                 opts['volname'] = f'CCI ({display})'
-        FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
+        FUSE(mount, a.mount_point, foreground=a.fg or a.d, ro=True, nothreads=True, debug=a.d,
              fsname=realpath(a.cci).replace(',', '_'), **opts)

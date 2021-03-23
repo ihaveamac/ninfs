@@ -287,5 +287,5 @@ def main(prog: str = None, args: list = None):
         if _c.macos or _c.windows:
             opts['fstypename'] = 'SRL'
             opts['volname'] = f'Nintendo DS ROM ({mount.title})'
-        FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=True, nothreads=True, debug=a.d,
+        FUSE(mount, a.mount_point, foreground=a.fg or a.d, ro=True, nothreads=True, debug=a.d,
              fsname=realpath(a.srl).replace(',', '_'), **opts)

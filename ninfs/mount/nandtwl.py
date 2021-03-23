@@ -245,5 +245,5 @@ def main(prog: str = None, args: list = None):
             elif _c.windows:
                 # volume label can only be up to 32 chars
                 opts['volname'] = 'Nintendo DSi NAND'
-        FUSE(mount, a.mount_point, foreground=a.fg or a.do or a.d, ro=a.ro, nothreads=True, debug=a.d,
+        FUSE(mount, a.mount_point, foreground=a.fg or a.d, ro=a.ro, nothreads=True, debug=a.d,
              fsname=realpath(a.nand).replace(',', '_'), **opts)
