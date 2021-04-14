@@ -19,6 +19,8 @@ Windows, macOS, and Linux are supported.
 * Nintendo DS / DSi
   * Nintendo DSi NAND backup ("nand\_dsi.bin")
   * Nintendo DS ROM image (".nds", ".srl")
+* iQue Player
+  * iQue Player NAND backup (read-only) ("nand.bin")
 * Nintendo Switch
   * Nintendo Switch NAND backup ("rawnand.bin")
 
@@ -134,11 +136,13 @@ Developer-unit contents are encrypted with different keys, which can be used wit
   `mount_nandtwl --console-id 4E696E74656E646F --cid 576879446F657344536945786973743F nand_dsi.bin mountpoint`
 * DSi NAND backup with a Console ID file and specified CID file:  
   `mount_nandtwl --console-id ConsoleID.bin --cid CID.bin nand_dsi.bin mountpoint`
-* Switch NAND backup  
+* iQue Player NAND backup:
+  `mount_nandbb nand.bin mountpoint`
+* Switch NAND backup:
   `mount_nandhac --keys prod.keys rawnand.bin mountpoint`
-* Switch NAND backup in multiple parts  
+* Switch NAND backup in multiple parts:
   `mount_nandhac --keys prod.keys -S rawnand.bin.00 mountpoint`
-* Switch NAND encrypted partition dump  
+* Switch NAND encrypted partition dump:
   `mount_nandhac --keys prod.keys --partition SYSTEM SYSTEM.bin mountpoint`
 * NCCH container (.app, .cxi, .cfa, .ncch):  
   `mount_ncch content.cxi mountpoint`

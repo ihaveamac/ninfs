@@ -159,7 +159,7 @@ def main(prog: str = None, args: list = None):
     if args is None:
         args = argv[1:]
     parser = ArgumentParser(prog=prog, description='Mount iQue Player NAND images.',
-                            parents=(_c.default_argp, _c.readonly_argp, _c.main_args('nand', 'iQue Player NAND image')))
+                            parents=(_c.default_argp, _c.main_args('nand', 'iQue Player NAND image')))
     
     a = parser.parse_args(args)
     opts = dict(_c.parse_fuse_opts(a.o))
