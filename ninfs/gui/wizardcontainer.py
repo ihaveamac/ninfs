@@ -15,7 +15,7 @@ from .opendir import open_directory
 from .optionsframes import RadiobuttonContainer
 from .outputviewer import OutputViewer
 from .setupwizard import *
-from .typeinfo import mount_types, ctr_types, twl_types, hac_types
+from .typeinfo import mount_types, ctr_types, twl_types, hac_types, bb_types
 
 if TYPE_CHECKING:
     from typing import List, Type
@@ -29,6 +29,7 @@ wizard_bases = {
     'nandctr': CTRNandImageSetup,
     'nandhac': HACNandImageSetup,
     'nandtwl': TWLNandImageSetup,
+    'nandbb': BBNandImageSetup,
     'ncch': NCCHSetup,
     'romfs': RomFSSetup,
     'sd': SDFilesystemSetup,
@@ -79,6 +80,7 @@ class WizardTypeSelector(WizardBase):
         add_options('Nintendo 3DS', ctr_types)
         add_options('Nintendo DSi', twl_types)
         add_options('Nintendo Switch', hac_types)
+        add_options('iQue Player', bb_types)
 
         type_selector_var.set('Select a type')
 

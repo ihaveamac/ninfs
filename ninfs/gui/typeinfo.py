@@ -6,6 +6,7 @@ mount_types = {
     'nandctr': 'Nintendo 3DS NAND backup ("nand.bin")',
     'nandhac': 'Nintendo Switch NAND backup ("rawnand.bin")',
     'nandtwl': 'Nintendo DSi NAND backup ("nand_dsi.bin")',
+    'nandbb': 'iQue Player NAND backup ("nand.bin")',
     'ncch': 'NCCH (".cxi", ".cfa", ".ncch", ".app")',
     'romfs': 'Read-only Filesystem (".romfs", "romfs.bin")',
     'sd': 'SD Card Contents ("Nintendo 3DS" from SD)',
@@ -16,5 +17,6 @@ mount_types = {
 ctr_types = ('cci', 'cdn', 'cia', 'exefs', 'nandctr', 'ncch', 'romfs', 'sd', 'threedsx')
 twl_types = ('nandtwl', 'srl')
 hac_types = ('nandhac',)
+bb_types = ('nandbb',)
 
 uses_directory = ('cdn', 'sd')

@@ -12,6 +12,7 @@ build_exe_options = {
         'ninfs.mount.nandctr',
         'ninfs.mount.nandhac',
         'ninfs.mount.nandtwl',
+        'ninfs.mount.nandbb',
         'ninfs.mount.ncch',
         'ninfs.mount.romfs',
         'ninfs.mount.sd',

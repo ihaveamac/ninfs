@@ -51,6 +51,7 @@ setup(
                                       'mount_nandctr = ninfs.main:main',
                                       'mount_nandtwl = ninfs.main:main',
                                       'mount_nandhac = ninfs.main:main',
+                                      'mount_nandbb = ninfs.main:main',
                                       'mount_ncch = ninfs.main:main',
                                       'mount_romfs = ninfs.main:main',
                                       'mount_sd = ninfs.main:main',
@@ -65,6 +66,7 @@ setup(
                                       'mount_cfa = ninfs.main:main',
                                       'mount_nand = ninfs.main:main',
                                       'mount_nanddsi = ninfs.main:main',
+                                      'mount_nandique = ninfs.main:main',
                                       'mount_nandswitch = ninfs.main:main',
                                       'mount_nandnx = ninfs.main:main',
                                       'mount_nds = ninfs.main:main']}
