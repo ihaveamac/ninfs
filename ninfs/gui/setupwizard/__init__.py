@@ -13,6 +13,7 @@ from .exefs import ExeFSSetup
 from .nandctr import CTRNandImageSetup
 from .nandhac import HACNandImageSetup
 from .nandtwl import TWLNandImageSetup
+from .nandbb import BBNandImageSetup
 from .ncch import NCCHSetup
 from .romfs import RomFSSetup
 from .sd import SDFilesystemSetup

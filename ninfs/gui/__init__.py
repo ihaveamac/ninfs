@@ -21,7 +21,7 @@ from uuid import uuid4
 from .about import NinfsAbout
 from .confighandler import get_bool, set_bool
 from .settings import NinfsSettings
-from .typeinfo import mount_types, ctr_types, twl_types, hac_types, uses_directory
+from .typeinfo import mount_types, ctr_types, twl_types, hac_types, bb_types, uses_directory
 from .updatecheck import thread_update_check
 from .wizardcontainer import WizardContainer, WizardTypeSelector, WizardFailedMount
 
