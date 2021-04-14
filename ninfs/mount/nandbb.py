@@ -24,16 +24,25 @@ class BBNandImageMount(LoggingMixIn, Operations):
         
         self.f = nand_fp
         
-        nand_size = nand_fp.seek(0, 2)
+    def __del__(self, *args):
+        try:
+            self.f.close()
+        except AttributeError:
+            pass
+    
+    destroy = __del__
+    
+    def init(self, path):
+        nand_size = self.f.seek(0, 2)
         if nand_size != 0x4000000:
             exit(f'NAND size is incorrect (expected 0x4000000, got {nand_size:#X})')
         
         bbfs_blocks = []
-        nand_fp.seek(0xFF0 * 0x4000)
+        self.f.seek(0xFF0 * 0x4000)
         for i in range(0x10):
-            bbfs_blocks.append(nand_fp.read(0x4000))
+            bbfs_blocks.append(self.f.read(0x4000))
         
-        nand_fp.seek(0)
+        self.f.seek(0)
         
         latest_seqno = -1
         latest_bbfs_block = None
@@ -62,13 +71,19 @@ class BBNandImageMount(LoggingMixIn, Operations):
         if latest_bbfs_block == None or latest_seqno == -1:
             exit(f'Blank BBFS (all BBFS magics were 00000000)')
         
+        self.used = 0
+        
         for i in range(0x2000, 0x3FF4, 0x14):
             entry = bbfs_blocks[latest_bbfs_block][i:i + 0x14]
             valid = bool(entry[11])
-            if valid:
+            u = readbe(entry[12:14])
+            start = u - (u & 0x8000) * 2
+            if valid and start != -1:
                 name = entry[:8].decode().rstrip("\x00")
                 ext = entry[8:11].decode().rstrip("\x00")
-                self.files[f'/{name}.{ext}'] = {'start': readbe(entry[12:14]), 'size': readbe(entry[16:20])}
+                size = readbe(entry[16:20])
+                self.files[f'/{name}.{ext}'] = {'start': start, 'size': size}
+                self.used += size
         
         fat = bbfs_blocks[latest_bbfs_block][:0x2000]
         
@@ -77,14 +92,6 @@ class BBNandImageMount(LoggingMixIn, Operations):
             u = readbe(fat[i:i + 2])
             s = u - (u & 0x8000) * 2
             self.fat_entries.append(s)
-    
-    def __del__(self, *args):
-        try:
-            self.f.close()
-        except AttributeError:
-            pass
-    
-    destroy = __del__
     
     def flush(self, path, fh):
         return self.f.flush()
@@ -139,7 +146,7 @@ class BBNandImageMount(LoggingMixIn, Operations):
     
     @_c.ensure_lower_path
     def statfs(self, path):
-        return {'f_bsize': 4096, 'f_blocks': 0x4000000 // 4096, 'f_bavail': 0, 'f_bfree': 0,
+        return {'f_bsize': 0x4000, 'f_blocks': 0x4000000 // 0x4000, 'f_bavail': 0xFF0 - 0x40 - (self.used // 0x4000), 'f_bfree': 0xFF0 - 0x40 - (self.used // 0x4000),
                 'f_files': len(self.files)}
     
     @_c.ensure_lower_path

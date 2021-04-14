@@ -30,4 +30,4 @@ class BBNandImageSetup(WizardBase):
 
         args = ['nandbb', main_file]
 
-        self.wizardcontainer.show_mount_point_selector('NAND', args)
+        self.wizardcontainer.show_mount_point_selector('iQue Player NAND', args)
