@@ -78,8 +78,8 @@ class RomFSMount(LoggingMixIn, Operations):
             item = self.reader.get_info_from_path(path)
         except RomFSFileNotFoundError:
             raise FuseOSError(ENOENT)
-        return {'f_bsize': 4096, 'f_blocks': self.reader.total_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
-                'f_files': len(item.contents)}
+        return {'f_bsize': 4096, 'f_frsize': 4096, 'f_blocks': self.reader.total_size // 4096, 'f_bavail': 0,
+                'f_bfree': 0, 'f_files': len(item.contents)}
 
 
 def main(prog: str = None, args: list = None):

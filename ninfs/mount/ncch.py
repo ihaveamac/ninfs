@@ -125,8 +125,8 @@ class NCCHContainerMount(LoggingMixIn, Operations):
         elif path.startswith('/romfs/'):
             return self.romfs_fuse.statfs(_c.remove_first_dir(path))
         else:
-            return {'f_bsize': 4096, 'f_blocks': self.reader.content_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
-                    'f_files': len(self.files)}
+            return {'f_bsize': 4096, 'f_frsize': 4096, 'f_blocks': self.reader.content_size // 4096, 'f_bavail': 0,
+                    'f_bfree': 0, 'f_files': len(self.files)}
 
 
 def main(prog: str = None, args: list = None):

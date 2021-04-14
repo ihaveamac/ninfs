@@ -209,7 +209,7 @@ class HACNandImageMount(LoggingMixIn, Operations):
     # TODO: get the real nand size, instead of hard-coding it
     @_c.ensure_lower_path
     def statfs(self, path: str):
-        return {'f_bsize': 4096, 'f_blocks': 0x747C00000 // 4096, 'f_bavail': 0, 'f_bfree': 0,
+        return {'f_bsize': 4096, 'f_frsize': 4096, 'f_blocks': 0x747C00000 // 4096, 'f_bavail': 0, 'f_bfree': 0,
                 'f_files': len(self.files)}
 
 

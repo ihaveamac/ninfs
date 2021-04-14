@@ -335,7 +335,7 @@ class CTRNandImageMount(LoggingMixIn, Operations):
     def statfs(self, path):
         if path.startswith('/essential/'):
             return self.exefs_fuse.statfs(_c.remove_first_dir(path))
-        return {'f_bsize': 4096, 'f_blocks': self.real_nand_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
+        return {'f_bsize': 4096, 'f_frsize': 4096, 'f_blocks': self.real_nand_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
                 'f_files': len(self.files)}
 
     @_c.ensure_lower_path

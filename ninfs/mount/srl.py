@@ -264,7 +264,7 @@ class SRLMount(LoggingMixIn, Operations):
         return self.f.read(size)
 
     def statfs(self, path):
-        return {'f_bsize': 4096, 'f_blocks': self.total_size // 4096, 'f_bavail': 0, 'f_bfree': 0}
+        return {'f_bsize': 4096, 'f_frsize': 4096, 'f_blocks': self.total_size // 4096, 'f_bavail': 0, 'f_bfree': 0}
 
 
 def main(prog: str = None, args: list = None):

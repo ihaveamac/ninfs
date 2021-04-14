@@ -181,7 +181,7 @@ class TWLNandImageMount(LoggingMixIn, Operations):
 
     @_c.ensure_lower_path
     def statfs(self, path):
-        return {'f_bsize': 4096, 'f_blocks': 0xF000000 // 4096, 'f_bavail': 0, 'f_bfree': 0,
+        return {'f_bsize': 4096, 'f_frsize': 4096, 'f_blocks': 0xF000000 // 4096, 'f_bavail': 0, 'f_bfree': 0,
                 'f_files': len(self.files)}
 
     @_c.ensure_lower_path

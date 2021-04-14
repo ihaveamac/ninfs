@@ -129,7 +129,7 @@ class CDNContentsMount(LoggingMixIn, Operations):
         first_dir = _c.get_first_dir(path)
         if first_dir in self.dirs:
             return self.dirs[first_dir].statfs(_c.remove_first_dir(path))
-        return {'f_bsize': 4096, 'f_blocks': self.total_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
+        return {'f_bsize': 4096, 'f_frsize': 4096, 'f_blocks': self.total_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
                 'f_files': len(self.files)}
 
 
