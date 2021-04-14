@@ -131,18 +131,18 @@ Developer-unit contents are encrypted with different keys, which can be used wit
 * 3DS NAND backup with OTP file and a CID hexstring:  
   `mount_nandctr --otp otp.bin --cid 7468616E6B7334636865636B696E6721 nand.bin mountpoint`
 * DSi NAND backup (Counter is automatically generated):  
-  `mount_nandtwl --console-id 4E696E74656E646F nand_dsi.bin mountpoint`
+  `mount_nandtwl --console-id 5345445543454D45 nand_dsi.bin mountpoint`
 * DSi NAND backup with a Console ID hexstring and specified CID hexstring:  
-  `mount_nandtwl --console-id 4E696E74656E646F --cid 576879446F657344536945786973743F nand_dsi.bin mountpoint`
+  `mount_nandtwl --console-id 5345445543454D45 --cid 576879446F657344536945786973743F nand_dsi.bin mountpoint`
 * DSi NAND backup with a Console ID file and specified CID file:  
   `mount_nandtwl --console-id ConsoleID.bin --cid CID.bin nand_dsi.bin mountpoint`
-* iQue Player NAND backup:
+* iQue Player NAND backup:  
   `mount_nandbb nand.bin mountpoint`
-* Switch NAND backup:
+* Switch NAND backup:  
   `mount_nandhac --keys prod.keys rawnand.bin mountpoint`
-* Switch NAND backup in multiple parts:
+* Switch NAND backup in multiple parts:  
   `mount_nandhac --keys prod.keys -S rawnand.bin.00 mountpoint`
-* Switch NAND encrypted partition dump:
+* Switch NAND encrypted partition dump:  
   `mount_nandhac --keys prod.keys --partition SYSTEM SYSTEM.bin mountpoint`
 * NCCH container (.app, .cxi, .cfa, .ncch):  
   `mount_ncch content.cxi mountpoint`
