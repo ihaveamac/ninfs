@@ -152,8 +152,8 @@ class BBNandImageMount(LoggingMixIn, Operations):
     
     @_c.ensure_lower_path
     def statfs(self, path):
-        return {'f_bsize': 0x4000, 'f_frsize': 0x4000, 'f_blocks': 0xFF0 - 0x40, 'f_bavail': 0xFF0 - 0x40 - self.used, 'f_bfree': 0xFF0 - 0x40 - self.used,
-                'f_files': len(self.files)}
+        return {'f_bsize': 0x4000, 'f_frsize': 0x4000, 'f_blocks': 0xFF0 - 0x40, 'f_bavail': 0xFF0 - 0x40 - self.used,
+                'f_bfree': 0xFF0 - 0x40 - self.used, 'f_files': len(self.files)}
     
     @_c.ensure_lower_path
     def write(self, path, data, offset, fh):
