@@ -83,7 +83,7 @@ class BBNandImageMount(LoggingMixIn, Operations):
                 ext = entry[8:11].decode().rstrip("\x00")
                 size = readbe(entry[16:20])
                 self.files[f'/{name}.{ext}'] = {'start': start, 'size': size}
-                self.used += size
+                self.used += size // 0x4000
         
         fat = bbfs_blocks[latest_bbfs_block][:0x2000]
         
@@ -146,7 +146,7 @@ class BBNandImageMount(LoggingMixIn, Operations):
     
     @_c.ensure_lower_path
     def statfs(self, path):
-        return {'f_bsize': 0x4000, 'f_blocks': 0x4000000 // 0x4000, 'f_bavail': 0xFF0 - 0x40 - (self.used // 0x4000), 'f_bfree': 0xFF0 - 0x40 - (self.used // 0x4000),
+        return {'f_bsize': 0x4000, 'f_blocks': 0xFF0 - 0x40, 'f_bavail': 0xFF0 - 0x40 - self.used, 'f_bfree': 0xFF0 - 0x40 - self.used,
                 'f_files': len(self.files)}
     
     @_c.ensure_lower_path
