@@ -12,14 +12,11 @@ from os import environ, makedirs
 from os.path import basename, dirname, expanduser, join as pjoin, realpath
 from sys import exit, argv, path, platform, hexversion, version_info
 
+import mountinfo
+
 windows = platform in {'win32', 'cygwin'}
 
 python_cmd = 'py -3' if windows else 'python3'
-
-mount_types = ('cci', 'cdn', 'cia', 'exefs', 'nandctr', 'nandhac', 'nandtwl', 'nandbb', 'ncch', 'romfs', 'sd', 'srl', 'threedsx',
-               'titledir')
-mount_aliases = {'3ds': 'cci', '3dsx': 'threedsx', 'app': 'ncch', 'csu': 'cci', 'cxi': 'ncch', 'cfa': 'ncch',
-                 'nand': 'nandctr', 'nandswitch': 'nandhac', 'nandnx': 'nandhac', 'nanddsi': 'nandtwl', 'nandique': 'nandbb', 'nds': 'srl'}
 
 _path = dirname(realpath(__file__))
 if _path not in path:
@@ -31,9 +28,13 @@ if hexversion < 0x030601F0:
 
 def exit_print_types():
     print('Please provide a mount type as the first argument.')
-    print(' ', ', '.join(mount_types))
+    print('Available mount types:')
     print()
-    print('Want to use a GUI? Use "gui" as the type! (e.g. {} -mninfs gui)'.format(python_cmd))
+    for cat, items in mountinfo.categories.items():
+        print(cat)
+        for item in items:
+            info = mountinfo.get_type_info(item)
+            print(f' - {item}: {info["name"]} ({info["info"]})')
     exit(1)
 
 
@@ -72,16 +73,16 @@ def mount(mount_type: str, return_doc: bool = False) -> int:
         except KeyError:
             pass
 
-    if mount_type not in mount_types and mount_type not in mount_aliases:
+    if mount_type not in mountinfo.types and mount_type not in mountinfo.aliases:
         exit_print_types()
 
-    module = import_module('mount.' + mount_aliases.get(mount_type, mount_type))
+    module = import_module('mount.' + mountinfo.aliases.get(mount_type, mount_type))
     if return_doc:
         return module.__doc__
 
     prog = None
     if __name__ != '__main__':
-        prog = 'mount_' + mount_aliases.get(mount_type, mount_type)
+        prog = 'mount_' + mountinfo.aliases.get(mount_type, mount_type)
     try:
         return module.main(prog=prog)
     except BootromNotFoundError as e:
