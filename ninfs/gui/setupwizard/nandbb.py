@@ -29,7 +29,7 @@ class BBNandImageSetup(WizardBase):
 
         main_textbox_var.trace_add('write', callback)
 
-        self.set_header_suffix('NAND')
+        self.set_header_suffix('iQue Player NAND')
 
     def next_pressed(self):
         main_file = self.main_textbox_var.get().strip()
