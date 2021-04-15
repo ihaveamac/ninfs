@@ -11,11 +11,11 @@ import tkinter.ttk as ttk
 import tkinter.filedialog as fd
 from typing import TYPE_CHECKING
 
+import mountinfo
 from .opendir import open_directory
 from .optionsframes import RadiobuttonContainer
 from .outputviewer import OutputViewer
 from .setupwizard import *
-from .typeinfo import mount_types, ctr_types, twl_types, hac_types, bb_types
 
 if TYPE_CHECKING:
     from typing import List, Type
@@ -70,17 +70,19 @@ class WizardTypeSelector(WizardBase):
                 # This isn't very nice
                 def changer(key):
                     def c():
+                        item_info = mountinfo.get_type_info(key)
+                        label_text = f'{item_info["name"]} ({item_info["info"]})'
                         self.wizardcontainer.set_next_enabled(True)
                         self.current_type = key
-                        self.type_selector_var.set(mount_types[key])
+                        self.type_selector_var.set(label_text)
                     return c
-                type_selector_menu.add_command(label='  ' + mount_types[k], command=changer(k))
+                item_info = mountinfo.get_type_info(k)
+                label_text = f'{item_info["name"]} ({item_info["info"]})'
+                type_selector_menu.add_command(label='  ' + label_text, command=changer(k))
 
         add_options('Select a type', ())
-        add_options('Nintendo 3DS', ctr_types)
-        add_options('Nintendo DSi', twl_types)
-        add_options('Nintendo Switch', hac_types)
-        add_options('iQue Player', bb_types)
+        for cat, types in mountinfo.categories.items():
+            add_options(cat, types)
 
         type_selector_var.set('Select a type')
 
