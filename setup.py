@@ -4,6 +4,8 @@ import sys
 
 from setuptools import setup, find_packages
 
+from ninfs import mountinfo
+
 if sys.hexversion < 0x030601f0:
     sys.exit('Python 3.6.1+ is required.')
 
@@ -41,33 +43,7 @@ setup(
     python_requires='>=3.6.1',
     # fusepy should be added here once the main repo has a new release with Windows support.
     entry_points={'gui_scripts': ['ninfsw = ninfs.main:gui'],
-                  'console_scripts': ['ninfs = ninfs.main:gui',
-                                      # not putting in gui_scripts since the cmd window is required and trying to
-                                      # remove it breaks some other stuff with subprocess management ?!?
-                                      'mount_cci = ninfs.main:main',
-                                      'mount_cdn = ninfs.main:main',
-                                      'mount_cia = ninfs.main:main',
-                                      'mount_exefs = ninfs.main:main',
-                                      'mount_nandctr = ninfs.main:main',
-                                      'mount_nandtwl = ninfs.main:main',
-                                      'mount_nandhac = ninfs.main:main',
-                                      'mount_nandbb = ninfs.main:main',
-                                      'mount_ncch = ninfs.main:main',
-                                      'mount_romfs = ninfs.main:main',
-                                      'mount_sd = ninfs.main:main',
-                                      'mount_srl = ninfs.main:main',
-                                      'mount_threedsx = ninfs.main:main',
-                                      # aliases
-                                      'mount_3ds = ninfs.main:main',
-                                      'mount_3dsx = ninfs.main:main',
-                                      'mount_app = ninfs.main:main',
-                                      'mount_csu = ninfs.main:main',
-                                      'mount_cxi = ninfs.main:main',
-                                      'mount_cfa = ninfs.main:main',
-                                      'mount_nand = ninfs.main:main',
-                                      'mount_nanddsi = ninfs.main:main',
-                                      'mount_nandique = ninfs.main:main',
-                                      'mount_nandswitch = ninfs.main:main',
-                                      'mount_nandnx = ninfs.main:main',
-                                      'mount_nds = ninfs.main:main']}
+                  'console_scripts': ['ninfs = ninfs.main:gui'] +
+                                     [f'mount_{x} = ninfs.main:main' for x in mountinfo.types.keys()] +
+                                     [f'mount_{x} = ninfs.main:main' for x in mountinfo.aliases.keys()]}
 )
