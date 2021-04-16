@@ -1,37 +1,21 @@
 import sys
+
 from cx_Freeze import setup, Executable
+
+from ninfs import mountinfo
+
+mount_module_paths = [f'ninfs.mount.{x}' for x in mountinfo.types.keys()]
 
 build_exe_options = {
     'includes': [
         'ninfs',
         'ninfs.gui',
-        'ninfs.mount.cci',
-        'ninfs.mount.cdn',
-        'ninfs.mount.cia',
-        'ninfs.mount.exefs',
-        'ninfs.mount.nandctr',
-        'ninfs.mount.nandhac',
-        'ninfs.mount.nandtwl',
-        'ninfs.mount.nandbb',
-        'ninfs.mount.ncch',
-        'ninfs.mount.romfs',
-        'ninfs.mount.sd',
-        'ninfs.mount.srl',
-        'ninfs.mount.threedsx',
+        'ninfs.mountinfo',
         'ninfs.main',
         'ninfs.reg_shell',
         'ninfs.fmt_detect',
         'ninfs.fuse',
-        'pyctr.type.cci',
-        'pyctr.type.cdn',
-        'pyctr.type.cia',
-        'pyctr.type.exefs',
-        'pyctr.type.ncch',
-        'pyctr.type.romfs',
-        'pyctr.type.sd',
-        'pyctr.type.smdh',
-        'pyctr.type.tmd',
-    ],
+    ] + mount_module_paths,
 }
 
 build_msi_options = {
