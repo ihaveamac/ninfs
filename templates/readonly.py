@@ -82,7 +82,7 @@ class ReadOnlyMount(LoggingMixIn, Operations):
         self.files['/first.bin'] = {'offset': 0, 'size': middle}
 
         # ...and the second half.
-        self.files['/second.bin'] = {'offset': middle, 'size': self.size}
+        self.files['/second.bin'] = {'offset': middle, 'size': self.size - middle}
 
     # This is called when a program calls `stat` on the file.
     @_c.ensure_lower_path
@@ -204,7 +204,7 @@ def main(prog: str = None, args: list = None):
                 # macOS allows a long volume name (not sure what the limit is).
                 # So for this, the file and its parent directory are included.
                 # Something more useful could also be added here, such as some unique ID or a title's name.
-                path_to_show = realpath(a.readonly).rsplit('/', maxsplit=2)
+                path_to_show = realpath(a.myfile).rsplit('/', maxsplit=2)
                 opts['volname'] = f'Split read-only file ({path_to_show[-2]}/{path_to_show[-1]})'
             elif _c.windows:
                 # Windows only allows a volume name of up to 32 characters.
@@ -222,4 +222,4 @@ def main(prog: str = None, args: list = None):
         # - fsname appears when `mount` is executed on Linux/BSD/macOS and usually contains the path to the base file.
         #   ',' is replaced with '_' or else some parts will be mistaken as FUSE options.
         FUSE(mount, a.mount_point, foreground=a.fg or a.d, ro=True, nothreads=True, debug=a.d,
-             fsname=realpath(a.readonly).replace(',', '_'), **opts)
+             fsname=realpath(a.myfile).replace(',', '_'), **opts)
