@@ -1,5 +1,18 @@
 This is a work in progress, please do not hesitate to contact me if there are any questions.
 
+## Before you continue...
+The focus of ninfs is to allow easy extraction of data from file types relevant to Nintendo consoles that would be useful mounting as a virtual filesystem.
+
+### Goals
+- File types that are standard on Nintendo consoles
+- File types that are standard across games used on Nintendo consoles (e.g. darc)
+- Standard/generic file types that are used often on Nintendo consoles (e.g. FAT32)
+
+### Non-goals
+- File types for other devices (e.g. Xbox or PlayStation), though ninfs can be used as a base for a separate project
+- Creation of files (e.g. game or save file containers, NAND images)
+- File types that would not be useful viewing as a filesystem (e.g. N64 ROMs due to the lack of a standard filesystem)
+
 ## Adding a new type
 Each mount type is stored in `ninfs/mount/{type_name}.py`. "`type_name`" is a name such as `cia`, `nandctr` or `sd`.
 
