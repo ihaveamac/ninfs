@@ -15,11 +15,11 @@ The central module that describes all the mount types is in `ninfs/mountinfo.py`
         'info': '".romfs", "romfs.bin"'
     },
     ```
-    `info` usually should show a quoted, comma-separated list of common file names and/or file extensions, but it can show other important files if necessary.
+   The key name must match the mount type. `name` should include the type's full name, including the console if necessary to distinguish it. `info` usually should show a quoted, comma-separated list of common file names and/or file extensions, but it can show other important files if necessary.
 1. Add any appropriate aliases. This could include different file extensions (e.g. `mount_3ds` is an alias for `mount_cci` since both are extensions of the same file type) or consoles (e.g. `mount_nandhac` and `mount_nandswitch`).
 1. Add it to the appropriate category, or create one if needed.
 
-Now ninfs will be able to show it in the default output (e.g. `python3 -m ninfs`), it can be used as a mount type (`python3 -m ninfs romfs`), it will generate aliases when installed (e.g. `mount_romfs`), and will be included in a build produced by cx_Freeze.
+Now ninfs will be able to show it in the default output (`python3 -m ninfs`), it can be used as a mount type (`python3 -m ninfs romfs`), it will generate aliases when installed (e.g. `mount_romfs`), and will be included in a build produced by cx_Freeze.
 
 It will also show up in the GUI, however it won't work properly until a setup wizard module is created for it.
 
