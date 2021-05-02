@@ -12,15 +12,15 @@ from os import environ, makedirs
 from os.path import basename, dirname, expanduser, join as pjoin, realpath
 from sys import exit, argv, path, platform, hexversion, version_info
 
+_path = dirname(realpath(__file__))
+if _path not in path:
+    path.insert(0, _path)
+
 import mountinfo
 
 windows = platform in {'win32', 'cygwin'}
 
 python_cmd = 'py -3' if windows else 'python3'
-
-_path = dirname(realpath(__file__))
-if _path not in path:
-    path.insert(0, _path)
 
 if hexversion < 0x030601F0:
     exit('Python {0[0]}.{0[1]}.{0[2]} is not supported. Please use Python 3.6.1 or later.'.format(version_info))
