@@ -77,7 +77,7 @@ class NinfsGUI(tk.Tk):
 
         self.wm_title('ninfs')
 
-        self.ico_path = self.get_data_file(join('data', 'windows.ico'))
+        self.ico_path = self.get_data_file('windows.ico')
 
         self.wm_minsize(500, 300)
         self.create_menu_bar()
@@ -127,7 +127,11 @@ class NinfsGUI(tk.Tk):
         self.wm_protocol('WM_DELETE_WINDOW', self.on_close)
 
     def get_data_file(self, path):
-        return join(dirname(__file__), path)
+        if frozen:
+            return join(sys._MEIPASS, 'guidata', path)
+        else:
+            # this kinda sucks
+            return join(dirname(__file__), 'data', path)
 
     def set_icon(self, wm: 'tk.Wm'):
         # just in case this also works on other platforms, but this assumption is likely wrong lol

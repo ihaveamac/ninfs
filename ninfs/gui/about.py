@@ -110,7 +110,7 @@ class NinfsAbout(tk.Toplevel):
                                     command=cmd_maker(url))
             url_button.grid(row=1)
 
-            with open(parent.get_data_file(join('data', 'licenses', license_file)), 'r', encoding='utf-8') as f:
+            with open(parent.get_data_file(join('licenses', license_file)), 'r', encoding='utf-8') as f:
                 license_frame = LicenseViewer(frame, text=f.read())
                 license_frame.grid(row=2)
 
