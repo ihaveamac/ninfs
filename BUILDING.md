@@ -30,7 +30,7 @@ scripts\make-inst-win.bat
 * `py -3 setup.py sdist` - build source distribution
 
 # macOS
-Still working on the standalone build. Only tested with 3.9 universal2 on macOS 11.3.1 Intel so far. This also doesn't currently build an arm64-compatible one (the main binary is only x86_64, despite the other libraries having an arm64 slice). I'm just leaving this here so I remember when I try to clean it up later.
+This needs Python built with universal2 to produce a build with a working GUI. Despite that it currently doesn't produce a universal build (https://github.com/pyinstaller/pyinstaller/issues/5315).
 
 Set up a venv, activate it, and install the requirements:
 ```sh
@@ -39,13 +39,22 @@ source venv39/bin/activate
 pip install pyinstaller -r requirements.txt
 ```
 
+Build the icns:
+```sh
+./scripts/make-icons.sh
+```
+
 Build the app:
 ```sh
 pyinstaller standalone.spec
 ```
 
+Build the dmg:
+```sh
+./scripts/make-dmg-mac.sh
+```
+
 todo:
-* Re-add icns building
 * Use pyinstaller for Windows in the same spec file (trying to do this with nsis might suck)
 
 ## Wheel and source dist build
