@@ -7,6 +7,11 @@
 import sys
 from os.path import dirname, join
 
+if len(sys.argv) > 1:
+    # Ignore `-psn_0_#######` which is added if macOS App Translocation is in effect
+    if sys.argv[1].startswith('-psn'):
+        del sys.argv[1]
+
 if getattr(sys, 'frozen', False):
     if hasattr(sys, '_MEIPASS'):
         # PyInstaller
