@@ -11,6 +11,7 @@ from ninfs import mountinfo
 mount_module_paths = [f'mount.{x}' for x in mountinfo.types.keys()]
 
 imports = [
+    'certifi',
     'gui',
     'mountinfo',
     'mount',
@@ -44,7 +45,7 @@ exe = EXE(pyz,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,
-          console=True )
+          console=False)
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,
