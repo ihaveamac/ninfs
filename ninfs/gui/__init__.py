@@ -34,6 +34,8 @@ is_mac = sys.platform == 'darwin'
 
 # cx_Freeze, PyInstaller, etc.
 frozen = getattr(sys, 'frozen', None)
+# PyInstaller sets this
+meipass = getattr(sys, '_MEIPASS', None)
 
 executable = sys.executable
 if is_windows:
@@ -127,8 +129,8 @@ class NinfsGUI(tk.Tk):
         self.wm_protocol('WM_DELETE_WINDOW', self.on_close)
 
     def get_data_file(self, path):
-        if frozen:
-            return join(sys._MEIPASS, 'guidata', path)
+        if frozen and meipass:
+            return join(meipass, 'guidata', path)
         else:
             # this kinda sucks
             return join(dirname(__file__), 'data', path)
