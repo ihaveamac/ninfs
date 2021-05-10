@@ -36,7 +36,7 @@ Set up a venv, activate it, and install the requirements:
 ```sh
 python3.9 -m venv venv39
 source venv39/bin/activate
-pip install pyinstaller -r requirements.txt
+pip install pyinstaller certifi -r requirements.txt
 ```
 
 Build the icns:
