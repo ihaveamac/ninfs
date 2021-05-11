@@ -305,6 +305,7 @@ class NinfsGUI(tk.Tk):
             menubar.add_cascade(menu=apple_menu)
 
             self.createcommand('tk::mac::ShowPreferences', self.show_settings)
+            self.createcommand('tk::mac::Quit', self.on_close)
 
         file_menu = tk.Menu(menubar)
         if not is_mac:
