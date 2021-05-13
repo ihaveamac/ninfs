@@ -3,7 +3,7 @@ ninfs (formerly fuse-3ds) is a FUSE program to extract data from Nintendo game c
 
 Windows, macOS, and Linux are supported.
 
-<p align="center"><img src="https://github.com/ihaveamac/ninfs/raw/master/resources/ciamount-mac.png" width="882"></p>
+<p align="center"><img src="https://github.com/ihaveamac/ninfs/raw/2.0/resources/cia-mount-mac.png" width="1032"></p>
 
 ## Supported types
 * Nintendo 3DS
