@@ -126,6 +126,14 @@ class TWLNandImageMount(LoggingMixIn, Operations):
         if mbr_sig != b'\x55\xaa':
             exit(f'MBR signature not found (expected "55aa", got "{mbr_sig.hex()}"). '
                  f'Make sure the provided Console ID and CID are correct.')
+        partitions = [[readle(mbr[i + 8:i + 12]) * 0x200,
+                       readle(mbr[i + 12:i + 16]) * 0x200] for i in range(0, 0x40, 0x10)]
+
+        for idx, part in enumerate(partitions):
+            if part[0]:
+                ptype = 'enc' if idx < 2 else 'dec'
+                pname = ('twl_main', 'twl_photo', 'twl_unk1', 'twk_unk2')[idx]
+                self.files[f'/{pname}.img'] = {'offset': part[0], 'size': part[1], 'type': ptype}
 
     def __del__(self, *args):
         try:
