@@ -62,7 +62,7 @@ app = BUNDLE(coll,
                  'LSMinimumSystemVersion': '10.12.6',
                  #'NSRequiresAquaSystemAppearance': True,
                  #'NSHighResolutionCapable': True,
-                 'CFBundleShortVersionString': '2.0a5',
-                 'CFBundleVersion': '2001',
+                 'CFBundleShortVersionString': '2.0a6',
+                 'CFBundleVersion': '2002',
              }
             )
