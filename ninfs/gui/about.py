@@ -85,7 +85,7 @@ class NinfsAbout(tk.Toplevel):
              'https://github.com/Legrandin/pycryptodome', 'PyCryptodome - multiple licenses'),
             (f'pyctr {pyctr_version}', 'pyctr', 'https://github.com/ihaveamac/pyctr',
              'pyctr - Copyright (c) 2017-2021 Ian Burgwin'),
-            ('haccrypto 0.1.0', 'haccrypto.md', 'https://github.com/luigoalma/haccrypto',
+            ('haccrypto 0.1.1', 'haccrypto.md', 'https://github.com/luigoalma/haccrypto',
              'haccrypto - Copyright (c) 2017-2021 Ian Burgwin & Copyright (c) 2020-2021 Luis Marques')
         ]
 
