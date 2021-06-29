@@ -9,31 +9,36 @@ Mounts Executable Filesystem (ExeFS) files, creating a virtual filesystem of the
 """
 
 import logging
-import os
 from errno import ENOENT
+from io import BytesIO
 from stat import S_IFDIR, S_IFREG
 from sys import argv
+from threading import Lock
 from typing import TYPE_CHECKING
 
 from pyctr.type.exefs import ExeFSReader, ExeFSFileNotFoundError, CodeDecompressionError
+from pyctr.type.smdh import SMDH, InvalidSMDHError
 
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
 from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time, realpath
 
 if TYPE_CHECKING:
-    from typing import Dict
+    from typing import BinaryIO, Dict, Union
 
 
 class ExeFSMount(LoggingMixIn, Operations):
     fd = 0
     files: 'Dict[str, str]'
+    special_files: 'Dict[str, Dict[str, Union[int, BinaryIO]]]'
 
     def __init__(self, reader: 'ExeFSReader', g_stat: dict, decompress_code: bool = False):
         self.g_stat = g_stat
 
         self.reader = reader
         self.decompress_code = decompress_code
+
+        self.special_files_lock = Lock()
 
         # for vfs stats
         self.exefs_size = sum(x.size for x in self.reader.entries.values())
@@ -43,6 +48,10 @@ class ExeFSMount(LoggingMixIn, Operations):
             self.reader.close()
         except AttributeError:
             pass
+
+        with self.special_files_lock:
+            for f in self.special_files.values():
+                f['io'].close()
 
     destroy = __del__
 
@@ -62,6 +71,27 @@ class ExeFSMount(LoggingMixIn, Operations):
 
         # displayed name associated with real entry name
         self.files = {'/' + x.name.replace('.', '', 1) + '.bin': x.name for x in self.reader.entries.values()}
+        self.special_files = {}
+
+        if 'icon' in self.reader.entries:
+            try:
+                with self.reader.open('icon') as i:
+                    smdh = SMDH.load(i)
+            except InvalidSMDHError:
+                print('ExeFS: Failed to load smdh')
+            else:
+                icon_small = BytesIO()
+                icon_large = BytesIO()
+
+                smdh.icon_small.save(icon_small, 'png')
+                smdh.icon_large.save(icon_large, 'png')
+
+                icon_small_size = icon_small.seek(0, 2)
+                icon_large_size = icon_large.seek(0, 2)
+
+                # these names are too long to be in the exefs, so special checks can be added for them
+                self.special_files['/icon_small.png'] = {'size': icon_small_size, 'io': icon_small}
+                self.special_files['/icon_large.png'] = {'size': icon_large_size, 'io': icon_large}
 
     @_c.ensure_lower_path
     def getattr(self, path, fh=None):
@@ -69,11 +99,15 @@ class ExeFSMount(LoggingMixIn, Operations):
         if path == '/':
             st = {'st_mode': (S_IFDIR | 0o555), 'st_nlink': 2}
         else:
-            try:
+            if path in self.files:
                 item = self.reader.entries[self.files[path]]
-            except KeyError:
+                size = item.size
+            elif path in self.special_files:
+                item = self.special_files[path]
+                size = item['size']
+            else:
                 raise FuseOSError(ENOENT)
-            st = {'st_mode': (S_IFREG | 0o444), 'st_size': item.size, 'st_nlink': 1}
+            st = {'st_mode': (S_IFREG | 0o444), 'st_size': size, 'st_nlink': 1}
         return {**st, **self.g_stat, 'st_uid': uid, 'st_gid': gid}
 
     def open(self, path, flags):
@@ -84,20 +118,26 @@ class ExeFSMount(LoggingMixIn, Operations):
     def readdir(self, path, fh):
         yield from ('.', '..')
         yield from (x[1:] for x in self.files)
+        yield from (x[1:] for x in self.special_files)
 
     @_c.ensure_lower_path
     def read(self, path, size, offset, fh):
-        try:
+        if path in self.files:
             with self.reader.open(self.files[path]) as f:
                 f.seek(offset)
                 return f.read(size)
-        except (KeyError, ExeFSFileNotFoundError):
+        elif path in self.special_files:
+            with self.special_files_lock:
+                f = self.special_files[path]['io']
+                f.seek(offset)
+                return f.read(size)
+        else:
             raise FuseOSError(ENOENT)
 
     @_c.ensure_lower_path
     def statfs(self, path):
         return {'f_bsize': 4096, 'f_frsize': 4096, 'f_blocks': self.exefs_size // 4096, 'f_bavail': 0, 'f_bfree': 0,
-                'f_files': len(self.reader)}
+                'f_files': len(self.reader) + len(self.special_files)}
 
 
 def main(prog: str = None, args: list = None):
