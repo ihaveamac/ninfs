@@ -17,5 +17,6 @@ from .nandbb import BBNandImageSetup
 from .ncch import NCCHSetup
 from .romfs import RomFSSetup
 from .sd import SDFilesystemSetup
+from .sdtitle import SDTitleSetup
 from .srl import SRLSetup
 from .threedsx import ThreeDSXSetup

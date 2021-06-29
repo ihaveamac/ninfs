@@ -15,6 +15,7 @@ Windows, macOS, and Linux are supported.
   * NCCH (".cxi", ".cfa", ".ncch", ".app")
   * Read-only Filesystem (".romfs", "romfs.bin")
   * SD Card Contents ("Nintendo 3DS" from SD)
+  * Installed SD Title Contents ("\*.tmd" and "\*.app" files)
   * 3DSX Homebrew (".3dsx")
 * Nintendo DS / DSi
   * Nintendo DSi NAND backup ("nand\_dsi.bin")

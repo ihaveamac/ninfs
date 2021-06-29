@@ -33,6 +33,7 @@ wizard_bases = {
     'ncch': NCCHSetup,
     'romfs': RomFSSetup,
     'sd': SDFilesystemSetup,
+    'sdtitle': SDTitleSetup,
     'srl': SRLSetup,
     'threedsx': ThreeDSXSetup,
 }

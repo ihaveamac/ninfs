@@ -49,6 +49,10 @@ types = {
         'name': 'SD Card Contents',
         'info': '"Nintendo 3DS" from SD'
     },
+    'sdtitle': {
+        'name': 'Installed SD Title Contents',
+        'info': '"*.tmd" and "*.app" files'
+    },
     'srl': {
         'name': 'Nintendo DS ROM image',
         'info': '".nds", ".srl"'
@@ -75,7 +79,7 @@ aliases = {
 }
 
 categories = {
-    'Nintendo 3DS': ['cci', 'cdn', 'cia', 'exefs', 'nandctr', 'ncch', 'romfs', 'sd', 'threedsx'],
+    'Nintendo 3DS': ['cci', 'cdn', 'cia', 'exefs', 'nandctr', 'ncch', 'romfs', 'sd', 'sdtitle', 'threedsx'],
     'Nintendo DS / DSi': ['nandtwl', 'srl'],
     'Nintendo Switch': ['nandhac'],
     'iQue Player': ['nandbb']
