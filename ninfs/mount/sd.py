@@ -11,6 +11,7 @@ Mounts SD contents under `/Nintendo 3DS`, creating a virtual filesystem with dec
 import logging
 import os
 from errno import EPERM, EACCES
+from os.path import basename, dirname, isdir
 from sys import exit, argv
 from threading import Lock
 from typing import TYPE_CHECKING
@@ -37,7 +38,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
     def fd_to_fileobj(self, path, mode, fd):
         fh = open(fd, mode, buffering=0)
         lock = Lock()
-        if not (os.path.basename(path).startswith('.') or 'nintendo dsiware' in path.lower()):
+        if not (basename(path).startswith('.') or 'nintendo dsiware' in path.lower() or dirname(path) == self.root):
             fh_enc = self.crypto.create_ctr_io(Keyslot.SD, fh, self.path_to_iv(path))
             fh_group = (fh_enc, fh, lock)
         else:
@@ -58,7 +59,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         self.crypto.setup_sd_key(movable)
         self.root_dir = self.crypto.id0.hex()
 
-        if not os.path.isdir(sd_dir + '/' + self.root_dir):
+        if not isdir(sd_dir + '/' + self.root_dir):
             exit(f'Could not find ID0 {self.root_dir} in the SD directory.')
 
         print('ID0:', self.root_dir)
