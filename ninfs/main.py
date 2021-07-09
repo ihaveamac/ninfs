@@ -70,6 +70,7 @@ def mount(mount_type: str, return_doc: bool = False) -> int:
             parent_pid = int(environ['NINFS_GUI_PARENT_PID'])
             if windll.kernel32.AttachConsole(parent_pid) == 0:  # ATTACH_PARENT_PROCESS
                 print(f'Failed to do AttachConsole({parent_pid}):', get_last_error())
+                print("(Note: this most likely isn't the cause of any other issues you might have!)")
         except KeyError:
             pass
 
