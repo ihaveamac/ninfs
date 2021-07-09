@@ -79,12 +79,14 @@ def mount(mount_type: str, return_doc: bool = False) -> int:
 
     module = import_module('mount.' + mountinfo.aliases.get(mount_type, mount_type))
     if return_doc:
+        # noinspection PyTypeChecker
         return module.__doc__
 
     prog = None
     if __name__ != '__main__':
         prog = 'mount_' + mountinfo.aliases.get(mount_type, mount_type)
     try:
+        # noinspection PyUnresolvedReferences
         return module.main(prog=prog)
     except BootromNotFoundError as e:
         print('Bootrom could not be found.',
