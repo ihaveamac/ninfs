@@ -73,25 +73,19 @@ class ExeFSMount(LoggingMixIn, Operations):
         self.files = {'/' + x.name.replace('.', '', 1) + '.bin': x.name for x in self.reader.entries.values()}
         self.special_files = {}
 
-        if 'icon' in self.reader.entries:
-            try:
-                with self.reader.open('icon') as i:
-                    smdh = SMDH.load(i)
-            except InvalidSMDHError:
-                print('ExeFS: Failed to load smdh')
-            else:
-                icon_small = BytesIO()
-                icon_large = BytesIO()
+        if self.reader.icon:
+            icon_small = BytesIO()
+            icon_large = BytesIO()
 
-                smdh.icon_small.save(icon_small, 'png')
-                smdh.icon_large.save(icon_large, 'png')
+            self.reader.icon.icon_small.save(icon_small, 'png')
+            self.reader.icon.icon_large.save(icon_large, 'png')
 
-                icon_small_size = icon_small.seek(0, 2)
-                icon_large_size = icon_large.seek(0, 2)
+            icon_small_size = icon_small.seek(0, 2)
+            icon_large_size = icon_large.seek(0, 2)
 
-                # these names are too long to be in the exefs, so special checks can be added for them
-                self.special_files['/icon_small.png'] = {'size': icon_small_size, 'io': icon_small}
-                self.special_files['/icon_large.png'] = {'size': icon_large_size, 'io': icon_large}
+            # these names are too long to be in the exefs, so special checks can be added for them
+            self.special_files['/icon_small.png'] = {'size': icon_small_size, 'io': icon_small}
+            self.special_files['/icon_large.png'] = {'size': icon_large_size, 'io': icon_large}
 
     @_c.ensure_lower_path
     def getattr(self, path, fh=None):
