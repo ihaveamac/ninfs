@@ -76,7 +76,7 @@ No standalone build is available at the moment.
 
 #### Install with existing Python
 * Install the latest version of Python 3. The recommended way is [Homebrew](https://brew.sh). You can also use an installer from [python.org](https://www.python.org/downloads/) or a tool like [pyenv](https://github.com/pyenv/pyenv).
-* Install the latest version of [FUSE for macOS](https://github.com/osxfuse/osxfuse/releases/latest).
+* Install the latest version of [macFUSE](https://github.com/osxfuse/osxfuse/releases/latest).
 * Install ninfs with `python3 -m pip install --upgrade https://github.com/ihaveamac/ninfs/archive/2.0.zip`
 
 ### Linux

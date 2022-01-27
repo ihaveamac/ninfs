@@ -155,8 +155,8 @@ class NinfsGUI(tk.Tk):
                         webbrowser.open('http://www.secfs.net/winfsp/rel/')
                 elif is_mac:
                     res = mb.askyesno('Failed to load libfuse',
-                                      'Failed to load libfuse. FUSE for macOS needs to be installed.\n\n'
-                                      'Would you like to open the FUSE for macOS download page?\n'
+                                      'Failed to load libfuse. macFUSE needs to be installed.\n\n'
+                                      'Would you like to open the macFUSE download page?\n'
                                       'https://osxfuse.github.io')
                     if res:
                         webbrowser.open('https://osxfuse.github.io')
