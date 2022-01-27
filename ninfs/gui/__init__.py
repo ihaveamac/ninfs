@@ -3,7 +3,7 @@
 # Copyright (c) 2017-2021 Ian Burgwin
 # This file is licensed under The MIT License (MIT).
 # You can find the full license text in LICENSE.md in the root of this project.
-
+import os
 import sys
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -204,8 +204,21 @@ class NinfsGUI(tk.Tk):
         wizard_window.change_frame(WizardTypeSelector)
         wizard_window.focus()
 
-    def mount(self, mounttype: 'str', cmdargs: 'List[str]', mountpoint: str, callback_success: 'Callable',
-              callback_failed: 'Callable'):
+    def mount(self, mounttype: str, cmdargs: 'List[str]', mountpoint: str, callback_success: 'Callable',
+              callback_failed: 'Callable', is_drive_letter: bool):
+        if is_windows:
+            if not is_drive_letter:
+                # the directory must first be deleted before winfsp can mount to it
+                try:
+                    os.rmdir(mountpoint)
+                except FileNotFoundError:
+                    pass
+                except Exception:
+                    exc_list = ['Failed to delete directory:', mountpoint, '']
+                    exc_list.extend(format_exc().splitlines())
+                    callback_failed(None, exc_list)
+                    return
+
         args = [executable]
         if not frozen:
             args.append(dirname(dirname(__file__)))

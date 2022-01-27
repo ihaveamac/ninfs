@@ -3,12 +3,13 @@
 # Copyright (c) 2017-2021 Ian Burgwin
 # This file is licensed under The MIT License (MIT).
 # You can find the full license text in LICENSE.md in the root of this project.
-
+import os
 from datetime import datetime
 from sys import platform
 import tkinter as tk
 import tkinter.ttk as ttk
 import tkinter.filedialog as fd
+import tkinter.messagebox as mb
 from typing import TYPE_CHECKING
 
 import mountinfo
@@ -18,7 +19,7 @@ from .outputviewer import OutputViewer
 from .setupwizard import *
 
 if TYPE_CHECKING:
-    from typing import List, Type
+    from typing import List, Optional, Type
     from . import NinfsGUI
 
 wizard_bases = {
@@ -156,7 +157,10 @@ class WizardMountPointSelector(WizardBase):
 
         self.adv_options = {'user_access': 'none'}
 
-        if platform == 'win32':
+        # special case for nand types here, which should not be mounted to a drive letter
+        if platform == 'win32' and not cmdargs[0].startswith('nand'):
+            self.is_drive_letter = True
+
             drive_letters = [x + ':' for x in get_unused_drives()]
 
             container, drive_selector, drive_selector_var = self.make_option_menu('Select the drive letter to use:',
@@ -168,6 +172,8 @@ class WizardMountPointSelector(WizardBase):
             self.wizardcontainer.set_next_enabled(True)
 
         else:
+            self.is_drive_letter = False
+
             def callback(*_):
                 mount_point = self.mount_point_var.get().strip()
                 self.wizardcontainer.set_next_enabled(mount_point)
@@ -176,8 +182,10 @@ class WizardMountPointSelector(WizardBase):
             container, mount_textbox, mount_textbox_var = self.make_directory_picker(labeltext, 'Select mountpoint')
             container.pack(fill=tk.X, expand=True)
 
-            adv_options_button = ttk.Button(self, text='Advanced mount options', command=self.show_advanced_options)
-            adv_options_button.pack(fill=tk.X, expand=True)
+            # no advanced options needed on windows yet
+            if platform != 'win32':
+                adv_options_button = ttk.Button(self, text='Advanced mount options', command=self.show_advanced_options)
+                adv_options_button.pack(fill=tk.X, expand=True)
 
             mount_textbox_var.trace_add('write', callback)
 
@@ -190,15 +198,20 @@ class WizardMountPointSelector(WizardBase):
             self.adv_options.update(adv_options_window.get_options())
 
     def next_pressed(self):
+        if platform == 'win32' and not self.is_drive_letter:
+            if len(os.listdir(self.mount_point_var.get())) != 0:
+                mb.showerror('ninfs', 'Directory must be empty.')
+                return
         extra_args = []
         if self.adv_options['user_access'] != 'none':
             extra_args.extend(('-o', self.adv_options['user_access']))
-        self.wizardcontainer.mount(self.mounttype, self.cmdargs + extra_args, self.mount_point_var.get())
+        self.wizardcontainer.mount(self.mounttype, self.cmdargs + extra_args, self.mount_point_var.get(),
+                                   self.is_drive_letter)
 
 
 class WizardMountStep(WizardBase):
-    def __init__(self, parent: 'tk.BaseWidget' = None, *, wizardcontainer: 'WizardContainer', mounttype: 'str',
-                 cmdargs: 'List[str]', mountpoint: 'str'):
+    def __init__(self, parent: 'tk.BaseWidget' = None, *, wizardcontainer: 'WizardContainer', mounttype: str,
+                 cmdargs: 'List[str]', mountpoint: str, is_drive_letter: bool):
         super().__init__(parent, wizardcontainer=wizardcontainer)
 
         self.wizardcontainer.set_cancel_enabled(False)
@@ -208,7 +221,8 @@ class WizardMountStep(WizardBase):
         label = ttk.Label(self, text='Starting mount process...')
         label.pack(fill=tk.X, expand=True)
 
-        self.wizardcontainer.parent.mount(mounttype, cmdargs, mountpoint, self.callback_success, self.callback_failed)
+        self.wizardcontainer.parent.mount(mounttype, cmdargs, mountpoint, self.callback_success, self.callback_failed,
+                                          is_drive_letter=is_drive_letter)
 
     def callback_success(self):
         opened = open_directory(self.mountpoint)
@@ -222,12 +236,13 @@ class WizardMountStep(WizardBase):
 
 
 class WizardFailedMount(WizardBase):
-    def __init__(self, parent: 'tk.BaseWidget' = None, *, wizardcontainer: 'WizardContainer', returncode: int,
-                 output: 'List[str]', kind: str):
+    def __init__(self, parent: 'tk.BaseWidget' = None, *, wizardcontainer: 'WizardContainer',
+                 returncode: 'Optional[int]', output: 'List[str]', kind: str):
         super().__init__(parent, wizardcontainer=wizardcontainer)
 
-        output.append('')
-        output.append(f'Return code was {returncode}')
+        if returncode:
+            output.append('')
+            output.append(f'Return code was {returncode}')
 
         self.returncode = returncode
         self.output = output
@@ -322,8 +337,9 @@ class WizardContainer(tk.Toplevel):
         self.next_button.configure(text='Mount')
         self.change_frame(WizardMountPointSelector, cmdargs=cmdargs, mounttype=mounttype)
 
-    def mount(self, mounttype: 'str', cmdargs: 'List[str]', mountpoint: str):
-        self.change_frame(WizardMountStep, mounttype=mounttype, cmdargs=cmdargs, mountpoint=mountpoint)
+    def mount(self, mounttype: 'str', cmdargs: 'List[str]', mountpoint: str, is_drive_letter: bool):
+        self.change_frame(WizardMountStep, mounttype=mounttype, cmdargs=cmdargs, mountpoint=mountpoint,
+                          is_drive_letter=is_drive_letter)
 
     def change_frame(self, target: 'Type[WizardBase]', *args, **kwargs):
         if self.current_frame:
