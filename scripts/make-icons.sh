@@ -1,7 +1,14 @@
 #!/bin/sh
-if [[ `uname -s` = Darwin ]]; then
-    mkdir build
-    rm -r build/ninfs.iconset > /dev/null
+
+# check for imagemagick
+if ! convert > /dev/null 2>&1; then
+  echo "convert not found, please install ImageMagick"
+  exit
+fi
+
+if [ "$(uname -s)" = Darwin ]; then
+    mkdir build 2> /dev/null
+    rm -r build/ninfs.iconset 2> /dev/null
     mkdir build/ninfs.iconset
 
     cp ninfs/gui/data/16x16.png build/ninfs.iconset/icon_16x16.png
