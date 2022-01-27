@@ -4,11 +4,13 @@ set OUTDIR=build\zipbuild\ninfs-%VERSION%
 
 mkdir dist
 rmdir /s /q build\zipbuild
-mkdir %OUTDIR% || exit /b
+mkdir build
+mkdir build\zipbuild
+mkdir %OUTDIR%
 
-copy LICENSE.md %OUTDIR% || exit /b
-copy README.md %OUTDIR% || exit /b
+copy LICENSE.md %OUTDIR%
+copy README.md %OUTDIR%
 
-xcopy /s /e /i /y build\exe.win32-3.8 %OUTDIR% || exit /b
+xcopy /s /e /i /y build\exe.win32-3.8 %OUTDIR%
 
-py -m zipfile -c dist\ninfs-%VERSION%-win32.zip %OUTDIR% || exit /b
+py -m zipfile -c dist\ninfs-%VERSION%-win32.zip %OUTDIR%
