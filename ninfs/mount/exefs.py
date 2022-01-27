@@ -10,12 +10,14 @@ Mounts Executable Filesystem (ExeFS) files, creating a virtual filesystem of the
 
 import logging
 from errno import ENOENT
+from itertools import chain
 from io import BytesIO
 from stat import S_IFDIR, S_IFREG
 from sys import argv
 from threading import Lock
 from typing import TYPE_CHECKING
 
+import png
 from pyctr.type.exefs import ExeFSReader, ExeFSFileNotFoundError, CodeDecompressionError
 from pyctr.type.smdh import SMDH, InvalidSMDHError
 
@@ -77,8 +79,11 @@ class ExeFSMount(LoggingMixIn, Operations):
             icon_small = BytesIO()
             icon_large = BytesIO()
 
-            self.reader.icon.icon_small.save(icon_small, 'png')
-            self.reader.icon.icon_large.save(icon_large, 'png')
+            def load_to_pypng(array, w, h):
+                return png.from_array((chain.from_iterable(x) for x in array), 'RGB', {'width': w, 'height': h})
+
+            load_to_pypng(self.reader.icon.icon_small_array, 24, 24).write(icon_small)
+            load_to_pypng(self.reader.icon.icon_large_array, 48, 48).write(icon_large)
 
             icon_small_size = icon_small.seek(0, 2)
             icon_large_size = icon_large.seek(0, 2)

@@ -1,3 +1,4 @@
 pyctr>=0.5.1,<0.7
 haccrypto>=0.1
 pycryptodomex>=3.9,<4
+pypng>=0.0.21
