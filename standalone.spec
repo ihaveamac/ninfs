@@ -8,6 +8,8 @@ sys.path.insert(0, os.getcwd())
 
 from ninfs import mountinfo
 
+import haccrypto
+
 mount_module_paths = [f'mount.{x}' for x in mountinfo.types.keys()]
 
 imports = [
@@ -24,7 +26,8 @@ imports = [
 
 a = Analysis(['ninfs/_frozen_main.py'],
              pathex=['./ninfs'],
-             binaries=[],
+	     # this is bugging the shit out of me
+             binaries=[(os.path.join(os.path.dirname(haccrypto.__file__), 'libcrypto.1.1.dylib'), 'haccrypto')],
              datas=[('ninfs/gui/data', 'guidata')],
              hiddenimports=imports,
              hookspath=[],
