@@ -333,13 +333,12 @@ class SplitFileHandler(BufferedIOBase):
 
 
 class RawDeviceHandler(BufferedIOBase):
-    """Handler for easier IO access with raw devices by aligning reads and writes to the sector size."""
+    """(NYI) Handler for easier IO access with raw devices by aligning reads and writes to the sector size."""
 
     _seek = 0
 
-    def __init__(self, fh: 'BinaryIO', mode: str = 'rb+', sector_size: int = 0x200):
+    def __init__(self, fh: 'BinaryIO', sector_size: int = 0x200):
         self._fh = fh
-        self.mode = mode
         self._sector_size = sector_size
 
     @_raise_if_closed
@@ -352,7 +351,8 @@ class RawDeviceHandler(BufferedIOBase):
             self._seek = max(self._seek + seek, 0)
         elif whence == 2:
             # this doesn't work...
-            raise Exception
+            # maybe if the size is known, this could be based off that instead?
+            raise NotImplementedError("can't seek from the ending on a block device")
         return self._seek
 
     @_raise_if_closed
@@ -361,12 +361,26 @@ class RawDeviceHandler(BufferedIOBase):
 
     @_raise_if_closed
     def readable(self) -> bool:
-        return True
+        return self._fh.readable()
 
     @_raise_if_closed
     def writable(self) -> bool:
-        return True
+        return self._fh.writable()
 
     @_raise_if_closed
     def seekable(self) -> bool:
-        return True
+        return self._fh.seekable()
+
+    @_raise_if_closed
+    def read(self, size: int = -1) -> bytes:
+        if size == -1:
+            raise NotImplementedError("can't read without a specified size")
+
+        before = self._seek % self._sector_size
+        after = 0
+        total = before + size
+        if total % self._sector_size:
+            after = self._sector_size - (total % self._sector_size)
+            total += after
+
+        self._seek += size
