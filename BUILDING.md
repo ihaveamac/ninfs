@@ -1,4 +1,4 @@
-This is still being worked on (as of October 25, 2020).
+This is still being worked on (as of January 26, 2022).
 
 # Windows
 
@@ -7,7 +7,7 @@ This expects Python 3.8 32-bit to be installed.
 
 Install the dependencies:
 ```batch
-py -3.8-32 -m pip install --user cx-Freeze==6.6 -r requirements.txt
+py -3.8-32 -m pip install --user --upgrade cx-Freeze==6.10 -r requirements.txt
 ```
 
 Build the exe:
@@ -30,13 +30,13 @@ scripts\make-inst-win.bat
 * `py -3 setup.py sdist` - build source distribution
 
 # macOS
-This needs Python built with universal2 to produce a build with a working GUI. Despite that it currently doesn't produce a universal build (https://github.com/pyinstaller/pyinstaller/issues/5315).
+This needs Python built with universal2 to produce a build with a working GUI. A universal2 build will be made.
 
 Set up a venv, activate it, and install the requirements:
 ```sh
 python3.9 -m venv venv39
 source venv39/bin/activate
-pip install pyinstaller certifi -r requirements.txt
+pip install --upgrade pyinstaller certifi -r requirements.txt
 ```
 
 Build the icns:
