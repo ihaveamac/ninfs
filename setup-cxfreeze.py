@@ -38,15 +38,9 @@ if sys.platform == 'win32':
     executables.append(Executable('ninfs/winpathmodify.py',
                                   target_name='winpathmodify'))
 
-# based on https://github.com/Legrandin/pycryptodome/blob/b3a394d0837ff92919d35d01de9952b8809e802d/setup.py
-with open('ninfs/__init__.py', 'r', encoding='utf-8') as f:
-    for line in f:
-        if line.startswith('__version__'):
-            version = eval(line.split('=')[1])
-
 setup(
     name='ninfs',
-    version=version,
+    version='2.0',
     description='FUSE filesystem Python scripts for Nintendo console files',
     options={'build_exe': build_exe_options},
     executables=executables
