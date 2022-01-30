@@ -14,13 +14,16 @@ from typing import TYPE_CHECKING
 
 import mountinfo
 from .opendir import open_directory
-from .optionsframes import RadiobuttonContainer
+from .optionsframes import CheckbuttonContainer, RadiobuttonContainer
 from .outputviewer import OutputViewer
 from .setupwizard import *
 
 if TYPE_CHECKING:
     from typing import List, Optional, Type
     from . import NinfsGUI
+
+# importing this from __init__ would cause a circular import, and it's just easier to copy this again
+is_windows = platform == 'win32'
 
 wizard_bases = {
     'cci': CCISetup,
@@ -39,7 +42,7 @@ wizard_bases = {
     'threedsx': ThreeDSXSetup,
 }
 
-if platform == 'win32':
+if is_windows:
     from ctypes import windll
     from string import ascii_uppercase
 
@@ -115,30 +118,41 @@ class WizardMountAdvancedOptions(tk.Toplevel):
         container = ttk.Frame(outer_container)
         container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        label = ttk.Label(container, text='External user access')
-        label.grid(row=0, column=0, padx=(0, 8), sticky=tk.NW)
+        label_opt = ttk.Label(container, text='Options')
+        label_opt.grid(row=0, column=0, padx=(0, 10), sticky=tk.NW)
 
-        opts = [
-            ("Don't allow other users", 'none'),
-            ('Allow access by root (-o allow_root)', 'allow_root'),
-            ('Allow access by other users (-o allow_other)', 'allow_other'),
-        ]
-        self.rb_container = RadiobuttonContainer(container, options=opts, default=current['user_access'])
-        self.rb_container.grid(row=0, column=1)
+        enabled = []
+        if current['use_dev']:
+            enabled.append('Use developer-unit keys')
+        self.check_opt = CheckbuttonContainer(container, options=['Use developer-unit keys'], enabled=enabled)
+        self.check_opt.grid(row=0, column=1, pady=(0, 10), sticky=tk.NW)
+
+        if not is_windows:
+            label_eua = ttk.Label(container, text='External user access')
+            label_eua.grid(row=1, column=0, padx=(0, 8), sticky=tk.NW)
+
+            opts_eua = [
+                ("Don't allow other users", 'none'),
+                ('Allow access by root (-o allow_root)', 'allow_root'),
+                ('Allow access by other users (-o allow_other)', 'allow_other'),
+            ]
+            self.rb_container_eua = RadiobuttonContainer(container, options=opts_eua, default=current['user_access'])
+            self.rb_container_eua.grid(row=1, column=1, pady=(0, 10))
 
         def ok():
             self.ok_clicked = True
             self.destroy()
 
         ok_button = ttk.Button(container, text='OK', command=ok)
-        ok_button.grid(row=1, column=0, columnspan=2, pady=(10, 0))
+        ok_button.grid(row=2, column=0, columnspan=2)
 
         self.geometry("+%d+%d" % (parent.winfo_rootx() + 50, parent.winfo_rooty() + 50))
 
         self.wm_deiconify()
 
     def get_options(self):
-        return {'user_access': self.rb_container.get_selected()}
+        return {'user_access': self.rb_container_eua.get_selected(),
+                'use_dev': self.check_opt.get_values()['Use developer-unit keys']}
 
     def wait_for_response(self):
         self.wait_window()
@@ -155,19 +169,22 @@ class WizardMountPointSelector(WizardBase):
         self.mounttype = mounttype
         self.cmdargs = cmdargs
 
-        self.adv_options = {'user_access': 'none'}
+        self.adv_options = {'user_access': 'none', 'use_dev': False}
 
         # special case for nand types here, which should not be mounted to a drive letter
-        if platform == 'win32' and not cmdargs[0].startswith('nand'):
+        if is_windows and not cmdargs[0].startswith('nand'):
             self.is_drive_letter = True
 
-            drive_letters = [x + ':' for x in get_unused_drives()]
+            drive_letters = ['A:', 'B:']
 
             container, drive_selector, drive_selector_var = self.make_option_menu('Select the drive letter to use:',
                                                                                   *drive_letters)
             container.pack(fill=tk.X, expand=True)
 
             self.mount_point_var = drive_selector_var
+
+            adv_options_button = ttk.Button(self, text='Advanced mount options', command=self.show_advanced_options)
+            adv_options_button.pack(fill=tk.X, expand=True)
 
             self.wizardcontainer.set_next_enabled(True)
 
@@ -182,10 +199,8 @@ class WizardMountPointSelector(WizardBase):
             container, mount_textbox, mount_textbox_var = self.make_directory_picker(labeltext, 'Select mountpoint')
             container.pack(fill=tk.X, expand=True)
 
-            # no advanced options needed on windows yet
-            if platform != 'win32':
-                adv_options_button = ttk.Button(self, text='Advanced mount options', command=self.show_advanced_options)
-                adv_options_button.pack(fill=tk.X, expand=True)
+            adv_options_button = ttk.Button(self, text='Advanced mount options', command=self.show_advanced_options)
+            adv_options_button.pack(fill=tk.X, expand=True)
 
             mount_textbox_var.trace_add('write', callback)
 
@@ -198,11 +213,13 @@ class WizardMountPointSelector(WizardBase):
             self.adv_options.update(adv_options_window.get_options())
 
     def next_pressed(self):
-        if platform == 'win32' and not self.is_drive_letter:
+        if is_windows and not self.is_drive_letter:
             if len(os.listdir(self.mount_point_var.get())) != 0:
                 mb.showerror('ninfs', 'Directory must be empty.')
                 return
         extra_args = []
+        if self.adv_options['use_dev']:
+            extra_args.append('--dev')
         if self.adv_options['user_access'] != 'none':
             extra_args.extend(('-o', self.adv_options['user_access']))
         self.wizardcontainer.mount(self.mounttype, self.cmdargs + extra_args, self.mount_point_var.get(),
