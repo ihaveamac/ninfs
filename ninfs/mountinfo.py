@@ -85,6 +85,9 @@ categories = {
     'iQue Player': ['nandbb']
 }
 
+# this will add the "Use developer-unit keys" option to Advanced options in the gui
+supports_dev_keys = ['cci', 'cdn', 'cia', 'nandctr', 'ncch', 'sd', 'sdtitle']
+
 
 def get_type_info(mount_type):
     return types[aliases.get(mount_type, mount_type)]

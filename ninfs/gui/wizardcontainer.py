@@ -99,7 +99,7 @@ class WizardTypeSelector(WizardBase):
 
 
 class WizardMountAdvancedOptions(tk.Toplevel):
-    def __init__(self, parent: 'WizardContainer' = None, *, current: 'dict'):
+    def __init__(self, parent: 'WizardContainer' = None, *, current: 'dict', show_dev_keys: bool):
         super().__init__(parent)
 
         self.wm_title('Advanced mount options')
@@ -118,14 +118,15 @@ class WizardMountAdvancedOptions(tk.Toplevel):
         container = ttk.Frame(outer_container)
         container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        label_opt = ttk.Label(container, text='Options')
-        label_opt.grid(row=0, column=0, padx=(0, 10), sticky=tk.NW)
+        if show_dev_keys:
+            label_opt = ttk.Label(container, text='Options')
+            label_opt.grid(row=0, column=0, padx=(0, 10), sticky=tk.NW)
 
-        enabled = []
-        if current['use_dev']:
-            enabled.append('Use developer-unit keys')
-        self.check_opt = CheckbuttonContainer(container, options=['Use developer-unit keys'], enabled=enabled)
-        self.check_opt.grid(row=0, column=1, pady=(0, 10), sticky=tk.NW)
+            enabled = []
+            if current['use_dev']:
+                enabled.append('Use developer-unit keys')
+            self.check_opt = CheckbuttonContainer(container, options=['Use developer-unit keys'], enabled=enabled)
+            self.check_opt.grid(row=0, column=1, pady=(0, 10), sticky=tk.NW)
 
         if not is_windows:
             label_eua = ttk.Label(container, text='External user access')
@@ -183,8 +184,10 @@ class WizardMountPointSelector(WizardBase):
 
             self.mount_point_var = drive_selector_var
 
-            adv_options_button = ttk.Button(self, text='Advanced mount options', command=self.show_advanced_options)
-            adv_options_button.pack(fill=tk.X, expand=True)
+            if cmdargs[0] in mountinfo.supports_dev_keys:
+                # the only advanced option for windows users is dev keys, so hide this button if that doesn't apply
+                adv_options_button = ttk.Button(self, text='Advanced mount options', command=self.show_advanced_options)
+                adv_options_button.pack(fill=tk.X, expand=True)
 
             self.wizardcontainer.set_next_enabled(True)
 
@@ -199,15 +202,18 @@ class WizardMountPointSelector(WizardBase):
             container, mount_textbox, mount_textbox_var = self.make_directory_picker(labeltext, 'Select mountpoint')
             container.pack(fill=tk.X, expand=True)
 
-            adv_options_button = ttk.Button(self, text='Advanced mount options', command=self.show_advanced_options)
-            adv_options_button.pack(fill=tk.X, expand=True)
+            if (not is_windows) or cmdargs[0] in mountinfo.supports_dev_keys:
+                # the only advanced option for windows users is dev keys, so hide this button if that doesn't apply
+                adv_options_button = ttk.Button(self, text='Advanced mount options', command=self.show_advanced_options)
+                adv_options_button.pack(fill=tk.X, expand=True)
 
             mount_textbox_var.trace_add('write', callback)
 
             self.mount_point_var = mount_textbox_var
 
     def show_advanced_options(self):
-        adv_options_window = WizardMountAdvancedOptions(self.wizardcontainer, current=self.adv_options)
+        adv_options_window = WizardMountAdvancedOptions(self.wizardcontainer, current=self.adv_options,
+                                                        show_dev_keys=self.cmdargs[0] in mountinfo.supports_dev_keys)
         adv_options_window.focus_set()
         if adv_options_window.wait_for_response():
             self.adv_options.update(adv_options_window.get_options())
