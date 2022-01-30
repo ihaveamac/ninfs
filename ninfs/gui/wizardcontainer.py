@@ -127,6 +127,8 @@ class WizardMountAdvancedOptions(tk.Toplevel):
                 enabled.append('Use developer-unit keys')
             self.check_opt = CheckbuttonContainer(container, options=['Use developer-unit keys'], enabled=enabled)
             self.check_opt.grid(row=0, column=1, pady=(0, 10), sticky=tk.NW)
+        else:
+            self.check_opt = None
 
         if not is_windows:
             label_eua = ttk.Label(container, text='External user access')
@@ -139,6 +141,8 @@ class WizardMountAdvancedOptions(tk.Toplevel):
             ]
             self.rb_container_eua = RadiobuttonContainer(container, options=opts_eua, default=current['user_access'])
             self.rb_container_eua.grid(row=1, column=1, pady=(0, 10))
+        else:
+            self.rb_container_eua = None
 
         def ok():
             self.ok_clicked = True
@@ -152,8 +156,13 @@ class WizardMountAdvancedOptions(tk.Toplevel):
         self.wm_deiconify()
 
     def get_options(self):
-        return {'user_access': self.rb_container_eua.get_selected(),
-                'use_dev': self.check_opt.get_values()['Use developer-unit keys']}
+        user_access = 'none'
+        use_dev = False
+        if self.rb_container_eua:
+            user_access = self.rb_container_eua.get_selected()
+        if self.check_opt:
+            use_dev = self.check_opt.get_values()['Use developer-unit keys']
+        return {'user_access': user_access, 'use_dev': use_dev}
 
     def wait_for_response(self):
         self.wait_window()
