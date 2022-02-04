@@ -7,7 +7,7 @@ set -e -u
 
 mkdir -p "$DMGDIR"
 
-cp -rpc dist/ninfs.app "$DMGDIR/ninfs.app"
+cp -Rpc dist/ninfs.app "$DMGDIR/ninfs.app"
 ln -s /Applications "$DMGDIR/Applications"
 cp resources/MacGettingStarted.pdf "$DMGDIR/Getting Started.pdf"
 
