@@ -1,4 +1,4 @@
-This is still being worked on (as of January 26, 2022).
+This is still being worked on (as of February 3, 2022).
 
 # Windows
 
@@ -34,8 +34,8 @@ This needs Python built with universal2 to produce a build with a working GUI. A
 
 Set up a venv, activate it, and install the requirements:
 ```sh
-python3.9 -m venv venv39
-source venv39/bin/activate
+python3.10 -m venv venv310
+source venv310/bin/activate
 pip install --upgrade pyinstaller certifi -r requirements.txt
 ```
 
@@ -49,9 +49,49 @@ Build the app:
 pyinstaller standalone.spec
 ```
 
+## Distributing for release
+Mostly for my reference, but in case you want to try and reproduce a build. If you are not signing and notarizing the app (which requires giving Apple $99 for a yearly developer program membership), you can just build the dmg and ignore the rest.
+
+## DMG only
+```sh
+./scripts/make-dmg-mac.sh
+```
+
+## Sign and notarize
+Most of this was taken from this gist: https://gist.github.com/txoof/0636835d3cc65245c6288b2374799c43
+
+Sign the app:
+```sh
+codesign \
+    --force \
+    --deep \
+    --options runtime \
+    --entitlements ./resources/mac-entitlements.plist \
+    --sign "<signature-id>" \
+    --timestamp \
+    ./dist/ninfs.app
+```
+
+`--timestamp` is not necessarily required (and could probably be removed for test builds), but it is if you are notarizing the app.
+
 Build the dmg:
 ```sh
 ./scripts/make-dmg-mac.sh
+```
+
+Upload for notarization:
+```sh
+xcrun altool --notarize-app --primary-bundle-id "net.ihaveahax.ninfs" --username "<email-address>" --password "@keychain:Developer-altool" --file ./dist/ninfs-<version>-macos.dmg
+```
+
+Wait for an email back about a successful notarization, or check the status:
+```sh
+xcrun altool --notarization-history 0 -u "<email-address>" -p "@keychain:Developer-altool"
+```
+
+Staple the ticket to the dmg:
+```sh
+xcrun stapler staple ./dist/ninfs-<version>-macos.dmg
 ```
 
 todo:
