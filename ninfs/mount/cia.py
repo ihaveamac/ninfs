@@ -91,9 +91,9 @@ class CTRImportableArchiveMount(LoggingMixIn, Operations):
             return self.dirs[first_dir].getattr(_c.remove_first_dir(path), fh)
         uid, gid, pid = fuse_get_context()
         if path == '/' or path in self.dirs:
-            st = {'st_mode': (S_IFDIR | 0o555), 'st_nlink': 2}
+            st = {'st_mode': (S_IFDIR | 0o777), 'st_nlink': 2}
         elif path in self.files:
-            st = {'st_mode': (S_IFREG | 0o444), 'st_size': self.files[path][2], 'st_nlink': 1}
+            st = {'st_mode': (S_IFREG | 0o666), 'st_size': self.files[path][2], 'st_nlink': 1}
         else:
             raise FuseOSError(ENOENT)
         return {**st, **self.g_stat, 'st_uid': uid, 'st_gid': gid}

@@ -234,9 +234,9 @@ class SRLMount(LoggingMixIn, Operations):
         uid, gid, pid = fuse_get_context()
         item = self.parse_path(path)
         if item['type'] == 'dir':
-            st = {'st_mode': (S_IFDIR | 0o555), 'st_nlink': 2}
+            st = {'st_mode': (S_IFDIR | 0o777), 'st_nlink': 2}
         elif item['type'] == 'file':
-            st = {'st_mode': (S_IFREG | 0o444), 'st_size': item['size'], 'st_nlink': 1}
+            st = {'st_mode': (S_IFREG | 0o666), 'st_size': item['size'], 'st_nlink': 1}
         else:
             # this won't happen unless I fucked up
             raise FuseOSError(ENOENT)

@@ -96,7 +96,7 @@ class ExeFSMount(LoggingMixIn, Operations):
     def getattr(self, path, fh=None):
         uid, gid, pid = fuse_get_context()
         if path == '/':
-            st = {'st_mode': (S_IFDIR | 0o555), 'st_nlink': 2}
+            st = {'st_mode': (S_IFDIR | 0o777), 'st_nlink': 2}
         else:
             if path in self.files:
                 item = self.reader.entries[self.files[path]]
@@ -106,7 +106,7 @@ class ExeFSMount(LoggingMixIn, Operations):
                 size = item['size']
             else:
                 raise FuseOSError(ENOENT)
-            st = {'st_mode': (S_IFREG | 0o444), 'st_size': size, 'st_nlink': 1}
+            st = {'st_mode': (S_IFREG | 0o666), 'st_size': size, 'st_nlink': 1}
         return {**st, **self.g_stat, 'st_uid': uid, 'st_gid': gid}
 
     def open(self, path, flags):

@@ -106,9 +106,9 @@ class BBNandImageMount(LoggingMixIn, Operations):
     def getattr(self, path, fh=None):
         uid, gid, pid = fuse_get_context()
         if path == '/':
-            st = {'st_mode': (S_IFDIR | (0o555)), 'st_nlink': 2}
+            st = {'st_mode': (S_IFDIR | 0o777), 'st_nlink': 2}
         elif path in self.files:
-            st = {'st_mode': (S_IFREG | (0o444)),
+            st = {'st_mode': (S_IFREG | 0o666),
                   'st_size': self.files[path]['size'], 'st_nlink': 1}
         else:
             raise FuseOSError(ENOENT)
