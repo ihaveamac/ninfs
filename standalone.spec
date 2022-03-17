@@ -26,9 +26,9 @@ imports = [
 
 a = Analysis(['ninfs/_frozen_main.py'],
              pathex=['./ninfs'],
-	     # this is bugging the shit out of me
+	         # this is bugging the shit out of me
              binaries=[(os.path.join(os.path.dirname(haccrypto.__file__), 'libcrypto.1.1.dylib'), 'haccrypto')],
-             datas=[('ninfs/gui/data', 'guidata')],
+             datas=[('ninfs/gui/data', 'guidata'), ('resources/InternetAccessPolicy.plist', '.')],
              hiddenimports=imports,
              hookspath=[],
              runtime_hooks=[],
