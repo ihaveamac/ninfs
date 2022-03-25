@@ -185,7 +185,7 @@ class WizardMountPointSelector(WizardBase):
         if is_windows and not cmdargs[0].startswith('nand'):
             self.is_drive_letter = True
 
-            drive_letters = ['A:', 'B:']
+            drive_letters = [x + ':' for x in get_unused_drives()]
 
             container, drive_selector, drive_selector_var = self.make_option_menu('Select the drive letter to use:',
                                                                                   *drive_letters)
