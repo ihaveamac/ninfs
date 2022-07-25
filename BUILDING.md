@@ -81,12 +81,7 @@ Build the dmg:
 
 Upload for notarization:
 ```sh
-xcrun altool --notarize-app --primary-bundle-id "net.ihaveahax.ninfs" --username "<email-address>" --password "@keychain:Developer-altool" --file ./dist/ninfs-<version>-macos.dmg
-```
-
-Wait for an email back about a successful notarization, or check the status:
-```sh
-xcrun altool --notarization-history 0 -u "<email-address>" -p "@keychain:Developer-altool"
+xcrun notarytool submit ./dist/ninfs-<version>-macos.dmg --keychain-profile "AC_PASSWORD" --wait
 ```
 
 Staple the ticket to the dmg:
