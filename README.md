@@ -69,6 +69,10 @@ A standalone zip is also provided in [releases](https://github.com/ihaveamac/nin
 * Install the latest version of [WinFsp](https://winfsp.dev/rel/).
 * Install ninfs with `py -3 -m pip install --upgrade https://github.com/ihaveamac/ninfs/archive/2.0.zip`
 
+#### Windows on ARM
+
+Official support for Windows on ARM will come [eventually](https://github.com/ihaveamac/ninfs/issues/91). In the mean time, running the x86 version has been tested and seems to work properly. Make sure to install the latest WinFSP version with ARM64 support.
+
 ### macOS
 Versions of macOS supported by Apple are highly recommended. macOS Sierra is the oldest version that should work. [macFUSE](https://osxfuse.github.io/) is required.
 
