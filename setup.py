@@ -38,6 +38,8 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
     ],
     install_requires=['pycryptodomex>=3.9,<4', 'pyctr>=0.5.1,<0.7', 'haccrypto>=0.1', 'pypng>=0.0.21'],
     python_requires='>=3.6.1',
