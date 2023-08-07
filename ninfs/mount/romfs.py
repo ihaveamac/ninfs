@@ -18,7 +18,7 @@ from pyctr.type.romfs import RomFSReader, RomFSFileNotFoundError
 
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
-from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time, realpath
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time, realpath, basename
 
 
 class RomFSMount(LoggingMixIn, Operations):
@@ -101,11 +101,8 @@ def main(prog: str = None, args: list = None):
         mount = RomFSMount(reader=r, g_stat=romfs_stat)
         if _c.macos or _c.windows:
             opts['fstypename'] = 'RomFS'
-            # assuming / is the path separator since macos. but if windows gets support for this,
-            #   it will have to be done differently.
-            path_to_show = realpath(a.romfs).rsplit('/', maxsplit=2)
             if _c.macos:
-                opts['volname'] = f'Nintendo 3DS RomFS ({path_to_show[-2]}/{path_to_show[-1]})'
+                opts['volname'] = f'Nintendo 3DS RomFS ({basename(a.romfs)})'
             elif _c.windows:
                 # volume label can only be up to 32 chars
                 opts['volname'] = 'Nintendo 3DS RomFS'

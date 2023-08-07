@@ -23,7 +23,7 @@ from pyctr.type.smdh import SMDH, InvalidSMDHError
 
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
-from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time, realpath
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time, realpath, basename
 
 if TYPE_CHECKING:
     from typing import BinaryIO, Dict, Union
@@ -159,11 +159,8 @@ def main(prog: str = None, args: list = None):
         mount = ExeFSMount(reader=r, g_stat=exefs_stat, decompress_code=a.decompress_code)
         if _c.macos or _c.windows:
             opts['fstypename'] = 'ExeFS'
-            # assuming / is the path separator since macos. but if windows gets support for this,
-            #   it will have to be done differently.
-            path_to_show = realpath(a.exefs).rsplit('/', maxsplit=2)
             if _c.macos:
-                opts['volname'] = f'Nintendo 3DS ExeFS ({path_to_show[-2]}/{path_to_show[-1]})'
+                opts['volname'] = f'Nintendo 3DS ExeFS ({basename(a.exefs)})'
             elif _c.windows:
                 # volume label can only be up to 32 chars
                 opts['volname'] = 'Nintendo 3DS ExeFS'

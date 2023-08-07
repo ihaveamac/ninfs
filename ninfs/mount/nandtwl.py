@@ -22,7 +22,7 @@ from pyctr.util import readbe, readle
 
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
-from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time, realpath
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time, realpath, basename
 
 
 class TWLNandImageMount(LoggingMixIn, Operations):
@@ -245,11 +245,8 @@ def main(prog: str = None, args: list = None):
         mount = TWLNandImageMount(nand_fp=f, g_stat=nand_stat, consoleid=a.console_id, cid=a.cid, readonly=a.ro)
         if _c.macos or _c.windows:
             opts['fstypename'] = 'TWLFS'
-            # assuming / is the path separator since macos. but if windows gets support for this,
-            #   it will have to be done differently.
             if _c.macos:
-                path_to_show = realpath(a.nand).rsplit('/', maxsplit=2)
-                opts['volname'] = f'Nintendo DSi NAND ({path_to_show[-2]}/{path_to_show[-1]})'
+                opts['volname'] = f'Nintendo DSi NAND ({basename(a.nand)})'
             elif _c.windows:
                 # volume label can only be up to 32 chars
                 opts['volname'] = 'Nintendo DSi NAND'

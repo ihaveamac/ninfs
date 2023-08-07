@@ -20,7 +20,7 @@ from pyctr.util import readle
 
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
-from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time, realpath
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time, realpath, basename
 from .romfs import RomFSMount
 
 if TYPE_CHECKING:
@@ -141,11 +141,8 @@ def main(prog: str = None, args: list = None):
         mount = ThreeDSXMount(threedsx_fp=f, g_stat=threedsx_stat)
         if _c.macos or _c.windows:
             opts['fstypename'] = '3DSX'
-            # assuming / is the path separator since macos. but if windows gets support for this,
-            #   it will have to be done differently.
-            path_to_show = realpath(a.threedsx).rsplit('/', maxsplit=2)
             if _c.macos:
-                opts['volname'] = f'3DSX Homebrew ({path_to_show[-2]}/{path_to_show[-1]})'
+                opts['volname'] = f'3DSX Homebrew ({basename(a.threedsx)})'
             elif _c.windows:
                 # volume label can only be up to 32 chars
                 opts['volname'] = '3DSX Homebrew'

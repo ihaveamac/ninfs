@@ -11,7 +11,7 @@ from errno import EROFS
 from functools import wraps
 from io import BufferedIOBase
 from os import stat, stat_result
-from os.path import realpath as real_realpath
+from os.path import basename, realpath as real_realpath
 from sys import exit, platform
 from typing import TYPE_CHECKING
 

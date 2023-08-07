@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 from zlib import crc32
 
 from haccrypto.crypto import XTSN, parse_biskeydump
-from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time, realpath
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time, realpath, basename
 from . import _common as _c
 
 if TYPE_CHECKING:
@@ -248,11 +248,8 @@ def main(prog: str = None, args: list = None):
                                   emummc=a.emummc or a.raw_emummc, partition=a.partition)
         if _c.macos or _c.windows:
             opts['fstypename'] = 'HACFS'
-            # assuming / is the path separator since macos. but if windows gets support for this,
-            #   it will have to be done differently.
             if _c.macos:
-                path_to_show = realpath(a.image).rsplit('/', maxsplit=2)
-                opts['volname'] = f'Nintendo Switch NAND ({path_to_show[-2]}/{path_to_show[-1]})'
+                opts['volname'] = f'Nintendo Switch NAND ({basename(a.image)})'
             elif _c.windows:
                 # volume label can only be up to 32 chars
                 opts['volname'] = 'Nintendo Switch NAND'

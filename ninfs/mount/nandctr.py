@@ -24,7 +24,7 @@ from pyctr.util import readbe, readle, roundup
 
 from . import _common as _c
 # _common imports these from fusepy, and prints an error if it fails; this allows less duplicated code
-from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time, realpath
+from ._common import FUSE, FuseOSError, Operations, LoggingMixIn, fuse_get_context, get_time, realpath, basename
 from .exefs import ExeFSMount
 
 # ncsd image doesn't have the actual size
@@ -425,12 +425,9 @@ def main(prog: str = None, args: list = None):
                                   boot9=a.boot9)
         if _c.macos or _c.windows:
             opts['fstypename'] = 'CTRFS'
-            # assuming / is the path separator since macos. but if windows gets support for this,
-            #   it will have to be done differently.
             device_id = f'{mount.crypto.otp_device_id:08X}'
             if _c.macos:
-                path_to_show = realpath(a.nand).rsplit('/', maxsplit=2)
-                opts['volname'] = f'Nintendo 3DS NAND ({device_id}; {path_to_show[-2]}/{path_to_show[-1]})'
+                opts['volname'] = f'Nintendo 3DS NAND ({device_id}; {basename(a.nand)})'
             elif _c.windows:
                 # volume label can only be up to 32 chars
                 opts['volname'] = f'Nintendo 3DS NAND ({device_id})'
