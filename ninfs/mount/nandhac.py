@@ -262,17 +262,20 @@ def main(prog: str = None, args: list = None):
     mode = 'rb' if a.ro else 'r+b'
 
     with open(a.keys, 'r', encoding='utf-8') as k:
+        # get absolute path to filename
+        # (works around issues related to current directory when forking into the background)
+        image = os.path.abspath(a.image)
         if a.split_files:
             # make sure the ending is an integer
             try:
-                int(a.image[-2:])
+                int(image[-2:])
             except ValueError:
                 exit('Could not find a part number at the end of the filename.\n'
                      'A multi-part Nintendo Switch NAND backup should have filenames in the format of '
                      '"filename.bin.XX", where XX is the part number.')
 
             # try to find all the parts, starting with 00
-            base = a.image[:-2]
+            base = image[:-2]
             count = 0
             while True:
                 if os.path.isfile(base + format(count, '02')):
@@ -287,5 +290,5 @@ def main(prog: str = None, args: list = None):
             do_thing(handler, k, get_time(base + '00'))
 
         else:
-            with open(a.image, mode) as f:
-                do_thing(f, k, get_time(a.image))
+            with open(image, mode) as f:
+                do_thing(f, k, get_time(image))
