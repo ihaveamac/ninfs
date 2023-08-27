@@ -52,7 +52,7 @@ SeedDB is checked in order of:
 * `~/.3ds/seeddb.bin`
 * `~/3ds/seeddb.bin`
 
-Python 3.6.1 or later is required.
+Python 3.8.0 or later is required.
 
 ### Windows
 Windows 8.1 or later is strongly recommended. Windows 7 may continue to work until ninfs's dependencies stop working on it.
@@ -65,7 +65,7 @@ A standalone zip is also provided in [releases](https://github.com/ihaveamac/nin
 
 #### Install with existing Python
 * Install the latest version of [Python 3](https://www.python.org/downloads/). The x86-64 version is preferred on 64-bit Windows.
-  * Python from the Microsoft Store can also be used. If this is used, `python3` must be used instead of `py -3`. This version has some limitations however, such as not being able to mount to directories.
+  * Python from the Microsoft Store is not recommended due to sandboxing restrictioons.
 * Install the latest version of [WinFsp](https://winfsp.dev/rel/).
 * Install ninfs with `py -3 -m pip install --upgrade https://github.com/ihaveamac/ninfs/archive/2.0.zip`
 
@@ -89,7 +89,7 @@ No standalone build is available at the moment.
 ninfs is available in the AUR: [normal](https://aur.archlinux.org/packages/ninfs/), [with gui](https://aur.archlinux.org/packages/ninfs-gui/), ~~[git](https://aur.archlinux.org/packages/ninfs-git/), [git with gui](https://aur.archlinux.org/packages/ninfs-gui-git/)~~
 
 #### Other distributions
-* Recent distributions (e.g. Ubuntu 18.04 and later) should have Python 3.6.1 or later pre-installed, or included in its repositories. If not, you can use an extra repository (e.g. [deadsnakes's PPA](https://launchpad.net/%7Edeadsnakes/+archive/ubuntu/ppa) for Ubuntu), [build from source](https://www.python.org/downloads/source/), or use a tool like [pyenv](https://github.com/pyenv/pyenv).
+* Recent distributions (e.g. Ubuntu 18.04 and later) should have Python 3.8.0 or later pre-installed, or included in its repositories. If not, you can use an extra repository (e.g. [deadsnakes's PPA](https://launchpad.net/%7Edeadsnakes/+archive/ubuntu/ppa) for Ubuntu), [build from source](https://www.python.org/downloads/source/), or use a tool like [pyenv](https://github.com/pyenv/pyenv).
 * Most distributions should have libfuse enabled/installed by default. Use your package manager if it isn't.
 * Install ninfs with `python3 -m pip install --upgrade --user https://github.com/ihaveamac/ninfs/archive/2.0.zip`
   * `--user` is not needed if you are using a virtual environment.

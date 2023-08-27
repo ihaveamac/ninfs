@@ -6,8 +6,8 @@ from setuptools import setup, find_packages
 
 from ninfs import mountinfo
 
-if sys.hexversion < 0x030601f0:
-    sys.exit('Python 3.6.1+ is required.')
+if sys.hexversion < 0x030800f0:
+    sys.exit('Python 3.8.0+ is required.')
 
 with open('README.md', 'r', encoding='utf-8') as f:
     readme = f.read()
@@ -34,15 +34,13 @@ setup(
         'Topic :: Utilities',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
     ],
     install_requires=['pycryptodomex>=3.9,<4', 'pyctr>=0.5.1,<0.7', 'haccrypto>=0.1', 'pypng>=0.0.21'],
-    python_requires='>=3.6.1',
+    python_requires='>=3.8.0',
     # fusepy should be added here once the main repo has a new release with Windows support.
     entry_points={'gui_scripts': ['ninfsw = ninfs.main:gui'],
                   'console_scripts': ['ninfs = ninfs.main:gui'] +
