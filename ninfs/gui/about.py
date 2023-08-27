@@ -9,15 +9,21 @@ import tkinter as tk
 import tkinter.ttk as ttk
 import webbrowser
 from os.path import join
+from importlib.metadata import metadata
 from typing import TYPE_CHECKING
-
-from Cryptodome import __version__ as pycryptodomex_version
-from pyctr import __version__ as pyctr_version
 
 from .osver import get_os_ver
 # "from .. import" didn't work :/
 from __init__ import __copyright__ as ninfs_copyright
 from __init__ import __version__ as ninfs_version
+
+frozen_using = None
+if getattr(sys, 'frozen', False):
+    if getattr(sys, '_MEIPASS', False):
+        frozen_using = 'PyInstaller'
+    else:
+        # cx-Freeze probably
+        frozen_using = 'cx-Freeze'
 
 if TYPE_CHECKING:
     from . import NinfsGUI
@@ -68,7 +74,10 @@ class NinfsAbout(tk.Toplevel):
         header_label = ttk.Label(container, text=f'ninfs {ninfs_version}', font=(None, 15, 'bold'))
         header_label.grid(row=0, column=0, padx=pad, pady=pad, sticky=tk.W)
 
-        version_label = ttk.Label(container, text=f'Running on {python_version} {pybits}-bit')
+        running_on = f'Running on Python {python_version} {pybits}-bit'
+        if frozen_using:
+            running_on += f' (frozen using {frozen_using})'
+        version_label = ttk.Label(container, text=running_on)
         version_label.grid(row=1, column=0, padx=pad, pady=(0, pad), sticky=tk.W)
 
         copyright_label = ttk.Label(container, text='This program uses several libraries and modules, which have '
@@ -77,15 +86,15 @@ class NinfsAbout(tk.Toplevel):
 
         # tab name, license file name, url
         info = [
-            (f'ninfs {ninfs_version}', 'ninfs.md', 'https://github.com/ihaveamac/ninfs',
+            (f'ninfs', ninfs_version, 'ninfs.md', 'https://github.com/ihaveamac/ninfs',
              'ninfs - Copyright (c) 2017-2021 Ian Burgwin'),
-            (f'WinFsp 2020.2', 'winfsp.txt', 'https://github.com/billziss-gh/winfsp',
+            (f'WinFsp', '2023', 'winfsp.txt', 'https://github.com/billziss-gh/winfsp',
              'WinFsp - Windows File System Proxy, Copyright (C) Bill Zissimopoulos'),
-            (f'pycryptodomex {pycryptodomex_version}', 'pycryptodome.rst',
+            (f'pycryptodomex', metadata('pycryptodomex')['Version'], 'pycryptodome.rst',
              'https://github.com/Legrandin/pycryptodome', 'PyCryptodome - multiple licenses'),
-            (f'pyctr {pyctr_version}', 'pyctr', 'https://github.com/ihaveamac/pyctr',
+            (f'pyctr', metadata('pyctr')['Version'], 'pyctr', 'https://github.com/ihaveamac/pyctr',
              'pyctr - Copyright (c) 2017-2021 Ian Burgwin'),
-            ('haccrypto 0.1.2', 'haccrypto.md', 'https://github.com/luigoalma/haccrypto',
+            ('haccrypto', metadata('haccrypto')['Version'], 'haccrypto.md', 'https://github.com/luigoalma/haccrypto',
              'haccrypto - Copyright (c) 2017-2021 Ian Burgwin & Copyright (c) 2020-2021 Luis Marques')
         ]
 
@@ -97,10 +106,9 @@ class NinfsAbout(tk.Toplevel):
                 webbrowser.open(do_url)
             return func
 
-        for tab_name, license_file, url, header in info:
-            print([tab_name, license_file, url])
+        for proj_name, proj_version, license_file, url, header in info:
             frame = ttk.Frame(license_notebook)
-            license_notebook.add(frame, text=tab_name)
+            license_notebook.add(frame, text=proj_name + ' ' + proj_version)
 
             license_header_label = ttk.Label(frame, text=header)
             license_header_label.grid(row=0, sticky=tk.W, padx=pad//2, pady=pad//2)
