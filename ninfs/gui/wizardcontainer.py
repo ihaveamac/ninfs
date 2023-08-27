@@ -94,8 +94,14 @@ class WizardTypeSelector(WizardBase):
         self.type_selector_var = type_selector_var
 
     def next_pressed(self):
-        next_base = wizard_bases[self.current_type]
-        self.wizardcontainer.change_frame(next_base)
+        try:
+            next_base = wizard_bases[self.current_type]
+        except KeyError:
+            mb.showerror('Derp', 'For some reason this type does not have a setup wizard module.\n'
+                                 'Unfortunately this means you have to use it through the command line for now.')
+            self.wizardcontainer.destroy()
+        else:
+            self.wizardcontainer.change_frame(next_base)
 
 
 class WizardMountAdvancedOptions(tk.Toplevel):

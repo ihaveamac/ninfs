@@ -10,7 +10,7 @@ from importlib import import_module
 from inspect import cleandoc
 from os import environ, makedirs
 from os.path import basename, dirname, expanduser, join as pjoin, realpath
-from sys import exit, argv, path, platform, hexversion, version_info
+from sys import exit, argv, path, platform, hexversion, version_info, executable
 
 _path = dirname(realpath(__file__))
 if _path not in path:
@@ -19,11 +19,21 @@ if _path not in path:
 import mountinfo
 
 windows = platform in {'win32', 'cygwin'}
+macos = platform == 'darwin'
 
 python_cmd = 'py -3' if windows else 'python3'
 
 if hexversion < 0x030800F0:
     exit('Python {0[0]}.{0[1]}.{0[2]} is not supported. Please use Python 3.8.0 or later.'.format(version_info))
+
+
+def print_version():
+    from __init__ import __version__
+    pyver = '{0[0]}.{0[1]}.{0[2]}'.format(version_info)
+    if version_info[3] != 'final':
+        pyver += '{0[3][0]}{0[4]}'.format(version_info)
+    # this should stay as str.format, so it runs on older versions
+    print('ninfs v{0} on Python {1} - https://github.com/ihaveamac/ninfs'.format(__version__, pyver))
 
 
 def exit_print_types():
@@ -35,6 +45,10 @@ def exit_print_types():
         for item in items:
             info = mountinfo.get_type_info(item)
             print(f' - {item}: {info["name"]} ({info["info"]})')
+    print()
+    print('Additional options:')
+    print('  --version                          print version')
+    print('  --install-desktop-entry [PREFIX]   create desktop entry (for Linux)')
     exit(1)
 
 
@@ -45,12 +59,7 @@ def mount(mount_type: str, return_doc: bool = False) -> int:
 
     if mount_type in {'-v', '--version'}:
         # this kinda feels wrong...
-        from __init__ import __version__
-        pyver = '{0[0]}.{0[1]}.{0[2]}'.format(version_info)
-        if version_info[3] != 'final':
-            pyver += '{0[3][0]}{0[4]}'.format(version_info)
-        # this should stay as str.format so it runs on older versions
-        print('ninfs v{0} on Python {1} - https://github.com/ihaveamac/ninfs'.format(__version__, pyver))
+        print_version()
         return 0
 
     # noinspection PyProtectedMember
@@ -75,6 +84,7 @@ def mount(mount_type: str, return_doc: bool = False) -> int:
             pass
 
     if mount_type not in mountinfo.types and mount_type not in mountinfo.aliases:
+        print_version()
         exit_print_types()
 
     module = import_module('mount.' + mountinfo.aliases.get(mount_type, mount_type))
@@ -100,11 +110,14 @@ def mount(mount_type: str, return_doc: bool = False) -> int:
 
 
 def create_desktop_entry(prefix: str = None):
-    desktop_file = cleandoc('''
+    if windows or macos:
+        print('This command is not supported for Windows or macOS.')
+        return
+    desktop_file = cleandoc(f'''
     [Desktop Entry]
     Name=ninfs
     Comment=Mount Nintendo contents
-    Exec=python3 -mninfs gui
+    Exec="{executable}" -mninfs gui
     Terminal=true
     Type=Application
     Icon=ninfs
