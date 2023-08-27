@@ -23,7 +23,7 @@ Unicode True
 
   !define NAME "ninfs ${VERSION}"
 
-  !define WINFSP_MSI_NAME "winfsp-1.8.20304.msi"
+  !define WINFSP_MSI_NAME "winfsp-2.0.23075.msi"
 
   ;Name and file
   Name "${NAME}"
@@ -133,9 +133,10 @@ Section "Uninstall" SecUninstall
 
   ExecWait '"$INSTDIR/winpathmodify.exe" remove "$INSTDIR"'
 
+  Delete "$INSTDIR\frozen_application_license.txt"
   Delete "$INSTDIR\LICENSE.md"
   Delete "$INSTDIR\README.md"
-  Delete "$INSTDIR\api-ms-win-crt-*.dll"
+  Delete "$INSTDIR\api-ms-win-*.dll"
   Delete "$INSTDIR\python3.dll"
   Delete "$INSTDIR\python38.dll"
   Delete "$INSTDIR\vcruntime140.dll"
