@@ -5,6 +5,7 @@
 # You can find the full license text in LICENSE.md in the root of this project.
 
 from ctypes import windll
+from os.path import isdir, expandvars
 from sys import stderr
 import winreg
 from argparse import ArgumentParser
@@ -23,7 +24,7 @@ def refresh_environment():
         print('SendMessageTimeoutW:', res)
 
 
-def do(op: str, path: str, allusers: bool):
+def do(op: str, mypath: str, allusers: bool):
     access = winreg.KEY_READ
     if op in {'add', 'remove'}:
         access |= winreg.KEY_WRITE
@@ -44,20 +45,28 @@ def do(op: str, path: str, allusers: bool):
     paths: 'list[str]' = value.strip(';').split(';')
     update = False
     if op == 'add':
-        if path not in paths:
-            paths.append(path)
+        if mypath not in paths:
+            paths.append(mypath)
             update = True
         else:
             print('Already in Path, not adding')
     elif op == 'remove':
         try:
-            paths.remove(path)
+            paths.remove(mypath)
             update = True
         except ValueError:
             print('Not in Path')
     elif op == 'list':
         for path in paths:
             print(path)
+    elif op == 'check':
+        for idx, path in enumerate(paths):
+            print(f'{idx}: {path}')
+            expanded = expandvars(path)
+            if expanded != path:
+                print(f'  {expanded}')
+            if not isdir(expanded):
+                print('  not a directory')
 
     if update:
         winreg.SetValueEx(k, 'Path', 0, keytype, ';'.join(paths))
@@ -73,6 +82,7 @@ if __name__ == '__main__':
     opers.add_argument('-add', metavar='PATH', help='Add path')
     opers.add_argument('-remove', metavar='PATH', help='Remove path')
     opers.add_argument('-list', help='List paths', action='store_true')
+    opers.add_argument('-check', help='Check paths', action='store_true')
 
     args = parser.parse_args()
 
@@ -82,3 +92,5 @@ if __name__ == '__main__':
         do('remove', args.remove, args.allusers)
     elif args.list:
         do('list', '', args.allusers)
+    elif args.check:
+        do('check', '', args.allusers)
