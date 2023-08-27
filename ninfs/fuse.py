@@ -30,6 +30,12 @@ from stat import S_IFDIR
 from traceback import print_exc
 
 
+# This tricks PyInstaller into *not* including the FUSE libraries. Normally it
+# searches for DLLs/dylibs loaded with ctypes, but with libfuse this is undesirable
+# (it must be installed separately regardless).
+fl = find_library
+
+
 try:
     from functools import partial
 except ImportError:
@@ -87,10 +93,10 @@ _libfuse_path = os.environ.get('FUSE_LIBRARY_PATH')
 if not _libfuse_path:
     if _system == 'Darwin':
         # libfuse dependency
-        _libiconv = ctypes.CDLL(find_library('iconv'), ctypes.RTLD_GLOBAL)
+        _libiconv = ctypes.CDLL(fl('iconv'), ctypes.RTLD_GLOBAL)
 
-        _libfuse_path = (find_library('osxfuse') or find_library('fuse') or
-                         find_library('fuse-t'))
+        _libfuse_path = (fl('osxfuse') or fl('fuse') or
+                         fl('fuse-t'))
     elif _system == 'Windows':
         try:
             import _winreg as reg
@@ -111,7 +117,7 @@ if not _libfuse_path:
         if _libfuse_path:
             _libfuse_path += r"bin\winfsp-%s.dll" % ("x64" if sys.maxsize > 0xffffffff else "x86")
     else:
-        _libfuse_path = find_library('fuse')
+        _libfuse_path = fl('fuse')
 
 if not _libfuse_path:
     raise EnvironmentError('Unable to find libfuse')
