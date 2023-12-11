@@ -1,9 +1,10 @@
 #!/bin/sh
 
 # check for imagemagick
-if ! convert > /dev/null 2>&1; then
+#if ! convert > /dev/null 2>&1; then
+if ! command -v convert &> /dev/null; then
   echo "convert not found, please install ImageMagick"
-  exit
+  exit 1
 fi
 
 if [ "$(uname -s)" = Darwin ]; then
