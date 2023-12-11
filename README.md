@@ -55,7 +55,7 @@ SeedDB is checked in order of:
 Python 3.8.0 or later is required.
 
 ### Windows
-Windows 8.1 or later is strongly recommended. Windows 7 may continue to work until ninfs's dependencies stop working on it.
+Windows 10 or later is recommended. Windows 7 and 8.1 may continue to work until ninfs's dependencies stop working on it.
 
 #### Installer
 An installer is provided in [releases](https://github.com/ihaveamac/ninfs/releases). It includes both ninfs and WinFsp, which is installed if required.
@@ -76,7 +76,8 @@ Official support for Windows on ARM will come [eventually](https://github.com/ih
 ### macOS
 Versions of macOS supported by Apple are highly recommended. macOS Sierra is the oldest version that should work. [macFUSE](https://osxfuse.github.io/) is required.
 
-No standalone build is available at the moment.
+#### Standalone application
+A standalone build is provided in [releases](https://github.com/ihaveamac/ninfs/releases). macFUSE must still be installed separately. Releases are built for Intel and Apple silicon, signed and notarized by Apple.
 
 #### Install with existing Python
 * Install the latest version of Python 3. The recommended way is [Homebrew](https://brew.sh). You can also use an installer from [python.org](https://www.python.org/downloads/) or a tool like [pyenv](https://github.com/pyenv/pyenv).
@@ -107,7 +108,7 @@ If it doesn't work, the other way is to use `<python-cmd> -mninfs <type>` (e.g. 
 
 Windows users can use a drive letter like `F:` as a mountpoint, or use `*` and a drive letter will be automatically chosen.
 
-Developer-unit contents are encrypted with different keys, which can be used with `--dev` with CCI, CDN, CIA, NANDCTR, NCCH, and SD.
+Developer-unit contents are encrypted with different keys, which can be used with `--dev` with CCI, CDN, CIA, NANDCTR, NCCH, and SD. These are less tested and may have bugs due to unknown differences between retail and dev files.
 
 #### Unmounting
 * Windows: Press <kbd>Ctrl</kbd> + <kbd>C</kbd> in the command prompt/PowerShell window.
@@ -180,4 +181,4 @@ Special thanks to @Jhynjhiruu for adding support for iQue Player NAND backups.
 
 Special thanks to @Stary2001 for help with NAND crypto (especially TWL), and @d0k3 for SD crypto.
 
-OTP code is from [Stary2001/3ds_tools](https://github.com/Stary2001/3ds_tools/blob/10b74fee927f66865b97fd73b3e7392e81a3099f/three_ds/aesengine.py), and is under the MIT license.
+OTP code is from [Stary2001/3ds\_tools](https://github.com/Stary2001/3ds_tools/blob/10b74fee927f66865b97fd73b3e7392e81a3099f/three_ds/aesengine.py), and is under the MIT license.
