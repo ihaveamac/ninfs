@@ -74,14 +74,14 @@ A standalone zip is also provided in [releases](https://github.com/ihaveamac/nin
 Official support for Windows on ARM will come [eventually](https://github.com/ihaveamac/ninfs/issues/91). In the mean time, running the x86 version has been tested and seems to work properly. Make sure to install the latest WinFSP version with ARM64 support.
 
 ### macOS
-Versions of macOS supported by Apple are highly recommended. macOS Sierra is the oldest version that should work. [macFUSE](https://osxfuse.github.io/) is required.
+Versions of macOS supported by Apple are highly recommended. macOS Sierra is the oldest version that should work. [macFUSE](https://osxfuse.github.io/) or [fuse-t](https://www.fuse-t.org) is required.
 
 #### Standalone application
-A standalone build is provided in [releases](https://github.com/ihaveamac/ninfs/releases). macFUSE must still be installed separately. Releases are built for Intel and Apple silicon, signed and notarized by Apple.
+A standalone build is provided in [releases](https://github.com/ihaveamac/ninfs/releases). macFUSE or fuse-t must still be installed separately. Releases are built for Intel and Apple silicon, signed and notarized by Apple.
 
 #### Install with existing Python
 * Install the latest version of Python 3. The recommended way is [Homebrew](https://brew.sh). You can also use an installer from [python.org](https://www.python.org/downloads/) or a tool like [pyenv](https://github.com/pyenv/pyenv).
-* Install the latest version of [macFUSE](https://github.com/osxfuse/osxfuse/releases/latest).
+* Install the latest version of [macFUSE](https://github.com/osxfuse/osxfuse/releases/latest) or [fuse-t](https://www.fuse-t.org).
 * Install ninfs with `python3 -m pip install --upgrade https://github.com/ihaveamac/ninfs/archive/2.0.zip`
 
 ### Linux
