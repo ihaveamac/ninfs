@@ -1,4 +1,4 @@
-This is still being worked on (as of February 3, 2022).
+This is still being worked on (as of January 29, 2024).
 
 # Windows
 
@@ -7,7 +7,7 @@ This expects Python 3.8 32-bit to be installed.
 
 Install the dependencies:
 ```batch
-py -3.8-32 -m pip install --user --upgrade cx-Freeze==6.10 -r requirements.txt
+py -3.8-32 -m pip install --user --upgrade "cx-Freeze>=6.15,<6.16" -r requirements.txt
 ```
 
 Build the exe:
@@ -34,8 +34,8 @@ This needs Python built with universal2 to produce a build with a working GUI. A
 
 Set up a venv, activate it, and install the requirements:
 ```sh
-python3.10 -m venv venv310
-source venv310/bin/activate
+python3.11 -m venv venv311
+source venv311/bin/activate
 pip install --upgrade pyinstaller certifi -r requirements.txt
 ```
 
