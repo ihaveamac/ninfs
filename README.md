@@ -31,7 +31,9 @@ Windows, macOS, and Linux are supported.
 * Extract a game's files out of a CIA, CCI (".3ds"), NCCH, RomFS, raw CDN contents, just by mounting them and browsing its files. Or use the virtual decrypted file and start playing the game in [Citra](https://citra-emu.org) right away.
 
 ## Setup
-For 3DS types, The ARM9 bootROM is required. You can dump it using boot9strap, which can be set up by [3DS Hacks Guide](https://3ds.hacks.guide). To dump the bootROM, hold START+SELECT+X when you boot up your 3DS. It is checked in order of:
+For 3DS types, The ARM9 BootROM is required. You can dump it using boot9strap, which can be set up by [3DS Hacks Guide](https://3ds.hacks.guide). To dump Boot9, follow the steps on [wiki.hacks.guide](https://wiki.hacks.guide/wiki/3DS:Dump_system_files).
+
+Boot9 is checked in order of:
 * `--boot9` argument (if set)
 * `BOOT9_PATH` environment variable (if set)
 * `%APPDATA%\3ds\boot9.bin` (Windows-specific)
@@ -64,23 +66,28 @@ An installer is provided in [releases](https://github.com/ihaveamac/ninfs/releas
 A standalone zip is also provided in [releases](https://github.com/ihaveamac/ninfs/releases). [WinFsp](https://winfsp.dev/rel/) must be installed separately.
 
 #### Install with existing Python
-* Install the latest version of [Python 3](https://www.python.org/downloads/). The x86-64 version is preferred on 64-bit Windows.
+* Install a version of [Python 3.8 or later](https://www.python.org/downloads/). The x86-64 version is preferred on 64-bit Windows.
   * Python from the Microsoft Store is not recommended due to sandboxing restrictioons.
 * Install the latest version of [WinFsp](https://winfsp.dev/rel/).
 * Install ninfs with `py -3 -m pip install --upgrade https://github.com/ihaveamac/ninfs/archive/2.0.zip`
 
 #### Windows on ARM
 
-Official support for Windows on ARM will come [eventually](https://github.com/ihaveamac/ninfs/issues/91). In the mean time, running the x86 version has been tested and seems to work properly. Make sure to install the latest WinFSP version with ARM64 support.
+Official support for Windows on ARM will come [eventually](https://github.com/ihaveamac/ninfs/issues/91). In the meantime, running the x86 version has been tested and seems to work properly. Make sure to install the latest WinFSP version with ARM64 support.
 
 ### macOS
 Versions of macOS supported by Apple are highly recommended. macOS Sierra is the oldest version that should work. [macFUSE](https://osxfuse.github.io/) or [fuse-t](https://www.fuse-t.org) is required.
 
 #### Standalone application
-A standalone build is provided in [releases](https://github.com/ihaveamac/ninfs/releases). macFUSE or fuse-t must still be installed separately. Releases are built for Intel and Apple silicon, signed and notarized by Apple.
+A standalone build is provided in [releases](https://github.com/ihaveamac/ninfs/releases). macFUSE or fuse-t must still be installed separately. Releases are built for Intel and Apple Silicon, signed and notarized by Apple.
 
 #### Install with existing Python
-* Install the latest version of Python 3. The recommended way is [Homebrew](https://brew.sh). You can also use an installer from [python.org](https://www.python.org/downloads/) or a tool like [pyenv](https://github.com/pyenv/pyenv).
+* Install a version of Python 3.8 or later. Various methods to use Python:
+  * [Installers from python.org](https://www.python.org/downloads/macos/).
+  * Xcode or Command Line Tools (note: has a broken GUI)
+  * [Homebrew](https://brew.sh)
+  * [MacPorts](https://www.macports.org/)
+  * [Nix](https://nixos.org/)
 * Install the latest version of [macFUSE](https://github.com/osxfuse/osxfuse/releases/latest) or [fuse-t](https://www.fuse-t.org).
 * Install ninfs with `python3 -m pip install --upgrade https://github.com/ihaveamac/ninfs/archive/2.0.zip`
 
@@ -90,7 +97,7 @@ A standalone build is provided in [releases](https://github.com/ihaveamac/ninfs/
 ninfs is available in the AUR: [normal](https://aur.archlinux.org/packages/ninfs/), [with gui](https://aur.archlinux.org/packages/ninfs-gui/), ~~[git](https://aur.archlinux.org/packages/ninfs-git/), [git with gui](https://aur.archlinux.org/packages/ninfs-gui-git/)~~
 
 #### Other distributions
-* Recent distributions (e.g. Ubuntu 18.04 and later) should have Python 3.8.0 or later pre-installed, or included in its repositories. If not, you can use an extra repository (e.g. [deadsnakes's PPA](https://launchpad.net/%7Edeadsnakes/+archive/ubuntu/ppa) for Ubuntu), [build from source](https://www.python.org/downloads/source/), or use a tool like [pyenv](https://github.com/pyenv/pyenv).
+* Recent distributions (e.g. Ubuntu 18.04 and later) should have Python 3.8.0 or later pre-installed, or included in its repositories. Refer to your distribution's documentation for details.
 * Most distributions should have libfuse enabled/installed by default. Use your package manager if it isn't.
 * Install ninfs with `python3 -m pip install --upgrade --user https://github.com/ihaveamac/ninfs/archive/2.0.zip`
   * `--user` is not needed if you are using a virtual environment.
@@ -99,12 +106,12 @@ ninfs is available in the AUR: [normal](https://aur.archlinux.org/packages/ninfs
 
 ## Usage
 ### Graphical user interface
-A GUI can be used by specifying the type to be `gui` (e.g. Windows: `py -3 -mninfs gui`, \*nix: `python3 -mninfs gui`). The GUI controls mounting and unmounting.
+A GUI can be used by specifying the type to be `gui` (e.g. Windows: `py -3 -mninfs gui`, Linux/macOS: `python3 -mninfs gui`). The GUI controls mounting and unmounting.
 
 ### Command line
 Run a mount script by using "`mount_<type>`" (e.g. `mount_cci game.3ds mountpoint`). Use `-h` to view arguments for a script.
 
-If it doesn't work, the other way is to use `<python-cmd> -mninfs <type>` (e.g. Windows: `py -3 -mninfs cci game.3ds mountpoint`, \*nix: `python3 -mninfs cci game.3ds mountpoint`).
+If it doesn't work, the other way is to use `<python-cmd> -mninfs <type>` (e.g. Windows: `py -3 -mninfs cci game.3ds mountpoint`, Linux/macOS: `python3 -mninfs cci game.3ds mountpoint`).
 
 Windows users can use a drive letter like `F:` as a mountpoint, or use `*` and a drive letter will be automatically chosen.
 
