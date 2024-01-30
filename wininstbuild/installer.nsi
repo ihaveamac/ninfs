@@ -107,7 +107,7 @@ Section "ninfs Application" SecInstall
 SectionEnd
 
 Section /o "Add to PATH" SecPATH
-  ExecWait '"$INSTDIR/winpathmodify.exe" add "$INSTDIR"'
+  ExecWait '"$INSTDIR/winpathmodify.exe" -add "$INSTDIR"'
 SectionEnd
 
 ;--------------------------------
@@ -131,7 +131,7 @@ Section "Uninstall" SecUninstall
   Delete "$SMPROGRAMS\$StartMenuFolder\uninstall.lnk"
   RMDir "$SMPROGRAMS\$StartMenuFolder"
 
-  ExecWait '"$INSTDIR/winpathmodify.exe" remove "$INSTDIR"'
+  ExecWait '"$INSTDIR/winpathmodify.exe" -remove "$INSTDIR"'
 
   Delete "$INSTDIR\frozen_application_license.txt"
   Delete "$INSTDIR\LICENSE.md"
