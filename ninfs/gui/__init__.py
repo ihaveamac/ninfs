@@ -5,9 +5,6 @@
 # You can find the full license text in LICENSE.md in the root of this project.
 import os
 import sys
-import tkinter as tk
-import tkinter.ttk as ttk
-import tkinter.messagebox as mb
 import webbrowser
 from inspect import cleandoc
 from os.path import dirname, join
@@ -17,6 +14,22 @@ from threading import Thread
 from traceback import format_exc
 from typing import TYPE_CHECKING
 from uuid import uuid4
+
+is_windows = sys.platform == 'win32'
+is_mac = sys.platform == 'darwin'
+
+try:
+    import tkinter as tk
+    import tkinter.ttk as ttk
+    import tkinter.messagebox as mb
+except ModuleNotFoundError:
+    print('Could not find tkinter.', file=sys.stderr)
+    if is_mac:
+        print('If using a package manager like Homebrew or MacPorts, make sure to install Tkinter with it.',
+              file=sys.stderr)
+    elif not is_mac or is_windows:
+        print('Make sure to install Tkinter with your package manager.', file=sys.stderr)
+    sys.exit(1)
 
 from .about import NinfsAbout
 from .confighandler import get_bool, set_bool
@@ -28,9 +41,6 @@ if TYPE_CHECKING:
     from typing import Callable, Dict, List, Tuple
 
 tutorial_url = 'https://gbatemp.net/threads/499994/'
-
-is_windows = sys.platform == 'win32'
-is_mac = sys.platform == 'darwin'
 
 # cx_Freeze, PyInstaller, etc.
 frozen = getattr(sys, 'frozen', None)
