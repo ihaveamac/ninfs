@@ -106,7 +106,10 @@ class SRLMount(LoggingMixIn, Operations):
 
         # parse header
         header = TwlHeaderRaw(*twl_header_struct.unpack(srl_fp.read(0x1000)))
-        self.title = header.game_title.decode('ascii').replace('\0', '')
+        try:
+            self.title = header.game_title.decode('ascii').replace('\0', '')
+        except UnicodeDecodeError:
+            self.title = '(unknown)'
         self.code = header.game_code.decode('ascii')
         self.total_size = 0x20000 << header.device_capacity
 
