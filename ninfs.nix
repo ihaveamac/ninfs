@@ -1,4 +1,4 @@
-{ lib, callPackage, buildPythonApplication, fetchPypi, pyctr, pycryptodomex, pypng, tkinter, setuptools, fusepy, haccrypto, pip }:
+{ lib, callPackage, buildPythonApplication, fetchPypi, pyctr, pycryptodomex, pypng, tkinter, setuptools, fusepy, haccrypto, pip, stdenv, pkgs }:
 
 buildPythonApplication rec {
   pname = "ninfs";
@@ -17,4 +17,10 @@ buildPythonApplication rec {
     pip
     haccrypto
   ];
+
+  postInstall = lib.optional (!stdenv.isDarwin) ''
+    for f in $out/bin/*; do
+      wrapProgram "$f" --set FUSE_LIBRARY_PATH ${pkgs.fuse}/lib/libfuse.so.2
+    done
+  '';
 }
