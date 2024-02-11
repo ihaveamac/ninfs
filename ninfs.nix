@@ -18,9 +18,7 @@ buildPythonApplication rec {
     haccrypto
   ];
 
-  postInstall = lib.optional (!stdenv.isDarwin) ''
-    for f in $out/bin/*; do
-      wrapProgram "$f" --set FUSE_LIBRARY_PATH ${pkgs.fuse}/lib/libfuse.so.2
-    done
-  '';
+  makeWrapperArgs = [
+    "--set FUSE_LIBRARY_PATH ${pkgs.fuse}/lib/libfuse.so.2"
+  ];
 }

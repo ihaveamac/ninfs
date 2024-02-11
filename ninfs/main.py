@@ -53,6 +53,12 @@ def exit_print_types():
 
 
 def mount(mount_type: str, return_doc: bool = False) -> int:
+    if 'nix_run_setup' in argv:
+        # I don't understand why this gets called with nix build!
+        # This feels like a hack but I currently don't know a better solution.
+        print('nix build is calling me! (main)')
+        return 0
+
     if mount_type in {'gui', 'gui_i_want_to_be_an_admin_pls'}:
         from gui import start_gui
         return start_gui()
