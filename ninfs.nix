@@ -18,7 +18,7 @@ buildPythonApplication rec {
     haccrypto
   ];
 
-  makeWrapperArgs = [
+  makeWrapperArgs = lib.optional (!stdenv.isDarwin) [
     "--set FUSE_LIBRARY_PATH ${pkgs.fuse}/lib/libfuse.so.2"
   ];
 }
