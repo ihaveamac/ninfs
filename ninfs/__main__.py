@@ -7,6 +7,11 @@
 from os.path import dirname, realpath
 from sys import argv, exit, path
 
+if 'nix_run_setup' in argv:
+    # I don't understand why this gets called with nix build!
+    print('nix build is calling me!')
+    exit(0)
+
 # path fun times
 path.insert(0, dirname(realpath(__file__)))
 

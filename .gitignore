@@ -10,3 +10,5 @@ __pycache__/
 *.pyd
 # dll and dylib are not here, since libcrypto needs to be included
 Thumbs.db
+result
+result-*
