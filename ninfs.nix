@@ -21,4 +21,14 @@ buildPythonApplication rec {
   makeWrapperArgs = lib.optional (!stdenv.isDarwin) [
     "--set FUSE_LIBRARY_PATH ${pkgs.fuse}/lib/libfuse.so.2"
   ];
+
+  meta = with lib; {
+    description = "FUSE filesystem Python scripts for Nintendo console files";
+    homepage = "https://github.com/ihaveamac/ninfs";
+    license = licenses.mit;
+    # until i figure out what's up with libfuse on linux
+    platforms = platforms.unix;
+    broken = !stdenv.isDarwin;
+    mainProgram = "ninfs";
+  };
 }
