@@ -93,8 +93,7 @@ A standalone build is provided in [releases](https://github.com/ihaveamac/ninfs/
 
 ### Linux
 #### Arch Linux
-(NOTE: git versions out of date while build process stabilizes)  
-ninfs is available in the AUR: [normal](https://aur.archlinux.org/packages/ninfs/), [with gui](https://aur.archlinux.org/packages/ninfs-gui/), ~~[git](https://aur.archlinux.org/packages/ninfs-git/), [git with gui](https://aur.archlinux.org/packages/ninfs-gui-git/)~~
+ninfs is available in the AUR: [normal](https://aur.archlinux.org/packages/ninfs/), [with gui](https://aur.archlinux.org/packages/ninfs-gui/), [git](https://aur.archlinux.org/packages/ninfs-git/), [git with gui](https://aur.archlinux.org/packages/ninfs-gui-git/)
 
 #### Other distributions
 * Recent distributions (e.g. Ubuntu 18.04 and later) should have Python 3.8.0 or later pre-installed, or included in its repositories. Refer to your distribution's documentation for details.
