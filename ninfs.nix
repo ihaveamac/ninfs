@@ -2,7 +2,7 @@
 
 buildPythonApplication rec {
   pname = "ninfs";
-  version = "2.0a11";
+  version = "2.0";
 
   srcs = builtins.path { path = ./.; name = "ninfs"; };
 
