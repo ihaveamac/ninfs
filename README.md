@@ -28,7 +28,7 @@ Windows, macOS, and Linux are supported.
 ## Example uses
 * Mount a NAND backup and browse CTRNAND, TWLNAND, and others, and write back to them without having to extract and decrypt them first.
 * Browse decrypted SD card contents. Dump installed games and saves, or copy contents between two system's SD contents.
-* Extract a game's files out of a CIA, CCI (".3ds"), NCCH, RomFS, raw CDN contents, just by mounting them and browsing its files. Or use the virtual decrypted file and start playing the game in [Citra](https://citra-emu.org) right away.
+* Extract a game's files out of a CIA, CCI (".3ds"), NCCH, RomFS, raw CDN contents, just by mounting them and browsing its files. Or use the virtual decrypted file and start playing the game in a 3DS emulator right away.
 
 ## Setup
 For 3DS types, The ARM9 BootROM is required. You can dump it using boot9strap, which can be set up by [3DS Hacks Guide](https://3ds.hacks.guide). To dump Boot9, follow the steps on [wiki.hacks.guide](https://wiki.hacks.guide/wiki/3DS:Dump_system_files).
