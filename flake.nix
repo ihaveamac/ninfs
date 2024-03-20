@@ -5,6 +5,7 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     pyctr.url = "github:ihaveamac/pyctr/master";
     pyctr.inputs.nixpkgs.follows = "nixpkgs";
+    pyctr.inputs.flake-utils.follows = "flake-utils";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
