@@ -41,7 +41,7 @@ Boot9 is checked in order of:
 * `~/.3ds/boot9.bin`
 * `~/3ds/boot9.bin`
 
-`boot9_prot.bin` can also be used in all of these locations.
+For historical reasons, `boot9_prot.bin` can also be used in all of these locations.
 
 "`~`" means the user's home directory. "`~/3ds`" would mean `/Users/username/3ds` on macOS and `C:\Users\username\3ds` on Windows.
 
@@ -72,7 +72,6 @@ A standalone zip is also provided in [releases](https://github.com/ihaveamac/nin
 * Install ninfs with `py -3 -m pip install --upgrade https://github.com/ihaveamac/ninfs/archive/2.0.zip`
 
 #### Windows on ARM
-
 Official support for Windows on ARM will come [eventually](https://github.com/ihaveamac/ninfs/issues/91). In the meantime, running the x86 version has been tested and seems to work properly. Make sure to install the latest WinFSP version with ARM64 support.
 
 ### macOS
