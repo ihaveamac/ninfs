@@ -1,0 +1,175 @@
+.Dd $Mdocdate: February 5 2024 $
+.Dt NINFS 1
+.Os
+.Sh NAME
+.Nm ninfs
+.Nd mount Nintendo console files with FUSE
+.Sh SYNOPSIS
+.Nm
+.Ar type
+.Op Ar arguments
+.Ar archive
+.Ar mountpoint
+.Nm
+.Cm gui
+.Nm
+.Fl -version
+.Nm
+.Fl -install-desktop-entry
+.Op Ar prefix
+.Sh DESCRIPTION
+.Nm
+mounts several different kinds of files from Nintendo game consoles.
+.Pp
+Each supported type has slightly different arguments. Refer to each type's man page for specifics. This page will describe common arguments and setup.
+.Pp
+The supported types are:
+.Bl -bullet
+.It
+Nintendo 3DS
+.Bl -bullet -compact
+.It
+CTR Cart Image (".3ds", ".cci"):
+.Xr mount_cci 1
+.It
+CDN contents ("cetk", "tmd", and contents)k
+.Xr mount_cdn 1
+.It
+CTR Cart Image (".3ds", ".cci"):
+.Xr mount_cci 1
+.It
+CDN contents ("cetk", "tmd", and contents):
+.Xr mount_cdn 1
+.It
+CTR Importable Archive (".cia"):
+.Xr mount_cia 1
+.It
+Executable Filesystem (".exefs", "exefs.bin"):
+.Xr mount_exefs 1
+.It
+Nintendo 3DS NAND backup ("nand.bin"):
+.Xr mount_nandctr 1
+.It
+NCCH (".cxi", ".cfa", ".ncch", ".app"):
+.Xr mount_ncch 1
+.It
+Read-only Filesystem (".romfs", "romfs.bin"):
+.Xr mount_romfs 1
+.It
+SD Card Contents ("Nintendo 3DS" from SD):
+.Xr mount_sd 1
+.It
+Installed SD Title Contents ("*.tmd" and "*.app" files):
+.Xr mount_sdtitle 1
+.It
+3DSX Homebrew (".3dsx"):
+.Xr mount_3dsx 1
+.El
+.It
+Nintendo DS / DSi
+.Bl -bullet -compact
+.It
+Nintendo DSi NAND backup ("nand_dsi.bin"):
+.Xr mount_nandtwl 1
+.It
+Nintendo DS ROM image (".nds", ".srl"):
+.Xr mount_nandsrl 1
+.El
+.It
+iQue Player
+.Bl -bullet -compact
+.It
+iQue Player NAND backup (read-only) ("nand.bin"):
+.Xr mount_nandbb 1
+.El
+.It
+Nintendo Switch
+.Bl -bullet -compact
+.It
+Nintendo Switch NAND backup ("rawnand.bin")
+.Xr mount_nandhac 1
+.El
+.El
+.Pp
+The "type" can also be specified as "gui", which will open a GUI if tkinter is accessible. No argument given will also open the GUI.
+.Pp
+Refer to
+.Lk https://hacks.guide
+and
+.Lk https://cfw.guide
+for guides on console hacking.
+.Sh OPTIONS
+.Ss Common
+.Bl -tag -width Ds
+.It Fl f | -fg
+run in the groundground
+.It Fl d
+enable debug output
+.It Fl o
+additional FUSE options
+.It Fl r | -ro
+mount read-only (only for writable types)
+.El
+.Ss Nintendo 3DS
+.Bl -tag -width Ds
+.It Fl -boot9
+path to boot9
+.It Fl -dev
+use developer-unit keys
+.It Fl -seeddb
+path to seeddb.bin
+.It Fl -seed
+seed as hexstring
+.El
+.Sh FILES
+The exact files needed are different for every type. Please refer to a type's man page for details.
+.Pp
+All systems:
+.Bl -tag -compact
+.\" .It Pa ~/.3ds
+.\" 3DS files like boot9.bin
+.It Pa ~/.3ds/boot9.bin
+dumped full or protected ARM9 BootROM
+.It Pa ~/.3ds/seeddb.bin
+per-game seeds for digital games released after March 2015
+.It Pa ~/.switch/prod.keys
+encryption keys for Switch, both universal and per-console
+.El
+.Pp
+Linux:
+.Bl -tag -compact
+.It Pa "$XDG_CONFIG_HOME/ninfs/config.ini"
+configuration for the GUI, such as update checks
+.El
+.Pp
+macOS:
+.Bl -tag -compact
+.It Pa "~/Library/Application Support/ninfs/config.ini"
+configuration for the GUI, such as update checks
+.El
+.Pp
+Windows:
+.Bl -tag -compact
+.It Pa "%APPDATA%\[rs]ninfs\[rs]config.ini"
+configuration for the GUI, such as update checks
+.El
+.Sh NOTES
+On all systems,
+.Pa ~/3ds
+can be used as an alternative to ~/.3ds.
+.Pp
+On macOS,
+.Pa ~/Library/Application Support/3ds
+can be used as an alternative to ~/.3ds.
+.Pp
+On Windows,
+.Pa %APPDATA%\[rs]3ds
+can be used as an alternative to ~/.3ds.
+.Pp
+It is recommended to only have one "3ds" directory. Some files will be loaded from every path if available (such as seeddb.bin), some will only be loaded from the first one.
+.Pp
+There are no alterantives for the "switch" directory, only ~/.switch is used.
+.Pp
+For historical reasons,
+.Pa boot9_prot.bin
+can be used where boot9.bin is also loaded. This was used when the protected region of the ARM9 BootROM was dumped separately.
