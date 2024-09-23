@@ -176,7 +176,7 @@ Developer-unit contents are encrypted with different keys, which can be used wit
 ## Related tools
 * roothorick's [BUSEHAC](https://gitlab.com/roothorick/busehac) is a Linux driver for encrypted Nintendo Switch NANDs.
 * Maschell's [fuse-wiiu](https://github.com/Maschell/fuse-wiiu) can be used to mount Wii U contents.
-* koolkdev's [wfslib](https://github.com/koolkdev/wfslib) has wfs-fuse to mount the Wii U mlc dumps and usb devices.
+* koolkdev's [wfs-tools](https://github.com/koolkdev/wfs-tools) has wfs-fuse to mount the Wii U mlc dumps and usb devices.
 
 # License/Credits
 * `ninfs` is under the MIT license.
