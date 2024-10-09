@@ -14,9 +14,11 @@ buildPythonApplication rec {
     pypng
     tkinter
     setuptools  # missing from requirements.txt
-    fusepy
+    #fusepy  # this gets added to PYTHONPATH manually in makeWrapperArgs
     haccrypto
   ];
+
+  makeWrapperArgs = lib.optional (!stdenv.isDarwin) [ "--prefix PYTHONPATH : ${fusepy}/${fusepy.pythonModule.sitePackages}" ];
 
   # ninfs includes its own copy of fusepy mainly for Windows support and fuse-t on macOS.
   # This isn't needed when running on Linux, and on macOS, macFUSE is required anyway.
@@ -29,7 +31,6 @@ buildPythonApplication rec {
     homepage = "https://github.com/ihaveamac/ninfs";
     license = licenses.mit;
     platforms = platforms.unix;
-    broken = !stdenv.isDarwin;
     mainProgram = "ninfs";
   };
 }
