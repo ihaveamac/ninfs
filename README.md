@@ -180,7 +180,6 @@ Developer-unit contents are encrypted with different keys, which can be used wit
 
 # License/Credits
 * `ninfs` is under the MIT license.
-  * `fuse.py` is under the ISC license ([taken from `setup.py`](https://github.com/fusepy/fusepy/blob/b5f87a1855119d55c755c2c4c8b1da346365629d/setup.py)).
 
 Special thanks to @Jhynjhiruu for adding support for iQue Player NAND backups.
 
