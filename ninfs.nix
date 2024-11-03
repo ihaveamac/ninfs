@@ -18,7 +18,7 @@ buildPythonApplication rec {
     haccrypto
   ];
 
-  makeWrapperArgs = lib.optional (!stdenv.isDarwin) [ "--prefix PYTHONPATH : ${mfusepy}/${mfusepy.pythonModule.sitePackages}" ];
+  makeWrapperArgs = [ "--prefix PYTHONPATH : ${mfusepy}/${mfusepy.pythonModule.sitePackages}" ];
 
   postInstall = lib.optionalString (!stdenv.isDarwin) ''
     mkdir -p $out/share/{applications,icons}
