@@ -67,6 +67,5 @@ ninfs = "ninfs.main:gui"
 [tool.setuptools.dynamic]
 version = {attr = "ninfs.__version__"}
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["ninfs.*"]
+[tool.setuptools.packages]
+find = {namespaces = false}
