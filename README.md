@@ -102,6 +102,15 @@ ninfs is available in the AUR: [normal](https://aur.archlinux.org/packages/ninfs
 * You can add a desktop entry with `python3 -m ninfs --install-desktop-entry`. If you want to install to a location other than the default (`$XDG_DATA_HOME`), you can add another argument with a path like `/usr/local/share`.
 * To use the GUI, tkinter needs to be installed. On Debian-/Ubuntu-based systems this is `python3-tk`. On Fedora this is `python3-tkinter`.
 
+### Nix/NixOS
+A nix derivation is provided, tested on NixOS, other Linux distributions, and macOS.
+
+On macOS, macFUSE or fuse-t must be installed separately, as nixpkgs doesn't (and probably can't) package either.
+
+With flakes to run the latest commit on main:
+* Use GUI: `nix run github:ihaveamac/ninfs`
+* Directly use mount (example with cia): `nix run github:ihaveamac/ninfs -- cia game.cia mountpoint`
+
 ## Usage
 ### Graphical user interface
 A GUI can be used by specifying the type to be `gui` (e.g. Windows: `py -3 -mninfs gui`, Linux/macOS: `python3 -mninfs gui`). The GUI controls mounting and unmounting.
