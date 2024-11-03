@@ -29,7 +29,7 @@ python_cmd = 'py -3' if windows else 'python3'
 # TODO: switch to use_ns in all scripts
 # noinspection PyBroadException
 try:
-    from fuse import FUSE, FuseOSError, Operations, fuse_get_context
+    from mfusepy import FUSE, FuseOSError, Operations, fuse_get_context
 except Exception as e:
     exit(f'Failed to import the fuse module:\n'
          f'{type(e).__name__}: {e}')

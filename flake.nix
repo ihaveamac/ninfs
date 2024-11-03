@@ -16,7 +16,8 @@
 
         packages = rec {
           haccrypto = pkgs.python3Packages.callPackage ./haccrypto.nix {};
-          ninfs = pkgs.python3Packages.callPackage ./ninfs.nix { haccrypto = haccrypto; pyctr = pyctr.packages.${system}.pyctr; };
+          mfusepy = pkgs.python3Packages.callPackage ./mfusepy.nix {};
+          ninfs = pkgs.python3Packages.callPackage ./ninfs.nix { haccrypto = haccrypto; mfusepy = mfusepy; pyctr = pyctr.packages.${system}.pyctr; };
           default = ninfs;
         };
       }

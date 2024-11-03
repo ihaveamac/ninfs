@@ -1,4 +1,4 @@
-{ lib, callPackage, buildPythonApplication, fetchPypi, pyctr, pycryptodomex, pypng, tkinter, setuptools, fusepy, haccrypto, stdenv }:
+{ lib, pkgs, callPackage, buildPythonApplication, fetchPypi, pyctr, pycryptodomex, pypng, tkinter, setuptools, mfusepy, haccrypto, stdenv }:
 
 buildPythonApplication rec {
   pname = "ninfs";
@@ -13,18 +13,12 @@ buildPythonApplication rec {
     pycryptodomex
     pypng
     tkinter
-    setuptools  # missing from requirements.txt
+    setuptools
     #fusepy  # this gets added to PYTHONPATH manually in makeWrapperArgs
     haccrypto
   ];
 
-  makeWrapperArgs = lib.optional (!stdenv.isDarwin) [ "--prefix PYTHONPATH : ${fusepy}/${fusepy.pythonModule.sitePackages}" ];
-
-  # ninfs includes its own copy of fusepy mainly for Windows support and fuse-t on macOS.
-  # This isn't needed when running on Linux, and on macOS, macFUSE is required anyway.
-  patchPhase = lib.optionalString (!stdenv.isDarwin) ''
-    rm ninfs/fuse.py
-  '';
+  makeWrapperArgs = lib.optional (!stdenv.isDarwin) [ "--prefix PYTHONPATH : ${mfusepy}/${mfusepy.pythonModule.sitePackages}" ];
 
   postInstall = lib.optionalString (!stdenv.isDarwin) ''
     mkdir -p $out/share/{applications,icons}

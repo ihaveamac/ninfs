@@ -153,7 +153,7 @@ class NinfsGUI(tk.Tk):
 
     def check_fuse(self):
         try:
-            import fuse
+            import mfusepy
         except EnvironmentError as e:
             if e.args[0] == 'Unable to find libfuse':
                 if is_windows:
