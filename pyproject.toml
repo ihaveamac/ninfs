@@ -1,0 +1,72 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ninfs"
+description = "FUSE filesystem Python scripts for Nintendo console files"
+authors = [
+    { name = "Ian Burgwin", email = "ian@ianburgwin.net" },
+]
+readme = "README.md"
+license = {text = "MIT"}
+dynamic = ["version"]
+requires-python = ">= 3.8"
+classifiers = [
+    "Topic :: Utilities",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "pyctr>=0.5.1,<0.8",
+    "haccrypto>=0.1",
+    "pycryptodomex>=3.9,<4",
+    "pypng>=0.0.21",
+    "setuptools>=61.0.0",
+    "mfusepy>=1.0.0",
+]
+
+[project.gui-scripts]
+ninfsw = "ninfs.main:gui"
+
+[project.scripts]
+mount_3ds = "ninfs.main:main"
+mount_3dsx = "ninfs.main:main"
+mount_app = "ninfs.main:main"
+mount_cci = "ninfs.main:main"
+mount_cdn = "ninfs.main:main"
+mount_cfa = "ninfs.main:main"
+mount_cia = "ninfs.main:main"
+mount_csu = "ninfs.main:main"
+mount_cxi = "ninfs.main:main"
+mount_exefs = "ninfs.main:main"
+mount_nand = "ninfs.main:main"
+mount_nandbb = "ninfs.main:main"
+mount_nandctr = "ninfs.main:main"
+mount_nanddsi = "ninfs.main:main"
+mount_nandhac = "ninfs.main:main"
+mount_nandique = "ninfs.main:main"
+mount_nandnx = "ninfs.main:main"
+mount_nandswitch = "ninfs.main:main"
+mount_nandtwl = "ninfs.main:main"
+mount_ncch = "ninfs.main:main"
+mount_nds = "ninfs.main:main"
+mount_romfs = "ninfs.main:main"
+mount_sd = "ninfs.main:main"
+mount_sdtitle = "ninfs.main:main"
+mount_srl = "ninfs.main:main"
+mount_threedsx = "ninfs.main:main"
+ninfs = "ninfs.main:gui"
+
+[tool.setuptools.dynamic]
+version = {attr = "ninfs.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ninfs.*"]
