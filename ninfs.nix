@@ -1,4 +1,20 @@
-{ lib, pkgs, callPackage, buildPythonApplication, fetchPypi, pyctr, pycryptodomex, pypng, tkinter, setuptools, mfusepy, haccrypto, stdenv }:
+{ lib
+, pkgs
+, callPackage
+, buildPythonApplication
+, fetchPypi
+, pyctr
+, pycryptodomex
+, pypng
+, tkinter
+, setuptools
+, mfusepy
+, haccrypto
+, stdenv
+
+, withGUI ? true
+
+}:
 
 buildPythonApplication rec {
   pname = "ninfs";
@@ -12,10 +28,10 @@ buildPythonApplication rec {
     pyctr
     pycryptodomex
     pypng
-    tkinter
     setuptools
-    #fusepy  # this gets added to PYTHONPATH manually in makeWrapperArgs
     haccrypto
+  ] ++ lib.optionals (withGUI) [
+    tkinter
   ];
 
   makeWrapperArgs = [ "--prefix PYTHONPATH : ${mfusepy}/${mfusepy.pythonModule.sitePackages}" ];
