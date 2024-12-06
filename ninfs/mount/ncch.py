@@ -66,20 +66,12 @@ class NCCHContainerMount(LoggingMixIn, Operations):
 
         if NCCHSection.ExeFS in self.reader.sections:
             self.files['/exefs.bin'] = NCCHSection.ExeFS
-            try:
-                self.exefs_fuse = ExeFSMount(self.reader.exefs, g_stat=self.g_stat, decompress_code=True)
-                self.exefs_fuse.init(path)
-            except Exception as e:
-                print(f'Failed to mount ExeFS: {type(e).__name__}: {e}')
-                self.exefs_fuse = None
+            self.exefs_fuse = ExeFSMount(self.reader.exefs, g_stat=self.g_stat, decompress_code=True)
+            self.exefs_fuse.init(path)
 
         if NCCHSection.RomFS in self.reader.sections:
             self.files['/romfs.bin'] = NCCHSection.RomFS
-            try:
-                self.romfs_fuse = RomFSMount(self.reader.romfs, g_stat=self.g_stat)
-            except Exception as e:
-                print(f'Failed to mount ExeFS: {type(e).__name__}: {e}')
-                self.romfs_fuse = None
+            self.romfs_fuse = RomFSMount(self.reader.romfs, g_stat=self.g_stat)
 
     @_c.ensure_lower_path
     def getattr(self, path, fh=None):
