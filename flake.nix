@@ -15,10 +15,10 @@
       let pkgs = nixpkgs.legacyPackages.${system}; in {
 
         packages = rec {
-          haccrypto = pkgs.python3Packages.callPackage ./haccrypto.nix {};
-          mfusepy = pkgs.python3Packages.callPackage ./mfusepy.nix {};
-          ninfs = pkgs.python3Packages.callPackage ./ninfs.nix { haccrypto = haccrypto; mfusepy = mfusepy; pyctr = pyctr.packages.${system}.pyctr; };
-          ninfsNoGUI = pkgs.python3Packages.callPackage ./ninfs.nix { haccrypto = haccrypto; mfusepy = mfusepy; pyctr = pyctr.packages.${system}.pyctr; withGUI = false; };
+          haccrypto = pkgs.python3Packages.callPackage ./nix/haccrypto.nix {};
+          mfusepy = pkgs.python3Packages.callPackage ./nix/mfusepy.nix {};
+          ninfs = pkgs.python3Packages.callPackage ./package.nix { haccrypto = haccrypto; mfusepy = mfusepy; pyctr = pyctr.packages.${system}.pyctr; };
+          ninfsNoGUI = ninfs.override { withGUI = false; };
           default = ninfs;
         };
       }
