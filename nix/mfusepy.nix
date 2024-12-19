@@ -26,7 +26,7 @@ buildPythonPackage rec {
   # be able to find libfuse in /usr/local/lib.
   patchPhase = lib.optionalString (!stdenv.hostPlatform.isDarwin) ''
     substituteInPlace mfusepy.py \
-      --replace "find_library('fuse')" "'${pkgs.fuse}/lib/libfuse.so'" \
+      --replace "find_library('fuse')" "'${pkgs.fuse.out}/lib/libfuse.so'" \
   '';
 
   meta = with lib; {
