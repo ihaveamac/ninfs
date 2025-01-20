@@ -23,11 +23,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1737340038,
-        "narHash": "sha256-WExQ1nczGdtlzna3yT2+CcEzVCcrLKqjZF4fnWe3lCE=",
+        "lastModified": 1737344241,
+        "narHash": "sha256-pA+AqtPByx1lxkmI599TuLE38GInBxbv6PiAxSSB7DU=",
         "owner": "ihaveamac",
         "repo": "pyctr",
-        "rev": "e8bdcf4688ea4c7f485e75aa0f484658eada5461",
+        "rev": "b2b36ae44316ff31302823911c812b5c82eb0e8b",
         "type": "github"
       },
       "original": {
