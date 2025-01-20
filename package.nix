@@ -14,6 +14,8 @@
   stdenv,
 
   withGUI ? true,
+  # this should probably be an option within python
+  mountAliases ? true,
 
 }:
 
@@ -53,6 +55,10 @@ buildPythonApplication rec {
     ];
 
   makeWrapperArgs = [ "--prefix PYTHONPATH : ${mfusepy}/${mfusepy.pythonModule.sitePackages}" ];
+
+  preFixup = lib.optionalString (!mountAliases) ''
+    rm $out/bin/mount_*
+  '';
 
   postInstall = lib.optionalString (!stdenv.isDarwin) ''
     mkdir -p $out/share/{applications,icons}
