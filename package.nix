@@ -1,18 +1,19 @@
-{ lib
-, pkgs
-, callPackage
-, buildPythonApplication
-, fetchPypi
-, pyctr
-, pycryptodomex
-, pypng
-, tkinter
-, setuptools
-, mfusepy
-, haccrypto
-, stdenv
+{
+  lib,
+  pkgs,
+  callPackage,
+  buildPythonApplication,
+  fetchPypi,
+  pyctr,
+  pycryptodomex,
+  pypng,
+  tkinter,
+  setuptools,
+  mfusepy,
+  haccrypto,
+  stdenv,
 
-, withGUI ? true
+  withGUI ? true,
 
 }:
 
@@ -20,19 +21,36 @@ buildPythonApplication rec {
   pname = "ninfs";
   version = "2.0";
 
-  srcs = builtins.path { path = ./.; name = "ninfs"; };
+  src = builtins.path {
+    path = ./.;
+    name = "ninfs";
+    filter =
+      path: type:
+      !(builtins.elem (baseNameOf path) [
+        "build"
+        "dist"
+        "localtest"
+        "__pycache__"
+        "v"
+        ".git"
+        "_build"
+        "ninfs.egg-info"
+      ]);
+  };
 
   doCheck = false;
 
-  propagatedBuildInputs = [
-    pyctr
-    pycryptodomex
-    pypng
-    setuptools
-    haccrypto
-  ] ++ lib.optionals (withGUI) [
-    tkinter
-  ];
+  propagatedBuildInputs =
+    [
+      pyctr
+      pycryptodomex
+      pypng
+      setuptools
+      haccrypto
+    ]
+    ++ lib.optionals (withGUI) [
+      tkinter
+    ];
 
   makeWrapperArgs = [ "--prefix PYTHONPATH : ${mfusepy}/${mfusepy.pythonModule.sitePackages}" ];
 
