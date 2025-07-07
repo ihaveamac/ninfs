@@ -29,7 +29,7 @@ dependencies = [
     "pycryptodomex>=3.9,<4",
     "pypng>=0.0.21",
     "setuptools>=61.0.0",
-    "mfusepy>=1.0.0",
+    "mfusepy~=1.0",
 ]
 
 [project.gui-scripts]
