@@ -22,6 +22,7 @@
 buildPythonApplication rec {
   pname = "ninfs";
   version = "2.0";
+  pyproject = true;
 
   src = builtins.path {
     path = ./.;
@@ -42,6 +43,8 @@ buildPythonApplication rec {
 
   doCheck = false;
 
+  build-system = [ setuptools ];
+
   propagatedBuildInputs =
     [
       pyctr
@@ -49,6 +52,7 @@ buildPythonApplication rec {
       pypng
       setuptools
       haccrypto
+      mfusepy # this might potentially break usage on non-NixOS Linux
     ]
     ++ lib.optionals (withGUI) [
       tkinter
