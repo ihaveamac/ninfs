@@ -9,12 +9,12 @@
 
 buildPythonPackage rec {
   pname = "mfusepy";
-  version = "1.0.0";
+  version = "1.1.1";
   format = "pyproject";
 
   src = fetchPypi {
     inherit pname version;
-    hash = "sha256-vpIjTLMw4l3wBPsR8uK9wghNTRD7awDy9TRUC8ZsGKI=";
+    hash = "sha256-Nkdyem53ddR/3v9hNVk18e1e2zHFEk0jMTjyqR6gH58=";
   };
 
   propagatedBuildInputs = [ setuptools pkgs.fuse ];
