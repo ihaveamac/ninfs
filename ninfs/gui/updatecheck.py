@@ -11,7 +11,7 @@ import webbrowser
 from typing import TYPE_CHECKING
 from urllib.request import urlopen, Request
 
-from pkg_resources import parse_version
+from packaging.version import parse as parse_version
 
 from .outputviewer import OutputViewer
 from .setupwizard import WizardBase
