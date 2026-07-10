@@ -2,11 +2,11 @@
   "nodes": {
     "nixpkgs": {
       "locked": {
-        "lastModified": 1766653575,
-        "narHash": "sha256-TPgxCS7+hWc4kPhzkU5dD2M5UuPhLuuaMNZ/IpwKQvI=",
+        "lastModified": 1783279667,
+        "narHash": "sha256-/NAkDSsve+GNM0Bt6tleJdCGfsTlK89nPjkVOzZMo0s=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "3c1016e6acd16ad96053116d0d3043029c9e2649",
+        "rev": "f205b5574fd0cb7da5b702a2da51507b7f4fdd1b",
         "type": "github"
       },
       "original": {
@@ -20,14 +20,15 @@
       "inputs": {
         "nixpkgs": [
           "nixpkgs"
-        ]
+        ],
+        "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1763515957,
-        "narHash": "sha256-S0qzooGQN5tkbIVgijVZ9umvBC1dYbdPN97tks5SbwE=",
+        "lastModified": 1783654857,
+        "narHash": "sha256-vbrslzipiEW7t1sy47OcXaKZbDzv1r+ehSQVPBZAu8s=",
         "owner": "ihaveamac",
         "repo": "pyctr",
-        "rev": "eb8d4d06ce7339727d3f72b40f45ec3260336058",
+        "rev": "cc9e5b90fa67359e0bda575b54650515e8569001",
         "type": "github"
       },
       "original": {
@@ -41,6 +42,27 @@
       "inputs": {
         "nixpkgs": "nixpkgs",
         "pyctr": "pyctr"
+      }
+    },
+    "treefmt-nix": {
+      "inputs": {
+        "nixpkgs": [
+          "pyctr",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1780220602,
+        "narHash": "sha256-eynAfOmbmxJnkp7YewvCEbShNnnYJ9gLLqkzsYtBPeM=",
+        "owner": "numtide",
+        "repo": "treefmt-nix",
+        "rev": "db947814a175b7ca6ded66e21383d938df01c227",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "treefmt-nix",
+        "type": "github"
       }
     }
   },
