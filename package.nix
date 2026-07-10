@@ -9,7 +9,6 @@
   pypng,
   tkinter,
   setuptools,
-  packaging,
   mfusepy,
   haccrypto,
   stdenv,
@@ -52,7 +51,6 @@ buildPythonApplication rec {
       pycryptodomex
       pypng
       setuptools
-      packaging
       haccrypto
       mfusepy # this might potentially break usage on non-NixOS Linux
     ]
