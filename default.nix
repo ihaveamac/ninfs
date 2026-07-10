@@ -16,9 +16,9 @@
 }:
 
 rec {
-  haccrypto = pkgs.python313Packages.callPackage ./nix/haccrypto.nix { };
-  mfusepy = pkgs.python313Packages.callPackage ./nix/mfusepy.nix { };
-  ninfs = pkgs.python313Packages.callPackage ./package.nix {
+  haccrypto = pkgs.python3Packages.callPackage ./nix/haccrypto.nix { };
+  mfusepy = pkgs.python3Packages.callPackage ./nix/mfusepy.nix { };
+  ninfs = pkgs.python3Packages.callPackage ./package.nix {
     inherit pyctr;
     haccrypto = haccrypto;
     mfusepy = mfusepy;
