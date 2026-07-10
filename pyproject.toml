@@ -68,3 +68,6 @@ version = {attr = "ninfs.__version__"}
 
 [tool.setuptools.packages]
 find = {namespaces = false}
+
+[tool.setuptools.package-data]
+ninfs = ["gui/data/*", "gui/data/licenses/*"]
