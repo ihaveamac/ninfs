@@ -66,6 +66,7 @@ class SDFilesystemMount(LoggingMixIn, Operations):
         print('Key:', self.crypto.keygen(Keyslot.SD).hex())
 
         self.root = realpath(sd_dir + '/' + self.root_dir)
+        print('Root:', self.root)
         self.root_len = len(self.root)
 
         self.readonly = readonly
