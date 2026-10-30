@@ -60,7 +60,10 @@ buildPythonApplication rec {
       tkinter
     ];
 
-  makeWrapperArgs = [ "--prefix PYTHONPATH : ${mfusepy}/${mfusepy.pythonModule.sitePackages}" ];
+  makeWrapperArgs = [
+    "--prefix PYTHONPATH : ${mfusepy}/${mfusepy.pythonModule.sitePackages}"
+    "--set NINFS_USE_ARG0 1"
+  ];
 
   preFixup = lib.optionalString (!mountAliases) ''
     rm $out/bin/mount_*

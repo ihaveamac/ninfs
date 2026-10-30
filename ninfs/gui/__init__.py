@@ -46,6 +46,8 @@ tutorial_url = 'https://gbatemp.net/threads/499994/'
 frozen = getattr(sys, 'frozen', None)
 # PyInstaller sets this
 meipass = getattr(sys, '_MEIPASS', None)
+# nix-specific hack
+use_arg0 = os.environ.get('NINFS_USE_ARG0', None)
 
 executable = sys.executable
 if is_windows:
@@ -59,6 +61,11 @@ if is_windows:
         print(executable)
 else:
     from os.path import ismount as check_mountpoint
+
+# nix-specific hack
+if use_arg0:
+    frozen = True
+    executable = sys.argv[0]
 
 
 def thread_output_reader(gui: 'NinfsGUI', proc: 'Popen', uuid: 'str', output_list: 'List[str]'):
